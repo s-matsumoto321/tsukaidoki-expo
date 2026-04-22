@@ -179,8 +179,9 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
 // ─── Main screen ─────────────────────────────────────────────────
 
 export default function ProjectDetailScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const project = PROJECTS[id ?? ''];
+  const isAccount = project?.kind === 'account';
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
@@ -241,7 +242,7 @@ export default function ProjectDetailScreen() {
       {/* ── Brand header ── */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={s.backTxt}>← ポートフォリオ</Text>
+          <Text style={s.backTxt}>← {from === 'pool' ? 'プール金' : 'ポートフォリオ'}</Text>
         </Pressable>
         <View style={s.hdrRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -249,7 +250,7 @@ export default function ProjectDetailScreen() {
             <Text style={s.timing}>{project.timing}</Text>
           </View>
           <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.amtLabel}>現在の積み立て</Text>
+            <Text style={s.amtLabel}>{isAccount ? '現在の残高' : '現在の積み立て'}</Text>
             <Text style={s.amt}>¥{project.now.toLocaleString('ja-JP')}</Text>
             <Text style={s.amtSub}>{project.goalLabel} · {project.statusTxt}</Text>
           </View>
@@ -316,7 +317,7 @@ export default function ProjectDetailScreen() {
         {/* Events section */}
         <View style={{ flex: 1, paddingBottom: insets.bottom }}>
           <View style={s.secRow}>
-            <Text style={s.secTitle}>積み立て・支出の年表</Text>
+            <Text style={s.secTitle}>{isAccount ? '入出金・取引の年表' : '積み立て・支出の年表'}</Text>
             <Text style={s.secSub}>スクロールで確認</Text>
           </View>
           <View style={s.evCardWrap}>

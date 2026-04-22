@@ -10,11 +10,11 @@ export type FinancialItem = {
 };
 
 export const POOL_ITEMS: FinancialItem[] = [
-  { color: '#0C447C', name: '証券口座', val: '¥300万', amount: 3_000_000, meta: 'SBI証券 · 投資信託・株式' },
-  { color: '#185FA5', name: '定期預金', val: '¥250万', amount: 2_500_000, meta: '〇〇銀行 · 1年定期' },
-  { color: '#378ADD', name: '積立NISA', val: '¥100万', amount: 1_000_000, meta: '月¥33,000 積立中' },
-  { color: '#85B7EB', name: 'メイン銀行', val: '¥80万', amount: 800_000, meta: '普通預金 · 給与振込口座' },
-  { color: '#B5D4F4', name: 'サブ銀行', val: '¥45万', amount: 450_000, meta: '普通預金 · 生活費' },
+  { color: '#0C447C', name: '証券口座', val: '¥300万', amount: 3_000_000, meta: 'SBI証券 · 投資信託・株式', projectId: 'pool-shoken' },
+  { color: '#185FA5', name: '定期預金', val: '¥250万', amount: 2_500_000, meta: '〇〇銀行 · 1年定期', projectId: 'pool-teiki' },
+  { color: '#378ADD', name: '積立NISA', val: '¥100万', amount: 1_000_000, meta: '月¥33,000 積立中', projectId: 'pool-nisa' },
+  { color: '#85B7EB', name: 'メイン銀行', val: '¥80万', amount: 800_000, meta: '普通預金 · 給与振込口座', projectId: 'pool-main' },
+  { color: '#B5D4F4', name: 'サブ銀行', val: '¥45万', amount: 450_000, meta: '普通預金 · 生活費', projectId: 'pool-sub' },
 ];
 
 export const PF_ITEMS: FinancialItem[] = [
