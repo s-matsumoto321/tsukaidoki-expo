@@ -3,6 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS } from '@/constants/data';
+import { useStore } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
@@ -22,8 +23,13 @@ function fmtPct(amount: number, total: number): string {
 }
 
 export default function PoolScreen() {
-  const total = POOL_ITEMS.reduce((sum, item) => sum + item.amount, 0);
-  const segments = POOL_ITEMS.map(item => ({ color: item.color, value: item.amount }));
+  const { balances } = useStore();
+  const items = POOL_ITEMS.map(item => ({
+    ...item,
+    amount: balances[item.projectId!] ?? item.amount,
+  }));
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  const segments = items.map(item => ({ color: item.color, value: item.amount }));
   const totalMan = Math.round(total / 10000).toLocaleString('ja-JP');
 
   return (
@@ -44,8 +50,8 @@ export default function PoolScreen() {
 
         {/* Account list */}
         <View style={s.listCard}>
-          {POOL_ITEMS.map((item, i) => {
-            const isLast = i === POOL_ITEMS.length - 1;
+          {items.map((item, i) => {
+            const isLast = i === items.length - 1;
             const hasDetail = !!item.projectId;
             return (
               <Pressable

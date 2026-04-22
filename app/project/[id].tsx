@@ -10,6 +10,8 @@ import Svg, {
 } from 'react-native-svg';
 import { useState, useRef, useCallback } from 'react';
 import { PROJECTS, type ProjectEvent } from '@/constants/projects';
+import { useStore } from '@/store/useStore';
+import { BalanceSheet } from '@/components/balance-sheet';
 
 const C = {
   brand: '#0C447C',
@@ -185,8 +187,13 @@ export default function ProjectDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
+  const { balances, userEvents } = useStore();
+  const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
+  const myUserEvents = userEvents[id ?? ''] ?? [];
+
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [sheetVisible, setSheetVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const rowY = useRef<Record<number, number>>({});
   const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -251,7 +258,12 @@ export default function ProjectDetailScreen() {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={s.amtLabel}>{isAccount ? '現在の残高' : '現在の積み立て'}</Text>
-            <Text style={s.amt}>¥{project.now.toLocaleString('ja-JP')}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+              <Text style={s.amt}>¥{currentAmount.toLocaleString('ja-JP')}</Text>
+              <Pressable onPress={() => setSheetVisible(true)} style={s.editBtn} hitSlop={8}>
+                <Text style={s.editTxt}>修正</Text>
+              </Pressable>
+            </View>
             <Text style={s.amtSub}>{project.goalLabel} · {project.statusTxt}</Text>
           </View>
         </View>
@@ -328,7 +340,7 @@ export default function ProjectDetailScreen() {
             >
               {project.events.map((ev, idx) => {
                 const sel = selectedIdx === ev.idx;
-                const isLast = idx === project.events.length - 1;
+                const isLast = idx === project.events.length - 1 && myUserEvents.length === 0;
                 return (
                   <Pressable
                     key={ev.idx}
@@ -350,10 +362,34 @@ export default function ProjectDetailScreen() {
                   </Pressable>
                 );
               })}
+              {myUserEvents.map((ev, idx) => {
+                const isLast = idx === myUserEvents.length - 1;
+                return (
+                  <View
+                    key={ev.id}
+                    style={[s.evRow, !isLast && s.evRowBorder]}
+                  >
+                    <Text style={s.evYr}>{ev.date}</Text>
+                    <View style={[s.evDot, { backgroundColor: ev.dot }]} />
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={s.evName}>{ev.name}</Text>
+                      <Text style={s.evDetail}>{ev.detail}</Text>
+                      <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
+                    </View>
+                  </View>
+                );
+              })}
             </ScrollView>
           </View>
         </View>
       </View>
+      <BalanceSheet
+        visible={sheetVisible}
+        projectId={id ?? ''}
+        currentAmount={currentAmount}
+        label={project.name}
+        onClose={() => setSheetVisible(false)}
+      />
     </View>
   );
 }
@@ -370,6 +406,8 @@ const s = StyleSheet.create({
   projName: { fontSize: 15, fontWeight: '500', color: '#fff', lineHeight: 20 },
   timing: { fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
   amtLabel: { fontSize: 9, color: 'rgba(255,255,255,0.55)' },
+  editBtn: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  editTxt: { fontSize: 10, color: '#fff', fontWeight: '500' },
   amt: { fontSize: 18, fontWeight: '500', color: '#fff', lineHeight: 22 },
   amtSub: { fontSize: 9, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
 
