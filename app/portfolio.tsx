@@ -1,5 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, StyleSheet } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { PF_ITEMS } from '@/constants/data';
 
@@ -11,6 +12,10 @@ const C = {
   textPrimary: '#2c2c2a',
   textSecondary: '#73726c',
   border: 'rgba(0,0,0,0.08)',
+  okBg: '#EAF3DE',
+  okText: '#27500A',
+  warnBg: '#FAEEDA',
+  warnText: '#633806',
 };
 
 function fmtJpy(amount: number): string {
@@ -29,6 +34,7 @@ export default function PortfolioScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
+        {/* Donut summary */}
         <View style={s.heroCard}>
           <DonutChart
             segments={segments}
@@ -41,17 +47,56 @@ export default function PortfolioScreen() {
           <Text style={s.totalAmt}>{fmtJpy(total)}</Text>
         </View>
 
+        {/* Project list */}
         <View style={s.listCard}>
-          {PF_ITEMS.map((item, i) => (
-            <View key={item.name} style={[s.row, i < PF_ITEMS.length - 1 && s.rowBorder]}>
-              <View style={[s.dot, { backgroundColor: item.color }]} />
-              <Text style={s.rowName}>{item.name}</Text>
-              <View style={s.rowRight}>
-                <Text style={s.rowAmt}>{fmtJpy(item.amount)}</Text>
-                <Text style={s.rowPct}>{fmtPct(item.amount, total)}</Text>
-              </View>
-            </View>
-          ))}
+          {PF_ITEMS.map((item, i) => {
+            const isLast = i === PF_ITEMS.length - 1;
+            const hasDetail = !!item.projectId;
+            return (
+              <Pressable
+                key={item.name}
+                style={[s.itemCard, !isLast && s.itemBorder]}
+                onPress={() => hasDetail && router.push(`/project/${item.projectId}`)}
+                disabled={!hasDetail}
+              >
+                {/* Top row */}
+                <View style={s.itemTop}>
+                  <View style={s.itemLeft}>
+                    <View style={[s.dot, { backgroundColor: item.color }]} />
+                    <Text style={s.itemName}>{item.name}</Text>
+                    {item.status && (
+                      <View style={item.status === 'ok' ? s.badgeOk : s.badgeWarn}>
+                        <Text style={item.status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt}>
+                          {item.status === 'ok' ? '◎' : '△'}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <View style={s.itemRight}>
+                    <Text style={s.itemAmt}>{fmtJpy(item.amount)}</Text>
+                    <Text style={s.itemPct}>{fmtPct(item.amount, total)}</Text>
+                  </View>
+                </View>
+
+                {/* Meta */}
+                {item.meta && (
+                  <Text style={s.itemMeta}>{item.meta}</Text>
+                )}
+
+                {/* Progress bar */}
+                {item.progress !== undefined && (
+                  <View style={s.barBg}>
+                    <View style={[s.barFill, { width: `${Math.round(item.progress * 100)}%`, backgroundColor: item.color }]} />
+                  </View>
+                )}
+
+                {/* Detail arrow */}
+                {hasDetail && (
+                  <Text style={s.arrow}>›</Text>
+                )}
+              </Pressable>
+            );
+          })}
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -81,18 +126,44 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
     marginHorizontal: 14,
     borderRadius: 16,
-    paddingHorizontal: 14,
+    overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
     shadowRadius: 4,
     elevation: 2,
   },
-  row: { flexDirection: 'row', alignItems: 'center', paddingVertical: 13, gap: 10 },
-  rowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
-  dot: { width: 10, height: 10, borderRadius: 5 },
-  rowName: { flex: 1, fontSize: 14, color: C.textPrimary },
-  rowRight: { alignItems: 'flex-end' },
-  rowAmt: { fontSize: 14, fontWeight: '500', color: C.textPrimary },
-  rowPct: { fontSize: 10, color: C.textSecondary, marginTop: 2 },
+  itemCard: {
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    position: 'relative',
+  },
+  itemBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
+
+  itemTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 },
+  itemLeft: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 },
+  dot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  itemName: { fontSize: 12, fontWeight: '500', color: C.textPrimary },
+  itemRight: { alignItems: 'flex-end' },
+  itemAmt: { fontSize: 14, fontWeight: '500', color: C.textPrimary },
+  itemPct: { fontSize: 9, color: C.textSecondary, marginTop: 1 },
+
+  badgeOk: { backgroundColor: C.okBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeOkTxt: { fontSize: 8, color: C.okText },
+  badgeWarn: { backgroundColor: C.warnBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeWarnTxt: { fontSize: 8, color: C.warnText },
+
+  itemMeta: { fontSize: 9, color: C.textSecondary, marginLeft: 17, marginBottom: 5 },
+
+  barBg: { backgroundColor: '#f0efe9', borderRadius: 4, height: 3, overflow: 'hidden', marginLeft: 17 },
+  barFill: { height: '100%', borderRadius: 4 },
+
+  arrow: {
+    position: 'absolute',
+    right: 14,
+    top: '50%',
+    marginTop: -8,
+    fontSize: 16,
+    color: C.textSecondary,
+  },
 });

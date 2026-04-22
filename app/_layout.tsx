@@ -35,6 +35,10 @@ export default function RootLayout() {
             headerBackTitle: 'ホーム',
           }}
         />
+        <Stack.Screen
+          name="project/[id]"
+          options={{ headerShown: false }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
