@@ -8,7 +8,16 @@ import Svg, {
   Text as SvgText,
   G,
 } from 'react-native-svg';
-import { useState, useRef, useCallback } from 'react';
+import Animated, {
+  useSharedValue,
+  useAnimatedProps,
+  withTiming,
+  withDelay,
+  Easing,
+} from 'react-native-reanimated';
+import { useState, useRef, useCallback, useEffect } from 'react';
+
+const AnimatedPolyline = Animated.createAnimatedComponent(Polyline);
 import { PROJECTS, type ProjectEvent } from '@/constants/projects';
 import { useStore } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
@@ -32,6 +41,21 @@ const C = {
   posText: '#065C3A',
   negText: '#7A1515',
 };
+
+function polylineLength(points: string): number {
+  if (!points) return 0;
+  const coords = points.trim().split(' ').map(p => {
+    const [x, y] = p.split(',').map(Number);
+    return { x, y };
+  });
+  let len = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i].x - coords[i - 1].x;
+    const dy = coords[i].y - coords[i - 1].y;
+    len += Math.sqrt(dx * dx + dy * dy);
+  }
+  return len;
+}
 
 function niceTickStep(maxVal: number, targetTicks: number): number {
   const rough = maxVal / targetTicks;
@@ -90,6 +114,22 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
   const planPts = project.plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
   const actualPts = actualIdx.map(i => `${xi(i)},${yv(project.actual[i]!)}`).join(' ');
 
+  const planLen = polylineLength(planPts);
+  const actualLen = polylineLength(actualPts);
+
+  const planOffset = useSharedValue(planLen);
+  const actualOffset = useSharedValue(actualLen);
+
+  useEffect(() => {
+    planOffset.value = planLen;
+    actualOffset.value = actualLen;
+    planOffset.value = withTiming(0, { duration: 700, easing: Easing.out(Easing.cubic) });
+    actualOffset.value = withDelay(400, withTiming(0, { duration: 1000, easing: Easing.out(Easing.cubic) }));
+  }, [id]);
+
+  const planAnimProps = useAnimatedProps(() => ({ strokeDashoffset: planOffset.value }));
+  const actualAnimProps = useAnimatedProps(() => ({ strokeDashoffset: actualOffset.value }));
+
   return (
     <Svg width={svgW} height={SVG_H}>
       {ticks.map(v => (
@@ -112,17 +152,21 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
         ) : null
       )}
 
-      <Polyline
+      <AnimatedPolyline
         points={planPts}
         fill="none" stroke={C.accent} strokeWidth={1.5}
-        strokeDasharray="5 3" opacity={0.6}
+        strokeDasharray={`${planLen} ${planLen}`}
+        opacity={0.6}
+        animatedProps={planAnimProps}
       />
 
       {actualIdx.length > 1 && (
-        <Polyline
+        <AnimatedPolyline
           points={actualPts}
           fill="none" stroke={C.green} strokeWidth={2.5}
           strokeLinecap="round" strokeLinejoin="round"
+          strokeDasharray={`${actualLen} ${actualLen}`}
+          animatedProps={actualAnimProps}
         />
       )}
 

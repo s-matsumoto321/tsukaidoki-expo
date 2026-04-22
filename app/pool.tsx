@@ -1,7 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
@@ -61,10 +60,7 @@ export default function PoolScreen() {
             const hasDetail = !!item.projectId;
             const pct = fmtPct(item.amount, total);
             return (
-              <Animated.View
-                key={item.name}
-                entering={FadeInDown.delay(i * 60).springify().damping(16)}
-              >
+              <View key={item.name}>
                 <Pressable
                   style={[s.row, !isLast && s.rowBorder]}
                   onPress={() => hasDetail && router.push(`/project/${item.projectId}?from=pool`)}
@@ -86,7 +82,7 @@ export default function PoolScreen() {
                   </View>
                   {hasDetail && <Text style={s.arrow}>›</Text>}
                 </Pressable>
-              </Animated.View>
+              </View>
             );
           })}
         </View>

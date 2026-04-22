@@ -1,7 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DonutChart } from '@/components/donut-chart';
 import { PF_ITEMS } from '@/constants/data';
 import { PROJECTS } from '@/constants/projects';
@@ -69,10 +68,7 @@ export default function PortfolioScreen() {
             const isOk = item.status === 'ok';
             const isWarn = item.status === 'warn';
             return (
-              <Animated.View
-                key={item.name}
-                entering={FadeInDown.delay(i * 60).springify().damping(16)}
-              >
+              <View key={item.name}>
                 <Pressable
                   style={[s.row, !isLast && s.rowBorder]}
                   onPress={() => hasDetail && router.push(`/project/${item.projectId}`)}
@@ -111,7 +107,7 @@ export default function PortfolioScreen() {
                   </View>
                   {hasDetail && <Text style={s.arrow}>›</Text>}
                 </Pressable>
-              </Animated.View>
+              </View>
             );
           })}
         </View>

@@ -1,7 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
@@ -33,12 +32,11 @@ type ChartCardProps = {
   delay: number;
 };
 
-function ChartCard({ title, badge, total, sub, items, route, delay }: ChartCardProps) {
+function ChartCard({ title, badge, total, sub, items, route, delay: _delay }: ChartCardProps) {
   const segments = items.map(i => ({ color: i.color, value: i.amount }));
   return (
-    <Animated.View entering={FadeInDown.delay(delay).springify().damping(16)}>
-      <Link href={route} asChild>
-        <Pressable style={s.chartCard}>
+    <Link href={route} asChild>
+      <Pressable style={s.chartCard}>
           <View style={s.cardHead}>
             <View>
               <Text style={s.cardTitle}>{title}</Text>
@@ -63,7 +61,6 @@ function ChartCard({ title, badge, total, sub, items, route, delay }: ChartCardP
           </View>
         </Pressable>
       </Link>
-    </Animated.View>
   );
 }
 
@@ -145,7 +142,7 @@ export default function HomeScreen() {
           />
 
           {/* 差額カード */}
-          <Animated.View entering={FadeInDown.delay(220).springify().damping(16)}>
+          <View>
             <View style={s.diffCard}>
               <View style={s.diffRow}>
                 <Text style={s.diffLabel}>プール金</Text>
@@ -164,10 +161,10 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
-          </Animated.View>
+          </View>
 
           {/* 安心ラインカード */}
-          <Animated.View entering={FadeInDown.delay(300).springify().damping(16)}>
+          <View>
             <View style={s.safeCard}>
               <View style={s.safeAccent} />
               <View style={{ flex: 1 }}>
@@ -176,7 +173,7 @@ export default function HomeScreen() {
                 <Text style={s.safeNote}>全プロジェクト計画達成後の余力。この範囲なら自由に使えます。</Text>
               </View>
             </View>
-          </Animated.View>
+          </View>
 
         </View>
       </ScrollView>
