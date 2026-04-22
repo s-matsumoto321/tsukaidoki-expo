@@ -1,5 +1,8 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { Link, type Href } from 'expo-router';
+import { DonutChart } from '@/components/donut-chart';
+import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 
 const C = {
   brand: '#0C447C',
@@ -14,22 +17,6 @@ const C = {
   textSecondary: '#73726c',
   border: 'rgba(0,0,0,0.08)',
 };
-
-const POOL_ITEMS = [
-  { color: '#0C447C', name: '証券口座', val: '¥300万' },
-  { color: '#185FA5', name: '定期預金', val: '¥250万' },
-  { color: '#378ADD', name: '積立NISA', val: '¥100万' },
-  { color: '#85B7EB', name: 'メイン銀行', val: '¥80万' },
-  { color: '#B5D4F4', name: 'サブ銀行', val: '¥45万' },
-];
-
-const PF_ITEMS = [
-  { color: '#0C447C', name: '教育PJ', val: '¥300万' },
-  { color: '#1D9E75', name: '老後PJ', val: '¥250万' },
-  { color: '#888780', name: '車PJ', val: '¥100万' },
-  { color: '#534AB7', name: 'その他', val: '¥115万' },
-  { color: '#EF9F27', name: '旅行PJ', val: '¥10万' },
-];
 
 type LegendItemProps = { color: string; name: string; val: string };
 
@@ -52,25 +39,31 @@ type ChartCardProps = {
   badgeTextStyle: object;
   total: string;
   sub: string;
-  items: LegendItemProps[];
-  onPress: () => void;
+  items: FinancialItem[];
+  route: Href;
 };
 
-function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items, onPress }: ChartCardProps) {
+function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items, route }: ChartCardProps) {
+  const segments = items.map(i => ({ color: i.color, value: i.amount }));
   return (
-    <Pressable style={s.chartCard} onPress={onPress}>
-      <View style={s.chartLabelRow}>
-        <Text style={s.chartLabel}>{title}</Text>
-        <View style={badgeStyle}>
-          <Text style={badgeTextStyle}>{badge}</Text>
+    <Link href={route} asChild>
+      <Pressable style={s.chartCard}>
+        <View style={s.chartLabelRow}>
+          <Text style={s.chartLabel}>{title}</Text>
+          <View style={badgeStyle}>
+            <Text style={badgeTextStyle}>{badge}</Text>
+          </View>
         </View>
-      </View>
-      <View style={s.chartCircle}>
-        <Text style={s.chartTotal}>{total}</Text>
-        <Text style={s.chartSub}>{sub}</Text>
-      </View>
-      {items.map(item => <LegendItem key={item.name} {...item} />)}
-    </Pressable>
+        <DonutChart
+          segments={segments}
+          size={90}
+          thickness={10}
+          centerLabel={total}
+          centerSub={sub}
+        />
+        {items.map(item => <LegendItem key={item.name} {...item} />)}
+      </Pressable>
+    </Link>
   );
 }
 
@@ -116,7 +109,7 @@ export default function HomeScreen() {
             total="¥775万"
             sub="5口座"
             items={POOL_ITEMS}
-            onPress={() => {}}
+            route="/pool"
           />
           <ChartCard
             title="ポートフォリオ"
@@ -126,7 +119,7 @@ export default function HomeScreen() {
             total="¥775万"
             sub="5PJ"
             items={PF_ITEMS}
-            onPress={() => {}}
+            route="/portfolio"
           />
         </View>
 
@@ -211,18 +204,7 @@ const s = StyleSheet.create({
   badgeBlueText: { fontSize: 8, color: C.brand },
   badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
   badgeGreenText: { fontSize: 8, color: C.greenText },
-  chartCircle: {
-    width: 90,
-    height: 90,
-    borderRadius: 45,
-    borderWidth: 10,
-    borderColor: '#dde8f4',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginVertical: 8,
-  },
-  chartTotal: { fontSize: 12, fontWeight: '500', color: C.textPrimary },
-  chartSub: { fontSize: 8, color: C.textSecondary, marginTop: 1 },
+
   legRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2, width: '100%' },
   legLeft: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
   legDot: { width: 6, height: 6, borderRadius: 3 },
