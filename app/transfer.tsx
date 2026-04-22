@@ -6,16 +6,17 @@ import { useStore } from '@/store/useStore';
 import { POOL_ITEMS } from '@/constants/data';
 
 const C = {
-  brand: '#1A5C6B',
-  brandDark: '#134754',
-  green: '#1D9E75',
-  bg: '#F7F3EC',
-  card: '#FFFDF8',
-  textPrimary: '#2C2825',
-  textSecondary: '#7A7268',
+  dark: '#072A35',
+  darkMid: '#0E3D4D',
+  accent: '#00C5A3',
+  green: '#2ECC8F',
+  bg: '#EEEAE0',
+  card: '#FFFFFF',
+  textPrimary: '#161C1E',
+  textSecondary: '#717870',
+  textTertiary: '#ABA8A2',
   border: 'rgba(0,0,0,0.07)',
-  selected: '#E4F2F6',
-  selectedBorder: '#1A5C6B',
+  selected: 'rgba(0,197,163,0.08)',
 };
 
 export default function TransferScreen() {
@@ -38,11 +39,8 @@ export default function TransferScreen() {
   const toBalance = toItem ? getBalance(toItem.projectId!, toItem.amount) : 0;
 
   const canExecute =
-    fromId !== null &&
-    toId !== null &&
-    fromId !== toId &&
-    amount > 0 &&
-    amount <= fromBalance;
+    fromId !== null && toId !== null &&
+    fromId !== toId && amount > 0 && amount <= fromBalance;
 
   const handleExecute = () => {
     if (!canExecute || !fromItem || !toItem) return;
@@ -51,163 +49,173 @@ export default function TransferScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: C.bg }}>
-      {/* Header */}
-      <View style={[s.header, { paddingTop: insets.top + 10 }]}>
+    <View style={{ flex: 1, backgroundColor: C.dark }}>
+      {/* ダークヘッダー */}
+      <View style={[s.header, { paddingTop: insets.top + 14 }]}>
         <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={s.backTxt}>✕　閉じる</Text>
+          <Text style={s.backTxt}>✕</Text>
         </Pressable>
         <Text style={s.title}>口座振替</Text>
+        <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 32 }]}>
-        {/* From */}
-        <Text style={s.sectionLabel}>振替元</Text>
-        <View style={s.card}>
-          {POOL_ITEMS.map((item, i) => {
-            const isSelected = fromId === item.projectId;
-            const bal = getBalance(item.projectId!, item.amount);
-            const isLast = i === POOL_ITEMS.length - 1;
-            return (
-              <Pressable
-                key={item.name}
-                style={[s.row, !isLast && s.rowBorder, isSelected && s.rowSelected]}
-                onPress={() => setFromId(item.projectId ?? null)}
-              >
-                <View style={[s.radio, isSelected && s.radioSelected]}>
-                  {isSelected && <View style={s.radioDot} />}
-                </View>
-                <View style={[s.colorDot, { backgroundColor: item.color }]} />
-                <Text style={s.rowName}>{item.name}</Text>
-                <Text style={[s.rowBal, isSelected && s.rowBalSelected]}>
-                  ¥{bal.toLocaleString('ja-JP')}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+      {/* カーブ遷移 */}
+      <View style={[s.content, { paddingBottom: insets.bottom + 32 }]}>
+        <ScrollView showsVerticalScrollIndicator={false}>
 
-        {/* To */}
-        <Text style={s.sectionLabel}>振替先</Text>
-        <View style={s.card}>
-          {POOL_ITEMS.map((item, i) => {
-            const isSelected = toId === item.projectId;
-            const isFrom = fromId === item.projectId;
-            const bal = getBalance(item.projectId!, item.amount);
-            const isLast = i === POOL_ITEMS.length - 1;
-            return (
-              <Pressable
-                key={item.name}
-                style={[s.row, !isLast && s.rowBorder, isSelected && s.rowSelected, isFrom && s.rowDisabled]}
-                onPress={() => !isFrom && setToId(item.projectId ?? null)}
-                disabled={isFrom}
-              >
-                <View style={[s.radio, isSelected && s.radioSelected]}>
-                  {isSelected && <View style={s.radioDot} />}
-                </View>
-                <View style={[s.colorDot, { backgroundColor: item.color }]} />
-                <Text style={[s.rowName, isFrom && s.rowNameDisabled]}>{item.name}</Text>
-                <Text style={[s.rowBal, isSelected && s.rowBalSelected, isFrom && s.rowNameDisabled]}>
-                  ¥{bal.toLocaleString('ja-JP')}
-                </Text>
-              </Pressable>
-            );
-          })}
-        </View>
+          <Text style={s.sectionLabel}>振替元</Text>
+          <View style={s.card}>
+            {POOL_ITEMS.map((item, i) => {
+              const isSelected = fromId === item.projectId;
+              const bal = getBalance(item.projectId!, item.amount);
+              const isLast = i === POOL_ITEMS.length - 1;
+              return (
+                <Pressable
+                  key={item.name}
+                  style={[s.row, !isLast && s.rowBorder, isSelected && s.rowSelected]}
+                  onPress={() => setFromId(item.projectId ?? null)}
+                >
+                  <View style={[s.radio, isSelected && s.radioActive]}>
+                    {isSelected && <View style={s.radioDot} />}
+                  </View>
+                  <View style={[s.colorBar, { backgroundColor: item.color }]} />
+                  <Text style={s.rowName}>{item.name}</Text>
+                  <Text style={[s.rowBal, isSelected && s.rowBalActive]}>
+                    ¥{bal.toLocaleString('ja-JP')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
 
-        {/* Amount */}
-        <Text style={s.sectionLabel}>金額</Text>
-        <View style={s.card}>
-          <View style={s.amtRow}>
-            <Text style={s.yen}>¥</Text>
+          <Text style={s.sectionLabel}>振替先</Text>
+          <View style={s.card}>
+            {POOL_ITEMS.map((item, i) => {
+              const isSelected = toId === item.projectId;
+              const isFrom = fromId === item.projectId;
+              const bal = getBalance(item.projectId!, item.amount);
+              const isLast = i === POOL_ITEMS.length - 1;
+              return (
+                <Pressable
+                  key={item.name}
+                  style={[s.row, !isLast && s.rowBorder, isSelected && s.rowSelected, isFrom && s.rowDisabled]}
+                  onPress={() => !isFrom && setToId(item.projectId ?? null)}
+                  disabled={isFrom}
+                >
+                  <View style={[s.radio, isSelected && s.radioActive]}>
+                    {isSelected && <View style={s.radioDot} />}
+                  </View>
+                  <View style={[s.colorBar, { backgroundColor: item.color }]} />
+                  <Text style={[s.rowName, isFrom && { color: C.textTertiary }]}>{item.name}</Text>
+                  <Text style={[s.rowBal, isSelected && s.rowBalActive, isFrom && { color: C.textTertiary }]}>
+                    ¥{bal.toLocaleString('ja-JP')}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
+
+          <Text style={s.sectionLabel}>金額</Text>
+          <View style={s.card}>
+            <View style={s.amtRow}>
+              <Text style={s.yen}>¥</Text>
+              <TextInput
+                style={s.amtInput}
+                value={amtText}
+                onChangeText={v => setAmtText(v.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={C.textTertiary}
+                selectTextOnFocus
+              />
+            </View>
+            {fromId && amount > fromBalance && (
+              <Text style={s.errorTxt}>残高（¥{fromBalance.toLocaleString('ja-JP')}）を超えています</Text>
+            )}
+          </View>
+
+          <Text style={s.sectionLabel}>メモ（任意）</Text>
+          <View style={s.card}>
             <TextInput
-              style={s.amtInput}
-              value={amtText}
-              onChangeText={v => setAmtText(v.replace(/[^0-9]/g, ''))}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor={C.textSecondary}
-              selectTextOnFocus
+              style={s.noteInput}
+              value={note}
+              onChangeText={setNote}
+              placeholder="口座振替・生活費補充 など"
+              placeholderTextColor={C.textTertiary}
+              returnKeyType="done"
             />
           </View>
-          {fromId && amount > fromBalance && (
-            <Text style={s.errorTxt}>振替元の残高（¥{fromBalance.toLocaleString('ja-JP')}）を超えています</Text>
+
+          {canExecute && (
+            <View style={s.preview}>
+              <Text style={s.previewFrom}>{fromItem?.name}</Text>
+              <Text style={s.previewArrow}>→</Text>
+              <Text style={s.previewTo}>{toItem?.name}</Text>
+              <Text style={s.previewAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
+            </View>
           )}
-        </View>
 
-        {/* Note */}
-        <Text style={s.sectionLabel}>メモ（任意）</Text>
-        <View style={s.card}>
-          <TextInput
-            style={s.noteInput}
-            value={note}
-            onChangeText={setNote}
-            placeholder="口座振替・生活費補充 など"
-            placeholderTextColor={C.textSecondary}
-            returnKeyType="done"
-          />
-        </View>
+          <Pressable
+            style={[s.execBtn, !canExecute && s.execBtnDisabled]}
+            onPress={handleExecute}
+            disabled={!canExecute}
+          >
+            <Text style={[s.execTxt, !canExecute && s.execTxtDisabled]}>実行する</Text>
+          </Pressable>
 
-        {/* Preview */}
-        {canExecute && (
-          <View style={s.preview}>
-            <Text style={s.previewTxt}>
-              {fromItem?.name}　→　{toItem?.name}　¥{amount.toLocaleString('ja-JP')}
-            </Text>
-          </View>
-        )}
-
-        {/* Execute button */}
-        <Pressable
-          style={[s.execBtn, !canExecute && s.execBtnDisabled]}
-          onPress={handleExecute}
-          disabled={!canExecute}
-        >
-          <Text style={[s.execTxt, !canExecute && s.execTxtDisabled]}>実行する</Text>
-        </Pressable>
-      </ScrollView>
+        </ScrollView>
+      </View>
     </View>
   );
 }
 
 const s = StyleSheet.create({
   header: {
-    backgroundColor: C.brand,
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+    backgroundColor: C.dark,
+    paddingHorizontal: 22,
+    paddingBottom: 16,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 16,
+    justifyContent: 'space-between',
   },
-  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.65)' },
-  title: { fontSize: 16, fontWeight: '600', color: '#fff' },
+  backTxt: { fontSize: 18, color: 'rgba(255,255,255,0.7)', fontWeight: '300' },
+  title: { fontSize: 16, fontWeight: '700', color: '#fff' },
 
-  content: { padding: 14 },
+  content: {
+    flex: 1,
+    backgroundColor: C.bg,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    marginTop: -8,
+    padding: 16,
+  },
+
   sectionLabel: {
     fontSize: 11,
-    fontWeight: '500',
-    color: C.textSecondary,
+    fontWeight: '600',
+    color: C.textTertiary,
     marginTop: 14,
-    marginBottom: 6,
-    marginLeft: 2,
-    letterSpacing: 0.3,
+    marginBottom: 8,
+    marginLeft: 4,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
 
   card: {
     backgroundColor: C.card,
-    borderRadius: 14,
+    borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#1A3040',
-    shadowOffset: { width: 0, height: 1 },
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
     shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 10,
+    elevation: 3,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 10,
   },
   rowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
@@ -215,71 +223,67 @@ const s = StyleSheet.create({
   rowDisabled: { opacity: 0.35 },
 
   radio: {
-    width: 18, height: 18, borderRadius: 9,
-    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.25)',
+    width: 20, height: 20, borderRadius: 10,
+    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.2)',
     justifyContent: 'center', alignItems: 'center',
   },
-  radioSelected: { borderColor: C.brand },
-  radioDot: {
-    width: 9, height: 9, borderRadius: 4.5,
-    backgroundColor: C.brand,
-  },
-  colorDot: { width: 10, height: 10, borderRadius: 5 },
+  radioActive: { borderColor: C.accent },
+  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: C.accent },
+  colorBar: { width: 4, height: 24, borderRadius: 2 },
   rowName: { flex: 1, fontSize: 14, color: C.textPrimary },
-  rowNameDisabled: { color: C.textSecondary },
-  rowBal: { fontSize: 13, fontWeight: '500', color: C.textPrimary },
-  rowBalSelected: { color: C.brand },
+  rowBal: { fontSize: 13, fontWeight: '600', color: C.textSecondary },
+  rowBalActive: { color: C.accent },
 
-  amtRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-  },
-  yen: { fontSize: 20, color: C.textSecondary, marginRight: 4 },
+  amtRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 4 },
+  yen: { fontSize: 22, color: C.textTertiary, marginRight: 4 },
   amtInput: {
     flex: 1,
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 30,
+    fontWeight: '800',
     color: C.textPrimary,
-    paddingVertical: 10,
-    letterSpacing: -0.5,
+    paddingVertical: 12,
+    letterSpacing: -1,
   },
-  errorTxt: { fontSize: 11, color: '#D64040', paddingHorizontal: 14, paddingBottom: 10 },
+  errorTxt: { fontSize: 11, color: '#F05050', paddingHorizontal: 16, paddingBottom: 10 },
 
   noteInput: {
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
     fontSize: 14,
     color: C.textPrimary,
   },
 
   preview: {
-    backgroundColor: C.selected,
-    borderRadius: 12,
-    padding: 12,
-    marginTop: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: 'rgba(0,197,163,0.1)',
+    borderRadius: 14,
+    padding: 14,
+    marginTop: 18,
+    gap: 8,
   },
-  previewTxt: { fontSize: 13, color: C.brand, fontWeight: '600' },
+  previewFrom: { fontSize: 13, color: C.textPrimary, fontWeight: '600' },
+  previewArrow: { fontSize: 14, color: C.accent, fontWeight: '700' },
+  previewTo: { fontSize: 13, color: C.textPrimary, fontWeight: '600', flex: 1 },
+  previewAmt: { fontSize: 15, color: C.accent, fontWeight: '800' },
 
   execBtn: {
-    backgroundColor: C.brand,
-    borderRadius: 14,
-    paddingVertical: 15,
+    backgroundColor: C.accent,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
     marginTop: 12,
-    shadowColor: C.brandDark,
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.25,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowColor: C.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.35,
+    shadowRadius: 12,
+    elevation: 6,
   },
   execBtnDisabled: {
     backgroundColor: 'rgba(0,0,0,0.08)',
     shadowOpacity: 0,
     elevation: 0,
   },
-  execTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
-  execTxtDisabled: { color: C.textSecondary },
+  execTxt: { fontSize: 16, fontWeight: '700', color: C.dark },
+  execTxtDisabled: { color: C.textTertiary },
 });

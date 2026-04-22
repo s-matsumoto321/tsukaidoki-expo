@@ -24,7 +24,7 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
         {total === 0 ? (
-          <Circle cx={cx} cy={cy} r={radius} fill="none" stroke="#D4EBF0" strokeWidth={thickness} />
+          <Circle cx={cx} cy={cy} r={radius} fill="none" stroke="rgba(0,197,163,0.15)" strokeWidth={thickness} />
         ) : (
           segments.map((seg, i) => {
             const segAngle = (seg.value / total) * 360;
@@ -57,6 +57,6 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center' },
-  label: { fontSize: 12, fontWeight: '600', color: '#2C2825' },
-  sub: { fontSize: 8, color: '#7A7268', marginTop: 1 },
+  label: { fontSize: 12, fontWeight: '700', color: '#161C1E' },
+  sub: { fontSize: 8, color: '#ABA8A2', marginTop: 1 },
 });

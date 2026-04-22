@@ -1,19 +1,28 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { ThemeProvider, DefaultTheme } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+const HDR = '#072A35';
+
+const AppTheme = {
+  ...DefaultTheme,
+  colors: {
+    ...DefaultTheme.colors,
+    background: '#EEEAE0',
+    card: HDR,
+    text: '#ffffff',
+    border: 'transparent',
+  },
+};
 
 export const unstable_settings = {
   anchor: '(tabs)',
 };
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <ThemeProvider value={AppTheme}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
@@ -21,18 +30,20 @@ export default function RootLayout() {
           name="pool"
           options={{
             title: 'プール金',
-            headerStyle: { backgroundColor: '#0C447C' },
+            headerStyle: { backgroundColor: HDR },
             headerTintColor: '#ffffff',
             headerBackTitle: 'ホーム',
+            headerShadowVisible: false,
           }}
         />
         <Stack.Screen
           name="portfolio"
           options={{
             title: 'ポートフォリオ',
-            headerStyle: { backgroundColor: '#0C447C' },
+            headerStyle: { backgroundColor: HDR },
             headerTintColor: '#ffffff',
             headerBackTitle: 'ホーム',
+            headerShadowVisible: false,
           }}
         />
         <Stack.Screen
@@ -44,7 +55,7 @@ export default function RootLayout() {
           options={{ presentation: 'modal', headerShown: false }}
         />
       </Stack>
-      <StatusBar style="auto" />
+      <StatusBar style="light" />
     </ThemeProvider>
   );
 }
