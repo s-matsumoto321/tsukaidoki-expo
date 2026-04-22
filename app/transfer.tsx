@@ -6,16 +6,16 @@ import { useStore } from '@/store/useStore';
 import { POOL_ITEMS } from '@/constants/data';
 
 const C = {
-  brand: '#0C447C',
+  brand: '#1A5C6B',
+  brandDark: '#134754',
   green: '#1D9E75',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-  borderFocus: '#0C447C',
-  selected: '#E6F1FB',
-  selectedBorder: '#0C447C',
+  bg: '#F7F3EC',
+  card: '#FFFDF8',
+  textPrimary: '#2C2825',
+  textSecondary: '#7A7268',
+  border: 'rgba(0,0,0,0.07)',
+  selected: '#E4F2F6',
+  selectedBorder: '#1A5C6B',
 };
 
 export default function TransferScreen() {
@@ -74,7 +74,7 @@ export default function TransferScreen() {
                 style={[s.row, !isLast && s.rowBorder, isSelected && s.rowSelected]}
                 onPress={() => setFromId(item.projectId ?? null)}
               >
-                <View style={s.radio}>
+                <View style={[s.radio, isSelected && s.radioSelected]}>
                   {isSelected && <View style={s.radioDot} />}
                 </View>
                 <View style={[s.colorDot, { backgroundColor: item.color }]} />
@@ -102,7 +102,7 @@ export default function TransferScreen() {
                 onPress={() => !isFrom && setToId(item.projectId ?? null)}
                 disabled={isFrom}
               >
-                <View style={s.radio}>
+                <View style={[s.radio, isSelected && s.radioSelected]}>
                   {isSelected && <View style={s.radioDot} />}
                 </View>
                 <View style={[s.colorDot, { backgroundColor: item.color }]} />
@@ -179,31 +179,35 @@ const s = StyleSheet.create({
     alignItems: 'center',
     gap: 16,
   },
-  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  title: { fontSize: 16, fontWeight: '500', color: '#fff' },
+  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.65)' },
+  title: { fontSize: 16, fontWeight: '600', color: '#fff' },
 
   content: { padding: 14 },
   sectionLabel: {
     fontSize: 11,
     fontWeight: '500',
     color: C.textSecondary,
-    marginTop: 12,
+    marginTop: 14,
     marginBottom: 6,
     marginLeft: 2,
+    letterSpacing: 0.3,
   },
 
   card: {
     backgroundColor: C.card,
-    borderRadius: 12,
+    borderRadius: 14,
     overflow: 'hidden',
-    borderWidth: 0.5,
-    borderColor: C.border,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 12,
     gap: 10,
   },
   rowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
@@ -212,9 +216,10 @@ const s = StyleSheet.create({
 
   radio: {
     width: 18, height: 18, borderRadius: 9,
-    borderWidth: 1.5, borderColor: C.brand,
+    borderWidth: 1.5, borderColor: 'rgba(0,0,0,0.25)',
     justifyContent: 'center', alignItems: 'center',
   },
+  radioSelected: { borderColor: C.brand },
   radioDot: {
     width: 9, height: 9, borderRadius: 4.5,
     backgroundColor: C.brand,
@@ -234,12 +239,13 @@ const s = StyleSheet.create({
   yen: { fontSize: 20, color: C.textSecondary, marginRight: 4 },
   amtInput: {
     flex: 1,
-    fontSize: 24,
-    fontWeight: '500',
+    fontSize: 26,
+    fontWeight: '700',
     color: C.textPrimary,
     paddingVertical: 10,
+    letterSpacing: -0.5,
   },
-  errorTxt: { fontSize: 11, color: '#E24B4A', paddingHorizontal: 14, paddingBottom: 10 },
+  errorTxt: { fontSize: 11, color: '#D64040', paddingHorizontal: 14, paddingBottom: 10 },
 
   noteInput: {
     paddingHorizontal: 14,
@@ -249,22 +255,31 @@ const s = StyleSheet.create({
   },
 
   preview: {
-    backgroundColor: '#E6F1FB',
-    borderRadius: 10,
+    backgroundColor: C.selected,
+    borderRadius: 12,
     padding: 12,
     marginTop: 16,
     alignItems: 'center',
   },
-  previewTxt: { fontSize: 13, color: C.brand, fontWeight: '500' },
+  previewTxt: { fontSize: 13, color: C.brand, fontWeight: '600' },
 
   execBtn: {
     backgroundColor: C.brand,
-    borderRadius: 12,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 15,
     alignItems: 'center',
     marginTop: 12,
+    shadowColor: C.brandDark,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  execBtnDisabled: { backgroundColor: 'rgba(0,0,0,0.1)' },
+  execBtnDisabled: {
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   execTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
   execTxtDisabled: { color: C.textSecondary },
 });

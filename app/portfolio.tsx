@@ -7,17 +7,17 @@ import { PROJECTS } from '@/constants/projects';
 import { useStore } from '@/store/useStore';
 
 const C = {
-  brand: '#0C447C',
+  brand: '#1A5C6B',
   green: '#1D9E75',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-  okBg: '#EAF3DE',
-  okText: '#27500A',
-  warnBg: '#FAEEDA',
-  warnText: '#633806',
+  bg: '#F7F3EC',
+  card: '#FFFDF8',
+  textPrimary: '#2C2825',
+  textSecondary: '#7A7268',
+  border: 'rgba(0,0,0,0.07)',
+  okBg: '#E8F5EF',
+  okText: '#0F5C3A',
+  warnBg: '#FBF0E6',
+  warnText: '#7A3A0A',
 };
 
 function fmtJpy(amount: number): string {
@@ -41,11 +41,10 @@ export default function PortfolioScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
-        {/* Donut summary */}
         <View style={s.heroCard}>
           <DonutChart
             segments={segments}
-            size={160}
+            size={164}
             thickness={18}
             centerLabel={`¥${totalMan}万`}
             centerSub={`${PF_ITEMS.length}PJ`}
@@ -54,7 +53,6 @@ export default function PortfolioScreen() {
           <Text style={s.totalAmt}>{fmtJpy(total)}</Text>
         </View>
 
-        {/* Project list */}
         <View style={s.listCard}>
           {items.map((item, i) => {
             const isLast = i === items.length - 1;
@@ -66,7 +64,6 @@ export default function PortfolioScreen() {
                 onPress={() => hasDetail && router.push(`/project/${item.projectId}`)}
                 disabled={!hasDetail}
               >
-                {/* Top row */}
                 <View style={s.itemTop}>
                   <View style={s.itemLeft}>
                     <View style={[s.dot, { backgroundColor: item.color }]} />
@@ -85,19 +82,16 @@ export default function PortfolioScreen() {
                   </View>
                 </View>
 
-                {/* Meta */}
                 {item.meta && (
                   <Text style={s.itemMeta}>{item.meta}</Text>
                 )}
 
-                {/* Progress bar */}
                 {item.progress !== undefined && (
                   <View style={s.barBg}>
                     <View style={[s.barFill, { width: `${Math.round(item.progress * 100)}%`, backgroundColor: item.color }]} />
                   </View>
                 )}
 
-                {/* Detail arrow */}
                 {hasDetail && (
                   <Text style={s.arrow}>›</Text>
                 )}
@@ -118,31 +112,31 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
     margin: 14,
     borderRadius: 16,
-    padding: 20,
+    padding: 22,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  totalLabel: { fontSize: 10, color: C.textSecondary, marginTop: 12 },
-  totalAmt: { fontSize: 24, fontWeight: '500', color: C.green, marginTop: 2 },
+  totalLabel: { fontSize: 11, color: C.textSecondary, marginTop: 14, letterSpacing: 0.3 },
+  totalAmt: { fontSize: 28, fontWeight: '700', color: C.green, marginTop: 2, letterSpacing: -0.5 },
 
   listCard: {
     backgroundColor: C.card,
     marginHorizontal: 14,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   itemCard: {
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 11,
     position: 'relative',
   },
   itemBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
@@ -150,9 +144,9 @@ const s = StyleSheet.create({
   itemTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 3 },
   itemLeft: { flexDirection: 'row', alignItems: 'center', gap: 7, flex: 1, minWidth: 0 },
   dot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
-  itemName: { fontSize: 12, fontWeight: '500', color: C.textPrimary },
+  itemName: { fontSize: 12, fontWeight: '600', color: C.textPrimary },
   itemRight: { alignItems: 'flex-end' },
-  itemAmt: { fontSize: 14, fontWeight: '500', color: C.textPrimary },
+  itemAmt: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   itemPct: { fontSize: 9, color: C.textSecondary, marginTop: 1 },
 
   badgeOk: { backgroundColor: C.okBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
@@ -162,7 +156,7 @@ const s = StyleSheet.create({
 
   itemMeta: { fontSize: 9, color: C.textSecondary, marginLeft: 17, marginBottom: 5 },
 
-  barBg: { backgroundColor: '#f0efe9', borderRadius: 4, height: 3, overflow: 'hidden', marginLeft: 17 },
+  barBg: { backgroundColor: '#EAE4DA', borderRadius: 4, height: 4, overflow: 'hidden', marginLeft: 17 },
   barFill: { height: '100%', borderRadius: 4 },
 
   arrow: {

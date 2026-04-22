@@ -14,21 +14,22 @@ import { useStore } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
 
 const C = {
-  brand: '#0C447C',
+  brand: '#1A5C6B',
+  brandDark: '#134754',
   green: '#1D9E75',
-  red: '#E24B4A',
-  orange: '#EF9F27',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  aiCard: '#E6F1FB',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  textTertiary: '#9c9a92',
-  border: 'rgba(0,0,0,0.08)',
-  borderMd: 'rgba(0,0,0,0.18)',
-  warn: '#FAEEDA',
+  red: '#D64040',
+  orange: '#C4622D',
+  bg: '#F7F3EC',
+  card: '#FFFDF8',
+  aiCard: '#E4F2F6',
+  textPrimary: '#2C2825',
+  textSecondary: '#7A7268',
+  textTertiary: '#A09890',
+  border: 'rgba(0,0,0,0.07)',
+  borderMd: 'rgba(0,0,0,0.15)',
+  warn: '#FBF0E6',
   danger: '#FCEBEB',
-  posText: '#27500A',
+  posText: '#0F5C3A',
   negText: '#791F1F',
 };
 
@@ -100,9 +101,9 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
         <G key={v}>
           <SvgLine
             x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
-            stroke="rgba(128,128,128,0.2)" strokeWidth={0.5}
+            stroke="rgba(26,92,107,0.12)" strokeWidth={0.5}
           />
-          <SvgText x={PL - 4} y={yv(v) + 3} textAnchor="end" fontSize={8} fill="#888">
+          <SvgText x={PL - 4} y={yv(v) + 3} textAnchor="end" fontSize={8} fill="#9A9088">
             {fmtY(v)}
           </SvgText>
         </G>
@@ -111,7 +112,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
       {/* X labels */}
       {project.years.map((yr, i) =>
         (i % xStep === 0 || i === n - 1) ? (
-          <SvgText key={i} x={xi(i)} y={SVG_H - 4} textAnchor="middle" fontSize={8} fill="#888">
+          <SvgText key={i} x={xi(i)} y={SVG_H - 4} textAnchor="middle" fontSize={8} fill="#9A9088">
             {yr}
           </SvgText>
         ) : null
@@ -121,7 +122,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
       <Polyline
         points={planPts}
         fill="none" stroke={C.brand} strokeWidth={1.5}
-        strokeDasharray="4 3" opacity={0.7}
+        strokeDasharray="4 3" opacity={0.65}
       />
 
       {/* Actual line */}
@@ -152,7 +153,6 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
         const sel = selectedIdx === ev.idx;
         return (
           <G key={`ev-${ev.idx}`} onPress={() => onSelect(ev, cx, cy)}>
-            {/* transparent hit area */}
             <Circle cx={cx} cy={cy} r={14} fill="rgba(0,0,0,0)" />
             {sel && <Circle cx={cx} cy={cy} r={9} fill={color} opacity={0.2} />}
             {ev.type === 'spend' ? (
@@ -198,7 +198,6 @@ export default function ProjectDetailScreen() {
   const rowY = useRef<Record<number, number>>({});
   const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // card margin(14×2) + card padding(12×2)
   const svgW = screenWidth - 52;
   const TIP_W = 136;
   const TIP_H = 46;
@@ -232,7 +231,6 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  // Tooltip positioning
   const tipLeft = tooltip
     ? Math.max(0, Math.min(tooltip.x - TIP_W / 2, svgW - TIP_W))
     : 0;
@@ -282,7 +280,6 @@ export default function ProjectDetailScreen() {
 
         {/* Graph card */}
         <View style={s.graphCard}>
-          {/* Legend */}
           <View style={s.legendRow}>
             <View style={s.legendItem}>
               <Svg width={14} height={4}>
@@ -300,7 +297,6 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
 
-          {/* Chart + tooltip */}
           <View style={{ position: 'relative' }}>
             <LineChart
               id={id ?? ''}
@@ -395,38 +391,35 @@ export default function ProjectDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  // Header
   header: {
     backgroundColor: C.brand,
     paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingBottom: 14,
   },
-  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 6 },
+  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginBottom: 6 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
-  projName: { fontSize: 15, fontWeight: '500', color: '#fff', lineHeight: 20 },
-  timing: { fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
-  amtLabel: { fontSize: 9, color: 'rgba(255,255,255,0.55)' },
-  editBtn: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
+  projName: { fontSize: 15, fontWeight: '600', color: '#fff', lineHeight: 20 },
+  timing: { fontSize: 10, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  amtLabel: { fontSize: 9, color: 'rgba(255,255,255,0.5)' },
+  editBtn: { backgroundColor: 'rgba(255,255,255,0.18)', borderRadius: 8, paddingHorizontal: 9, paddingVertical: 4 },
   editTxt: { fontSize: 10, color: '#fff', fontWeight: '500' },
-  amt: { fontSize: 18, fontWeight: '500', color: '#fff', lineHeight: 22 },
-  amtSub: { fontSize: 9, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  amt: { fontSize: 20, fontWeight: '700', color: '#fff', lineHeight: 24, letterSpacing: -0.3 },
+  amtSub: { fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
 
-  // AI card
   aiCard: {
     margin: 10,
     marginBottom: 6,
     backgroundColor: C.aiCard,
     borderRadius: 12,
-    padding: 9,
+    padding: 10,
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 8,
   },
-  aiIcon: { fontSize: 13, color: '#185FA5', lineHeight: 20 },
-  aiLabel: { fontSize: 9, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
-  aiTxt: { fontSize: 11, color: C.brand, lineHeight: 16 },
+  aiIcon: { fontSize: 13, color: C.brand, lineHeight: 20 },
+  aiLabel: { fontSize: 9, color: C.brand, fontWeight: '600', marginBottom: 2, letterSpacing: 0.3 },
+  aiTxt: { fontSize: 11, color: C.brandDark, lineHeight: 16 },
 
-  // Graph card
   graphCard: {
     marginHorizontal: 14,
     marginBottom: 6,
@@ -437,15 +430,19 @@ const s = StyleSheet.create({
     paddingHorizontal: 12,
     paddingTop: 10,
     paddingBottom: 8,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   legendRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendSolid: { width: 14, height: 2, borderRadius: 1 },
   legendDotR: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.red },
   legendTxt: { fontSize: 10, color: C.textSecondary },
-  graphHint: { fontSize: 9, color: C.textSecondary, marginTop: 4, textAlign: 'center' },
+  graphHint: { fontSize: 9, color: C.textTertiary, marginTop: 4, textAlign: 'center' },
 
-  // Tooltip
   tooltip: {
     position: 'absolute',
     backgroundColor: C.card,
@@ -454,10 +451,10 @@ const s = StyleSheet.create({
     borderRadius: 8,
     paddingVertical: 6,
     paddingHorizontal: 9,
-    shadowColor: '#000',
+    shadowColor: '#1A3040',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
     elevation: 4,
     zIndex: 10,
     minWidth: 100,
@@ -481,7 +478,6 @@ const s = StyleSheet.create({
     borderBottomColor: 'transparent',
   },
 
-  // Events section
   secRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -499,6 +495,11 @@ const s = StyleSheet.create({
     borderColor: C.border,
     borderRadius: 12,
     overflow: 'hidden',
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   evRow: {
     flexDirection: 'row',

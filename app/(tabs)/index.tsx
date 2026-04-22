@@ -6,17 +6,18 @@ import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 
 const C = {
-  brand: '#0C447C',
+  brand: '#1A5C6B',
+  brandDark: '#134754',
   green: '#1D9E75',
-  greenBg: '#EAF3DE',
-  greenText: '#27500A',
-  greenSub: '#3B6D11',
-  greenDark: '#173404',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
+  greenBg: '#E8F5EF',
+  greenText: '#0F5C3A',
+  greenSub: '#2A7D55',
+  greenDark: '#0A3D26',
+  bg: '#F7F3EC',
+  card: '#FFFDF8',
+  textPrimary: '#2C2825',
+  textSecondary: '#7A7268',
+  border: 'rgba(0,0,0,0.07)',
 };
 
 type LegendItemProps = { color: string; name: string; val: string };
@@ -91,16 +92,16 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
+      <StatusBar barStyle="light-content" backgroundColor={C.brandDark} />
       <ScrollView style={s.scrollView} contentContainerStyle={s.content}>
 
         {/* ヘッダー */}
         <View style={s.header}>
           <View style={s.headerLeft}>
-            <Text style={s.logo}>ツカイドキβ版</Text>
+            <Text style={s.logo}>ツカイドキ</Text>
             <Text style={s.headerSub}>総資産</Text>
             <Text style={s.headerTotal}>¥{poolTotal.toLocaleString('ja-JP')}</Text>
-            <Text style={s.headerNote}>プール金・ポートフォリオ 両方の合計</Text>
+            <Text style={s.headerNote}>プール金・ポートフォリオの合計</Text>
           </View>
           <Pressable style={s.transferBtn} onPress={() => router.push('/transfer')}>
             <Text style={s.transferBtnTxt}>振替</Text>
@@ -129,8 +130,8 @@ export default function HomeScreen() {
           <ChartCard
             title="プール金"
             badge="口座別"
-            badgeStyle={s.badgeBlue}
-            badgeTextStyle={s.badgeBlueText}
+            badgeStyle={s.badgeTeal}
+            badgeTextStyle={s.badgeTealText}
             total={fmtMan(poolTotal)}
             sub={`${POOL_ITEMS.length}口座`}
             items={poolItems}
@@ -179,9 +180,9 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.brand },
+  safe: { flex: 1, backgroundColor: C.brandDark },
   scrollView: { flex: 1 },
-  content: { backgroundColor: C.bg, paddingBottom: 20 },
+  content: { backgroundColor: C.bg, paddingBottom: 24 },
 
   header: {
     backgroundColor: C.brand,
@@ -189,28 +190,30 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 14,
+    paddingTop: 14,
+    paddingBottom: 18,
   },
   headerLeft: { flex: 1 },
-  logo: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
-  headerTotal: { fontSize: 24, fontWeight: '500', color: '#fff', marginTop: 1 },
-  headerNote: { fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
+  logo: { fontSize: 11, fontWeight: '600', color: 'rgba(255,255,255,0.5)', letterSpacing: 1.5 },
+  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 10 },
+  headerTotal: { fontSize: 30, fontWeight: '700', color: '#fff', marginTop: 2, letterSpacing: -0.5 },
+  headerNote: { fontSize: 9, color: 'rgba(255,255,255,0.4)', marginTop: 3 },
   transferBtn: {
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    marginTop: 4,
+    borderColor: 'rgba(255,255,255,0.35)',
+    borderRadius: 20,
+    paddingHorizontal: 13,
+    paddingVertical: 6,
+    marginTop: 6,
   },
   transferBtnTxt: { fontSize: 11, color: '#fff', fontWeight: '500' },
 
   matchBar: {
-    margin: 8,
-    borderRadius: 12,
-    paddingVertical: 8,
+    marginHorizontal: 12,
+    marginTop: 10,
+    marginBottom: 2,
+    borderRadius: 14,
+    paddingVertical: 9,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
@@ -218,28 +221,31 @@ const s = StyleSheet.create({
     backgroundColor: C.greenBg,
   },
   matchDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.green, justifyContent: 'center', alignItems: 'center' },
-  matchDotTxt: { fontSize: 11, fontWeight: '500', color: '#fff' },
-  matchBarWarn: { backgroundColor: '#FAEEDA' },
-  matchDotWarn: { backgroundColor: '#E24B4A' },
+  matchDotTxt: { fontSize: 11, fontWeight: '600', color: '#fff' },
+  matchBarWarn: { backgroundColor: '#FBF0E6' },
+  matchDotWarn: { backgroundColor: '#D64040' },
   matchTxt: { fontSize: 11, fontWeight: '500', color: C.greenText },
-  matchTxtWarn: { color: '#633806' },
+  matchTxtWarn: { color: '#7A3A0A' },
   matchSub: { fontSize: 9, marginTop: 1, color: C.greenSub },
-  matchSubWarn: { color: '#633806' },
+  matchSubWarn: { color: '#7A3A0A' },
 
-  dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
+  dualChart: { flexDirection: 'row', gap: 8, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6 },
   chartCard: {
     flex: 1,
     backgroundColor: C.card,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    borderRadius: 12,
-    padding: 9,
+    borderRadius: 14,
+    padding: 10,
     alignItems: 'center',
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   chartLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 4 },
   chartLabel: { fontSize: 10, color: C.textSecondary },
-  badgeBlue: { backgroundColor: '#E6F1FB', borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
-  badgeBlueText: { fontSize: 8, color: C.brand },
+  badgeTeal: { backgroundColor: '#DFF0F4', borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeTealText: { fontSize: 8, color: C.brand },
   badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
   badgeGreenText: { fontSize: 8, color: C.greenText },
 
@@ -250,19 +256,22 @@ const s = StyleSheet.create({
   legVal: { fontSize: 9, fontWeight: '500', color: C.textPrimary },
 
   diffCard: {
-    marginHorizontal: 14,
+    marginHorizontal: 12,
     marginBottom: 8,
     backgroundColor: C.card,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    borderRadius: 12,
-    paddingHorizontal: 12,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 6,
+    elevation: 3,
   },
   diffRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderBottomWidth: 0.5,
     borderBottomColor: C.border,
   },
@@ -272,18 +281,18 @@ const s = StyleSheet.create({
   diffBig: { fontSize: 13, color: C.brand },
   diffLabelGreen: { color: C.green, fontWeight: '500' },
   diffValGreen: { color: C.green },
-  diffLabelWarn: { color: '#E24B4A', fontWeight: '500' },
-  diffValWarn: { color: '#E24B4A' },
+  diffLabelWarn: { color: '#D64040', fontWeight: '500' },
+  diffValWarn: { color: '#D64040' },
 
   safeCard: {
-    marginHorizontal: 14,
+    marginHorizontal: 12,
     marginBottom: 10,
-    backgroundColor: C.greenBg,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    backgroundColor: '#E4F2F6',
+    borderRadius: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
   },
-  safeLabel: { fontSize: 10, color: C.greenText, marginBottom: 2 },
-  safeAmt: { fontSize: 20, fontWeight: '500', color: C.greenDark },
-  safeNote: { fontSize: 9, color: C.greenSub, marginTop: 2, lineHeight: 14 },
+  safeLabel: { fontSize: 10, color: C.brand, marginBottom: 3, fontWeight: '500' },
+  safeAmt: { fontSize: 24, fontWeight: '700', color: C.brandDark, letterSpacing: -0.5 },
+  safeNote: { fontSize: 9, color: C.brand, marginTop: 3, lineHeight: 14, opacity: 0.75 },
 });

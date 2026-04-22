@@ -6,12 +6,12 @@ import { POOL_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 
 const C = {
-  brand: '#0C447C',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
+  brand: '#1A5C6B',
+  bg: '#F7F3EC',
+  card: '#FFFDF8',
+  textPrimary: '#2C2825',
+  textSecondary: '#7A7268',
+  border: 'rgba(0,0,0,0.07)',
 };
 
 function fmtJpy(amount: number): string {
@@ -35,11 +35,10 @@ export default function PoolScreen() {
   return (
     <SafeAreaView style={s.safe} edges={['bottom']}>
       <ScrollView contentContainerStyle={s.content}>
-        {/* Donut summary */}
         <View style={s.heroCard}>
           <DonutChart
             segments={segments}
-            size={160}
+            size={164}
             thickness={18}
             centerLabel={`¥${totalMan}万`}
             centerSub={`${POOL_ITEMS.length}口座`}
@@ -48,7 +47,6 @@ export default function PoolScreen() {
           <Text style={s.totalAmt}>{fmtJpy(total)}</Text>
         </View>
 
-        {/* Account list */}
         <View style={s.listCard}>
           {items.map((item, i) => {
             const isLast = i === items.length - 1;
@@ -87,33 +85,33 @@ const s = StyleSheet.create({
     backgroundColor: C.card,
     margin: 14,
     borderRadius: 16,
-    padding: 20,
+    padding: 22,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
-  totalLabel: { fontSize: 10, color: C.textSecondary, marginTop: 12 },
-  totalAmt: { fontSize: 24, fontWeight: '500', color: C.brand, marginTop: 2 },
+  totalLabel: { fontSize: 11, color: C.textSecondary, marginTop: 14, letterSpacing: 0.3 },
+  totalAmt: { fontSize: 28, fontWeight: '700', color: C.brand, marginTop: 2, letterSpacing: -0.5 },
 
   listCard: {
     backgroundColor: C.card,
     marginHorizontal: 14,
     borderRadius: 16,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A3040',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 13,
     gap: 10,
   },
   rowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
@@ -122,7 +120,7 @@ const s = StyleSheet.create({
   rowName: { fontSize: 14, color: C.textPrimary },
   rowMeta: { fontSize: 9, color: C.textSecondary, marginTop: 2 },
   rowRight: { alignItems: 'flex-end' },
-  rowAmt: { fontSize: 14, fontWeight: '500', color: C.textPrimary },
+  rowAmt: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   rowPct: { fontSize: 10, color: C.textSecondary, marginTop: 2 },
   arrow: { fontSize: 16, color: C.textSecondary, marginLeft: 2 },
 });
