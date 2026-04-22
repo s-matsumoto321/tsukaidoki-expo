@@ -1,8 +1,9 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
-import { Link, type Href } from 'expo-router';
+import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
+import { useStore } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
@@ -67,7 +68,27 @@ function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items
   );
 }
 
+function fmtMan(yen: number): string {
+  return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
+}
+
 export default function HomeScreen() {
+  const { balances } = useStore();
+
+  const poolItems = POOL_ITEMS.map(item => ({
+    ...item,
+    amount: balances[item.projectId!] ?? item.amount,
+  }));
+  const pfItems = PF_ITEMS.map(item => ({
+    ...item,
+    amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
+  }));
+
+  const poolTotal = poolItems.reduce((sum, item) => sum + item.amount, 0);
+  const pfTotal = pfItems.reduce((sum, item) => sum + item.amount, 0);
+  const diff = poolTotal - pfTotal;
+  const isBalanced = diff === 0;
+
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
@@ -78,24 +99,28 @@ export default function HomeScreen() {
           <View style={s.headerLeft}>
             <Text style={s.logo}>ツカイドキβ版</Text>
             <Text style={s.headerSub}>総資産</Text>
-            <Text style={s.headerTotal}>¥7,750,000</Text>
+            <Text style={s.headerTotal}>¥{poolTotal.toLocaleString('ja-JP')}</Text>
             <Text style={s.headerNote}>プール金・ポートフォリオ 両方の合計</Text>
           </View>
-          <Pressable style={s.menuBtn} onPress={() => {}}>
-            <View style={s.menuLine} />
-            <View style={s.menuLine} />
-            <View style={s.menuLine} />
+          <Pressable style={s.transferBtn} onPress={() => router.push('/transfer')}>
+            <Text style={s.transferBtnTxt}>振替</Text>
           </Pressable>
         </View>
 
         {/* 一致バー */}
-        <View style={s.matchBar}>
-          <View style={s.matchDot}>
-            <Text style={s.matchDotTxt}>✓</Text>
+        <View style={[s.matchBar, !isBalanced && s.matchBarWarn]}>
+          <View style={[s.matchDot, !isBalanced && s.matchDotWarn]}>
+            <Text style={s.matchDotTxt}>{isBalanced ? '✓' : '!'}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.matchTxt}>プール金 ＝ ポートフォリオ　一致</Text>
-            <Text style={s.matchSub}>差額 ¥0 · 記録は整合しています</Text>
+            <Text style={[s.matchTxt, !isBalanced && s.matchTxtWarn]}>
+              {isBalanced ? 'プール金 ＝ ポートフォリオ　一致' : 'プール金 ≠ ポートフォリオ　差異あり'}
+            </Text>
+            <Text style={[s.matchSub, !isBalanced && s.matchSubWarn]}>
+              {isBalanced
+                ? '差額 ¥0 · 記録は整合しています'
+                : `差額 ¥${Math.abs(diff).toLocaleString('ja-JP')} · 残高修正が必要です`}
+            </Text>
           </View>
         </View>
 
@@ -106,9 +131,9 @@ export default function HomeScreen() {
             badge="口座別"
             badgeStyle={s.badgeBlue}
             badgeTextStyle={s.badgeBlueText}
-            total="¥775万"
-            sub="5口座"
-            items={POOL_ITEMS}
+            total={fmtMan(poolTotal)}
+            sub={`${POOL_ITEMS.length}口座`}
+            items={poolItems}
             route="/pool"
           />
           <ChartCard
@@ -116,9 +141,9 @@ export default function HomeScreen() {
             badge="用途別"
             badgeStyle={s.badgeGreen}
             badgeTextStyle={s.badgeGreenText}
-            total="¥775万"
-            sub="5PJ"
-            items={PF_ITEMS}
+            total={fmtMan(pfTotal)}
+            sub={`${PF_ITEMS.length}PJ`}
+            items={pfItems}
             route="/portfolio"
           />
         </View>
@@ -127,15 +152,17 @@ export default function HomeScreen() {
         <View style={s.diffCard}>
           <View style={s.diffRow}>
             <Text style={s.diffLabel}>プール金 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>¥7,750,000</Text>
+            <Text style={[s.diffVal, s.diffBig]}>¥{poolTotal.toLocaleString('ja-JP')}</Text>
           </View>
           <View style={s.diffRow}>
             <Text style={s.diffLabel}>ポートフォリオ 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>¥7,750,000</Text>
+            <Text style={[s.diffVal, s.diffBig]}>¥{pfTotal.toLocaleString('ja-JP')}</Text>
           </View>
           <View style={[s.diffRow, s.diffRowLast]}>
-            <Text style={[s.diffLabel, s.diffLabelGreen]}>差額</Text>
-            <Text style={[s.diffVal, s.diffValGreen]}>¥0 ✓</Text>
+            <Text style={[s.diffLabel, isBalanced ? s.diffLabelGreen : s.diffLabelWarn]}>差額</Text>
+            <Text style={[s.diffVal, isBalanced ? s.diffValGreen : s.diffValWarn]}>
+              {isBalanced ? '¥0 ✓' : `¥${diff.toLocaleString('ja-JP')}`}
+            </Text>
           </View>
         </View>
 
@@ -170,8 +197,15 @@ const s = StyleSheet.create({
   headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
   headerTotal: { fontSize: 24, fontWeight: '500', color: '#fff', marginTop: 1 },
   headerNote: { fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
-  menuBtn: { width: 28, height: 28, justifyContent: 'center', alignItems: 'flex-end', marginTop: 4 },
-  menuLine: { width: 16, height: 1.5, backgroundColor: 'rgba(255,255,255,0.8)', borderRadius: 1, marginVertical: 1.5 },
+  transferBtn: {
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.5)',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    marginTop: 4,
+  },
+  transferBtnTxt: { fontSize: 11, color: '#fff', fontWeight: '500' },
 
   matchBar: {
     margin: 8,
@@ -185,8 +219,12 @@ const s = StyleSheet.create({
   },
   matchDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.green, justifyContent: 'center', alignItems: 'center' },
   matchDotTxt: { fontSize: 11, fontWeight: '500', color: '#fff' },
+  matchBarWarn: { backgroundColor: '#FAEEDA' },
+  matchDotWarn: { backgroundColor: '#E24B4A' },
   matchTxt: { fontSize: 11, fontWeight: '500', color: C.greenText },
+  matchTxtWarn: { color: '#633806' },
   matchSub: { fontSize: 9, marginTop: 1, color: C.greenSub },
+  matchSubWarn: { color: '#633806' },
 
   dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
   chartCard: {
@@ -234,6 +272,8 @@ const s = StyleSheet.create({
   diffBig: { fontSize: 13, color: C.brand },
   diffLabelGreen: { color: C.green, fontWeight: '500' },
   diffValGreen: { color: C.green },
+  diffLabelWarn: { color: '#E24B4A', fontWeight: '500' },
+  diffValWarn: { color: '#E24B4A' },
 
   safeCard: {
     marginHorizontal: 14,

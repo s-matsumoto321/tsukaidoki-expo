@@ -3,6 +3,8 @@ import { ScrollView, View, Text, Pressable, StyleSheet } from 'react-native';
 import { router } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { PF_ITEMS } from '@/constants/data';
+import { PROJECTS } from '@/constants/projects';
+import { useStore } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
@@ -27,8 +29,13 @@ function fmtPct(amount: number, total: number): string {
 }
 
 export default function PortfolioScreen() {
-  const total = PF_ITEMS.reduce((sum, item) => sum + item.amount, 0);
-  const segments = PF_ITEMS.map(item => ({ color: item.color, value: item.amount }));
+  const { balances } = useStore();
+  const items = PF_ITEMS.map(item => ({
+    ...item,
+    amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
+  }));
+  const total = items.reduce((sum, item) => sum + item.amount, 0);
+  const segments = items.map(item => ({ color: item.color, value: item.amount }));
   const totalMan = Math.round(total / 10000).toLocaleString('ja-JP');
 
   return (
@@ -49,9 +56,9 @@ export default function PortfolioScreen() {
 
         {/* Project list */}
         <View style={s.listCard}>
-          {PF_ITEMS.map((item, i) => {
-            const isLast = i === PF_ITEMS.length - 1;
-            const hasDetail = !!item.projectId;
+          {items.map((item, i) => {
+            const isLast = i === items.length - 1;
+            const hasDetail = !!item.projectId && item.projectId in PROJECTS;
             return (
               <Pressable
                 key={item.name}

@@ -39,6 +39,10 @@ export default function RootLayout() {
           name="project/[id]"
           options={{ headerShown: false }}
         />
+        <Stack.Screen
+          name="transfer"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </ThemeProvider>
