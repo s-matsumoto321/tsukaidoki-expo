@@ -38,27 +38,26 @@ function LegendItem({ color, name, val }: LegendItemProps) {
 type ChartCardProps = {
   title: string;
   badge: string;
-  badgeStyle: object;
-  badgeTextStyle: object;
+  headerColor: string;
   total: string;
   sub: string;
   items: FinancialItem[];
   route: Href;
 };
 
-function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items, route }: ChartCardProps) {
+function ChartCard({ title, badge, headerColor, total, sub, items, route }: ChartCardProps) {
   const segments = items.map(i => ({ color: i.color, value: i.amount }));
   return (
     <Link href={route} asChild>
       <Pressable style={s.chartCard}>
-        <View style={s.chartLabelRow}>
-          <Text style={s.chartLabel}>{title}</Text>
-          <View style={badgeStyle}>
-            <Text style={badgeTextStyle}>{badge}</Text>
-          </View>
+        <View style={[s.chartHeader, { backgroundColor: headerColor }]}>
+          <Text style={s.chartHeaderTitle}>{title}</Text>
+          <Text style={s.chartHeaderBadge}>{badge}</Text>
         </View>
-        <DonutChart segments={segments} size={90} thickness={10} centerLabel={total} centerSub={sub} />
-        {items.map(item => <LegendItem key={item.name} {...item} />)}
+        <View style={s.chartBody}>
+          <DonutChart segments={segments} size={90} thickness={10} centerLabel={total} centerSub={sub} />
+          {items.map(item => <LegendItem key={item.name} {...item} />)}
+        </View>
       </Pressable>
     </Link>
   );
@@ -194,8 +193,7 @@ export default function HomeScreen() {
           <ChartCard
             title="プール金"
             badge="口座別"
-            badgeStyle={s.badgeBlue}
-            badgeTextStyle={s.badgeBlueText}
+            headerColor={C.brand}
             total={fmtMan(poolTotal)}
             sub={`${POOL_ITEMS.length}口座`}
             items={poolItems}
@@ -204,8 +202,7 @@ export default function HomeScreen() {
           <ChartCard
             title="ポートフォリオ"
             badge="用途別"
-            badgeStyle={s.badgeGreen}
-            badgeTextStyle={s.badgeGreenText}
+            headerColor={C.green}
             total={fmtMan(pfTotal)}
             sub={`${PF_ITEMS.length}PJ`}
             items={pfItems}
@@ -303,20 +300,23 @@ const s = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: C.border,
     borderRadius: 12,
-    padding: 9,
+    overflow: 'hidden',
+  },
+  chartHeader: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
-  chartLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 4 },
-  chartLabel: { fontSize: 10, color: C.textSecondary },
-  badgeBlue: { backgroundColor: '#E6F1FB', borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
-  badgeBlueText: { fontSize: 8, color: C.brand },
-  badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
-  badgeGreenText: { fontSize: 8, color: C.greenText },
-  legRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2, width: '100%' },
-  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
-  legDot: { width: 6, height: 6, borderRadius: 3 },
-  legName: { fontSize: 9, color: C.textSecondary, flex: 1 },
-  legVal: { fontSize: 9, fontWeight: '500', color: C.textPrimary },
+  chartHeaderTitle: { fontSize: 12, fontWeight: '700', color: '#fff' },
+  chartHeaderBadge: { fontSize: 9, color: 'rgba(255,255,255,0.7)' },
+  chartBody: { padding: 9, alignItems: 'center' },
+  legRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, width: '100%' },
+  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 },
+  legDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
+  legName: { fontSize: 11, color: C.textSecondary, flex: 1 },
+  legVal: { fontSize: 11, fontWeight: '500', color: C.textPrimary, minWidth: 44, textAlign: 'right' },
 
   // -------------------------------------------------------
   // 案B: 左右ミラーリストのスタイル（コメントアウト中）
