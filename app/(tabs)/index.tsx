@@ -1,8 +1,7 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
-import { router } from 'expo-router';
-// import { Link, type Href } from 'expo-router'; // 案A(ドーナツ)で使用
-// import { DonutChart } from '@/components/donut-chart'; // 案A(ドーナツ)で使用
+import { Link, router, type Href } from 'expo-router';
+import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 
@@ -20,9 +19,8 @@ const C = {
 };
 
 // -------------------------------------------------------
-// 案A: ドーナツ2列（コメントアウト中）
+// 案A: ドーナツ2列（現行）
 // -------------------------------------------------------
-/*
 type LegendItemProps = { color: string; name: string; val: string };
 
 function LegendItem({ color, name, val }: LegendItemProps) {
@@ -65,11 +63,11 @@ function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items
     </Link>
   );
 }
-*/
 
 // -------------------------------------------------------
-// 案B: 左右ミラーリスト（現行）
+// 案B: 左右ミラーリスト（コメントアウト中）
 // -------------------------------------------------------
+/*
 type MirrorItemProps = { color: string; name: string; amount: number; total: number };
 
 function MirrorItem({ color, name, amount, total }: MirrorItemProps) {
@@ -129,6 +127,11 @@ function MirrorCard({ poolItems, pfItems, poolTotal, pfTotal }: MirrorCardProps)
     </View>
   );
 }
+*/
+
+function fmtMan(yen: number): string {
+  return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
+}
 
 function fmtYen(yen: number): string {
   return `¥${yen.toLocaleString('ja-JP')}`;
@@ -186,15 +189,7 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* 案B: 左右ミラーリスト */}
-        <MirrorCard
-          poolItems={poolItems}
-          pfItems={pfItems}
-          poolTotal={poolTotal}
-          pfTotal={pfTotal}
-        />
-
-        {/* 案A: ドーナツ2列（コメントアウト中）
+        {/* 案A: ドーナツ2列 */}
         <View style={s.dualChart}>
           <ChartCard
             title="プール金"
@@ -217,6 +212,14 @@ export default function HomeScreen() {
             route="/portfolio"
           />
         </View>
+
+        {/* 案B: 左右ミラーリスト（コメントアウト中）
+        <MirrorCard
+          poolItems={poolItems}
+          pfItems={pfItems}
+          poolTotal={poolTotal}
+          pfTotal={pfTotal}
+        />
         */}
 
         {/* 差額カード */}
@@ -291,8 +294,34 @@ const s = StyleSheet.create({
   matchSubWarn: { color: '#633806' },
 
   // -------------------------------------------------------
-  // 案B: 左右ミラーリストのスタイル（現行）
+  // 案A: ドーナツ2列のスタイル（現行）
   // -------------------------------------------------------
+  dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
+  chartCard: {
+    flex: 1,
+    backgroundColor: C.card,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    borderRadius: 12,
+    padding: 9,
+    alignItems: 'center',
+  },
+  chartLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 4 },
+  chartLabel: { fontSize: 10, color: C.textSecondary },
+  badgeBlue: { backgroundColor: '#E6F1FB', borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeBlueText: { fontSize: 8, color: C.brand },
+  badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
+  badgeGreenText: { fontSize: 8, color: C.greenText },
+  legRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2, width: '100%' },
+  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
+  legDot: { width: 6, height: 6, borderRadius: 3 },
+  legName: { fontSize: 9, color: C.textSecondary, flex: 1 },
+  legVal: { fontSize: 9, fontWeight: '500', color: C.textPrimary },
+
+  // -------------------------------------------------------
+  // 案B: 左右ミラーリストのスタイル（コメントアウト中）
+  // -------------------------------------------------------
+  /*
   mCard: {
     marginHorizontal: 14,
     marginTop: 2,
@@ -320,32 +349,6 @@ const s = StyleSheet.create({
   mBarBg: { flex: 1, height: 5, backgroundColor: C.border, borderRadius: 2.5, overflow: 'hidden' },
   mBarFill: { height: 5, borderRadius: 2.5 },
   mAmt: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 26, textAlign: 'right' },
-
-  // -------------------------------------------------------
-  // 案A: ドーナツ2列のスタイル（コメントアウト中）
-  // -------------------------------------------------------
-  /*
-  dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
-  chartCard: {
-    flex: 1,
-    backgroundColor: C.card,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    borderRadius: 12,
-    padding: 9,
-    alignItems: 'center',
-  },
-  chartLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start', marginBottom: 4 },
-  chartLabel: { fontSize: 10, color: C.textSecondary },
-  badgeBlue: { backgroundColor: '#E6F1FB', borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
-  badgeBlueText: { fontSize: 8, color: C.brand },
-  badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
-  badgeGreenText: { fontSize: 8, color: C.greenText },
-  legRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2, width: '100%' },
-  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
-  legDot: { width: 6, height: 6, borderRadius: 3 },
-  legName: { fontSize: 9, color: C.textSecondary, flex: 1 },
-  legVal: { fontSize: 9, fontWeight: '500', color: C.textPrimary },
   */
 
   diffCard: {
