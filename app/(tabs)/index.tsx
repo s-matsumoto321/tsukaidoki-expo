@@ -160,7 +160,10 @@ export default function HomeScreen() {
 
         {/* ヘッダー */}
         <View style={s.header}>
-          <Text style={s.headerTitle}>ツカイドキβ版</Text>
+          {/* ロゴ画像（assets/images/logo.png を追加後にコメント解除）
+          <Image source={require('@/assets/images/logo.png')} style={s.logoImg} resizeMode="contain" />
+          */}
+          <Text style={s.headerTitle}>ツカイドキ</Text>
           <Text style={s.headerSub}>ライフマネープラン</Text>
         </View>
 
@@ -169,6 +172,13 @@ export default function HomeScreen() {
           <Text style={s.totalLabel}>総資産</Text>
           <Text style={s.totalAmt}>{fmtYen(poolTotal)}</Text>
           <Text style={s.totalNote}>プール金・ポートフォリオ 両方の合計</Text>
+        </View>
+
+        {/* セクション区切り */}
+        <View style={s.sectionDivider}>
+          <View style={s.sectionLine} />
+          <Text style={s.sectionDividerLabel}>内訳チェック</Text>
+          <View style={s.sectionLine} />
         </View>
 
         {/* 一致バー */}
@@ -259,7 +269,7 @@ const s = StyleSheet.create({
   totalCard: {
     marginHorizontal: 14,
     marginTop: 10,
-    marginBottom: 2,
+    marginBottom: 4,
     backgroundColor: C.card,
     borderRadius: 12,
     borderWidth: 0.5,
@@ -270,6 +280,17 @@ const s = StyleSheet.create({
   totalLabel: { fontSize: 12, color: C.textSecondary },
   totalAmt: { fontSize: 30, fontWeight: '500', color: C.brand, marginTop: 2 },
   totalNote: { fontSize: 11, color: C.textSecondary, marginTop: 4 },
+
+  sectionDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginHorizontal: 14,
+    marginTop: 16,
+    marginBottom: 4,
+    gap: 8,
+  },
+  sectionLine: { flex: 1, height: 0.5, backgroundColor: C.border },
+  sectionDividerLabel: { fontSize: 11, color: C.textSecondary },
 
   matchBar: {
     margin: 8,

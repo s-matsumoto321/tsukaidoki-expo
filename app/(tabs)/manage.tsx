@@ -52,6 +52,9 @@ export default function ManageScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
+        {/* ロゴ画像（assets/images/logo.png を追加後にコメント解除）
+        <Image source={require('@/assets/images/logo.png')} style={s.logoImg} resizeMode="contain" />
+        */}
         <Text style={s.headerTitle}>管理</Text>
         <Text style={s.headerSub}>プール金・ポートフォリオ・口座振替</Text>
       </View>
