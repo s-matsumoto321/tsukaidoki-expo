@@ -1,3 +1,4 @@
+import { Fragment } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -7,6 +8,8 @@ import Svg, {
   Circle,
   Text as SvgText,
   G,
+  Rect,
+  Path,
 } from 'react-native-svg';
 import { useState, useRef, useCallback } from 'react';
 import { PROJECTS, type ProjectEvent } from '@/constants/projects';
@@ -61,6 +64,7 @@ const PB = 20;
 
 type TooltipState = { x: number; y: number; event: ProjectEvent };
 type Period = '生涯' | '5年' | '1年';
+type EvTab = '計画' | '実績';
 
 // ─── LineChart ───────────────────────────────────────────────────
 
@@ -103,7 +107,9 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
   const ticks: number[] = [];
   for (let v = 0; v <= maxVal; v += step) ticks.push(v);
 
-  const xStep = Math.max(1, Math.ceil(n / 5));
+  // 1年モードは全ラベル表示、それ以外は最大5本
+  const xStep = period === '1年' ? 1 : Math.max(1, Math.ceil(n / 5));
+
   const actualIdx = actual
     .map((v, i) => (v !== null ? i : -1))
     .filter(i => i !== -1);
@@ -134,6 +140,17 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
           </SvgText>
         ) : null
       )}
+
+      {/* 1年モード: 縦グリッド補助線 */}
+      {period === '1年' && years.map((_, i) => (
+        i > 0 && i < n - 1 ? (
+          <SvgLine
+            key={`vg-${i}`}
+            x1={xi(i)} y1={PT} x2={xi(i)} y2={PT + gH}
+            stroke="rgba(128,128,128,0.1)" strokeWidth={0.5}
+          />
+        ) : null
+      ))}
 
       {/* Plan line */}
       <Polyline
@@ -170,7 +187,6 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
         const sel = selectedIdx === ev.idx;
         return (
           <G key={`ev-${ev.idx}`} onPress={() => onSelect(ev, cx, cy)}>
-            {/* transparent hit area */}
             <Circle cx={cx} cy={cy} r={14} fill="rgba(0,0,0,0)" />
             {sel && <Circle cx={cx} cy={cy} r={9} fill={color} opacity={0.2} />}
             {ev.type === 'spend' ? (
@@ -196,6 +212,54 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
   );
 }
 
+// ─── Car image placeholder ───────────────────────────────────────
+
+function CarImageCard() {
+  return (
+    <View style={s.carCard}>
+      <View style={s.carImgArea}>
+        {/* Simple SVG car silhouette */}
+        <Svg width={160} height={80} viewBox="0 0 160 80">
+          {/* Road */}
+          <Rect x={0} y={66} width={160} height={4} rx={2} fill="rgba(0,0,0,0.15)" />
+          {/* Body */}
+          <Path
+            d="M12,62 L12,42 Q12,38 16,38 L42,38 Q50,28 58,24 L110,24 Q118,24 124,34 L140,38 Q146,38 148,42 L148,62 Z"
+            fill="#888780"
+          />
+          {/* Roof / cabin */}
+          <Path
+            d="M52,37 L60,25 L108,25 L118,37 Z"
+            fill="#A0A09A"
+          />
+          {/* Windshield */}
+          <Path
+            d="M56,36 L63,26 L100,26 L110,36 Z"
+            fill="rgba(174,214,241,0.75)"
+          />
+          {/* Side window */}
+          <Rect x={63} y={26} width={44} height={10} rx={2} fill="rgba(174,214,241,0.75)" />
+          {/* Door line */}
+          <SvgLine x1={88} y1={37} x2={88} y2={62} stroke="rgba(0,0,0,0.15)" strokeWidth={0.8} />
+          {/* Headlight */}
+          <Rect x={142} y={46} width={6} height={5} rx={2} fill="#F5E08A" />
+          {/* Taillight */}
+          <Rect x={12} y={46} width={5} height={5} rx={2} fill="#E24B4A" opacity={0.8} />
+          {/* Front wheel */}
+          <Circle cx={120} cy={63} r={13} fill="#333" />
+          <Circle cx={120} cy={63} r={7}  fill="#888" />
+          <Circle cx={120} cy={63} r={3}  fill="#aaa" />
+          {/* Rear wheel */}
+          <Circle cx={46}  cy={63} r={13} fill="#333" />
+          <Circle cx={46}  cy={63} r={7}  fill="#888" />
+          <Circle cx={46}  cy={63} r={3}  fill="#aaa" />
+        </Svg>
+      </View>
+      <Text style={s.carCaption}>新車イメージ · 2028年 買い替え予定</Text>
+    </View>
+  );
+}
+
 // ─── Main screen ─────────────────────────────────────────────────
 
 export default function ProjectDetailScreen() {
@@ -209,15 +273,15 @@ export default function ProjectDetailScreen() {
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
   const myUserEvents = userEvents[id ?? ''] ?? [];
 
-  const [period, setPeriod] = useState<Period>('生涯');
+  const [period, setPeriod]   = useState<Period>('生涯');
+  const [evTab, setEvTab]     = useState<EvTab>('計画');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
+  const [tooltip, setTooltip]         = useState<TooltipState | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const rowY = useRef<Record<number, number>>({});
   const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // card margin(14×2) + card padding(12×2)
   const svgW = screenWidth - 52;
   const TIP_W = 136;
   const TIP_H = 46;
@@ -251,7 +315,6 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  // Tooltip positioning
   const tipLeft = tooltip
     ? Math.max(0, Math.min(tooltip.x - TIP_W / 2, svgW - TIP_W))
     : 0;
@@ -301,7 +364,6 @@ export default function ProjectDetailScreen() {
 
         {/* Graph card */}
         <View style={s.graphCard}>
-          {/* Legend + period selector */}
           <View style={s.legendPeriodRow}>
             <View style={s.legendRow}>
               <View style={s.legendItem}>
@@ -332,7 +394,6 @@ export default function ProjectDetailScreen() {
             </View>
           </View>
 
-          {/* Chart + tooltip */}
           <View style={{ position: 'relative' }}>
             <LineChart
               id={id ?? ''}
@@ -363,59 +424,81 @@ export default function ProjectDetailScreen() {
         <View style={{ flex: 1, paddingBottom: insets.bottom }}>
           <View style={s.secRow}>
             <Text style={s.secTitle}>{isAccount ? '入出金・取引の年表' : '積み立て・支出の年表'}</Text>
-            <Text style={s.secSub}>スクロールで確認</Text>
+            <View style={s.periodRow}>
+              {(['計画', '実績'] as const).map(t => (
+                <Pressable
+                  key={t}
+                  style={[s.periodBtn, evTab === t && s.periodBtnActive]}
+                  onPress={() => setEvTab(t)}
+                >
+                  <Text style={[s.periodTxt, evTab === t && s.periodTxtActive]}>{t}</Text>
+                </Pressable>
+              ))}
+            </View>
           </View>
+
           <View style={s.evCardWrap}>
             <ScrollView
               ref={scrollRef}
               style={{ flex: 1 }}
               contentContainerStyle={{ paddingVertical: 4, paddingHorizontal: 12 }}
             >
-              {project.events.map((ev, idx) => {
-                const sel = selectedIdx === ev.idx;
-                const isLast = idx === project.events.length - 1 && myUserEvents.length === 0;
-                return (
-                  <Pressable
-                    key={ev.idx}
-                    style={[
-                      s.evRow,
-                      !isLast && s.evRowBorder,
-                      sel && { backgroundColor: ev.type === 'spend' ? C.danger : C.warn, borderRadius: 8 },
-                    ]}
-                    onLayout={e => { rowY.current[ev.idx] = e.nativeEvent.layout.y; }}
-                    onPress={() => handleRowPress(ev)}
-                  >
-                    <Text style={s.evYr}>{ev.year}</Text>
-                    <View style={[s.evDot, { backgroundColor: ev.dot }]} />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={s.evName}>{ev.name}</Text>
-                      <Text style={s.evDetail}>{ev.detail}</Text>
-                      <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
-              {myUserEvents.map((ev, idx) => {
-                const isLast = idx === myUserEvents.length - 1;
-                return (
-                  <View
-                    key={ev.id}
-                    style={[s.evRow, !isLast && s.evRowBorder]}
-                  >
-                    <Text style={s.evYr}>{ev.date}</Text>
-                    <View style={[s.evDot, { backgroundColor: ev.dot }]} />
-                    <View style={{ flex: 1, minWidth: 0 }}>
-                      <Text style={s.evName}>{ev.name}</Text>
-                      <Text style={s.evDetail}>{ev.detail}</Text>
-                      <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
-                    </View>
+              {evTab === '計画' ? (
+                project.events.map((ev, idx) => {
+                  const sel = selectedIdx === ev.idx;
+                  const isLast = idx === project.events.length - 1;
+                  const showCarImg = id === 'car' && ev.type === 'spend';
+                  return (
+                    <Fragment key={ev.idx}>
+                      {showCarImg && <CarImageCard />}
+                      <Pressable
+                        style={[
+                          s.evRow,
+                          !isLast && s.evRowBorder,
+                          sel && { backgroundColor: ev.type === 'spend' ? C.danger : C.warn, borderRadius: 8 },
+                        ]}
+                        onLayout={e => { rowY.current[ev.idx] = e.nativeEvent.layout.y; }}
+                        onPress={() => handleRowPress(ev)}
+                      >
+                        <Text style={s.evYr}>{ev.year}</Text>
+                        <View style={[s.evDot, { backgroundColor: ev.dot }]} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={s.evName}>{ev.name}</Text>
+                          <Text style={s.evDetail}>{ev.detail}</Text>
+                          <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
+                        </View>
+                      </Pressable>
+                    </Fragment>
+                  );
+                })
+              ) : (
+                myUserEvents.length === 0 ? (
+                  <View style={s.emptyEvs}>
+                    <Text style={s.emptyEvsTxt}>実績データがありません</Text>
+                    <Text style={s.emptyEvsSub}>「残高修正」から実績を記録できます</Text>
                   </View>
-                );
-              })}
+                ) : (
+                  myUserEvents.map((ev, idx) => {
+                    const isLast = idx === myUserEvents.length - 1;
+                    return (
+                      <View key={ev.id} style={[s.evRow, !isLast && s.evRowBorder]}>
+                        <Text style={s.evYr}>{ev.date}</Text>
+                        <View style={[s.evDot, { backgroundColor: ev.dot }]} />
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={s.evName}>{ev.name}</Text>
+                          <Text style={s.evDetail}>{ev.detail}</Text>
+                          <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
+                        </View>
+                      </View>
+                    );
+                  })
+                )
+              )}
             </ScrollView>
           </View>
         </View>
       </View>
+
       <BalanceSheet
         visible={sheetVisible}
         projectId={id ?? ''}
@@ -536,7 +619,6 @@ const s = StyleSheet.create({
     paddingVertical: 4,
   },
   secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
-  secSub: { fontSize: 11, color: C.textTertiary },
   evCardWrap: {
     flex: 1,
     marginHorizontal: 14,
@@ -562,4 +644,34 @@ const s = StyleSheet.create({
   evAmt: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   evPos: { color: C.posText },
   evNeg: { color: C.negText },
+
+  // Car image card
+  carCard: {
+    marginVertical: 8,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#EDECEA',
+    borderWidth: 0.5,
+    borderColor: C.border,
+  },
+  carImgArea: {
+    height: 100,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#E0DDD9',
+  },
+  carCaption: {
+    fontSize: 11,
+    color: C.textSecondary,
+    textAlign: 'center',
+    paddingVertical: 6,
+  },
+
+  // Empty state
+  emptyEvs: {
+    paddingVertical: 32,
+    alignItems: 'center',
+  },
+  emptyEvsTxt: { fontSize: 14, color: C.textSecondary, fontWeight: '500' },
+  emptyEvsSub: { fontSize: 12, color: C.textTertiary, marginTop: 6 },
 });
