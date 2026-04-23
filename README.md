@@ -1,50 +1,184 @@
-# Welcome to your Expo app 👋
+# ツカイドキ — 要件定義書
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+## 1. アプリ概要
 
-## Get started
+### アプリ名
+**ツカイドキ**
 
-1. Install dependencies
+### コンセプト
+「貯め時」と同時に「使い時」を知る資産管理アプリ。  
+自分で作った庭を育てていくように、人生のお金を計画・育て・楽しむ。
 
-   ```bash
-   npm install
-   ```
+### 解決する課題
+既存の家計簿・資産管理アプリは「節約」志向が中心で、固定費・変動費の削減を促すものが多い。  
+ツカイドキは逆の視点に立つ——「いくら使ってよいか」を明確にし、資産形成と人生の楽しみを両立させる。
 
-2. Start the app
+---
 
-   ```bash
-   npx expo start
-   ```
+## 2. ターゲットユーザー
 
-In the output, you'll find options to open the app in a
+| 項目 | 内容 |
+|------|------|
+| 年齢 | 25〜42歳 |
+| 属性 | 共働き・子育て世代 / 積極的に資産形成中の単身者 |
+| 性格 | 几帳面・将来思考。数字は得意ではないが管理したい |
+| 悩み | ライフマネープランを組みたいが、どう組めばいいかわからない |
+| 資産状況 | 貯金300万〜800万円。老後・教育資金に漠然とした不安がある |
+| 欲求 | 車・旅行などにも使いたい。でも「どれくらい使ってよいか」がわからない |
+| 感情ニーズ | 夢を描きたい。夢に近づいている実感を得たい。不安を解消しながら今の人生も楽しみたい |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+### 主な利用シーン
+- 朝の通勤中
+- 月初の振り返り
+- ボーナス後の資金整理
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+---
 
-## Get a fresh project
+## 3. 機能の3層構造
 
-When you're ready, run:
+```
+感情層（なぜ使うか）   ← 最重要
+  └ 夢PJの進捗確認・不安解消の実感・自信回復
 
-```bash
-npm run reset-project
+管理層（何を管理するか）
+  └ プール金 ↔ ポートフォリオの一致確認
+
+操作層（どう使うか）
+  └ ズレの入力・口座振替・残高修正
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+> **設計方針：** 感情層（夢への実感・不安解消）が最重要。操作層はその手段に過ぎない。  
+> UI/UX・機能追加の優先順位は「感情層への貢献度」を軸に判断する。
 
-## Learn more
+---
 
-To learn more about developing your project with Expo, look at the following resources:
+## 4. 利用頻度と利用フロー
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+利用頻度は**低頻度**を前提とする。
 
-## Join the community
+### 初期設定（初回のみ）
+- 現在の資産（プール金・口座別残高）を入力
+- 積立金額を設定
+- 進めたいプロジェクト（PJ）を登録
 
-Join our community of developers creating universal apps.
+### 日常利用（暇な時間・通勤中）
+- 教育PJ・老後PJの進捗確認 → 不安解消の実感
+- 夢PJ（車・旅行など）の積立状況確認 → 夢に近づく実感・自信回復
+- プール金とポートフォリオを眺め、コントロールできている安心感を得る
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+### 月次更新（月1回・ボーナス後など）
+- ボーナス・利息などでプール金にプラスのズレが生じた場合に入力
+  - ズレ分をポートフォリオに反映（基本は余剰金項目で調整）
+- 支出などでマイナスのズレが生じた場合に入力
+- 証券→銀行などの口座振替が発生した場合に入力
+
+---
+
+## 5. 現在実装されている機能
+
+### ダッシュボード（ホーム）
+- 総資産表示（プール金 + ポートフォリオ合計）
+- 残高一致確認（差異があれば警告）
+- プール金・ポートフォリオのドーナツチャート
+- 安心ライン（今月自由に使える金額）の表示
+- 口座振替ショートカットボタン
+
+### プール金管理
+- 5つの口座（銀行・証券）の一覧・構成比
+- ドーナツチャートで構成を可視化
+- 各口座の詳細へのナビゲーション
+
+### ポートフォリオ管理
+- 5つの人生プロジェクトの一覧・進捗率
+- ドーナツチャートで構成を可視化
+- ステータスバッジ（◎ OK / △ 要注意）
+- 各プロジェクトの詳細へのナビゲーション
+
+### プロジェクト詳細
+- 折れ線グラフ：計画値 vs 実績値の推移
+- イベント年表：マイルストーン（支出・入金・開始）の時系列表示
+- AIインサイト：プロジェクト進捗の自動分析テキスト
+- 残高修正モーダル：現在残高を編集し差額をイベントとして記録
+
+### 口座振替
+- 振替元・振替先の選択
+- 金額入力・メモ入力
+- プレビュー確認 → 実行（両口座の残高を自動更新）
+
+---
+
+## 6. 将来実装予定の機能
+
+### Supabase連携（操作層の強化）
+- プール金・ポートフォリオデータのクラウド保存
+- 複数デバイス間の同期・家族共有（夫婦など）
+- 現在のAsyncStorage（ローカル保存）から移行
+- 選定理由：保守しやすさ・無料枠・セキュリティを総合的に評価して採用を検討中
+
+### AIアシスタント補助（PJ登録時）
+- PJ種別（老後・教育・旅行など）に応じた入力補助
+- 例：老後資金 → 一般的な生活費・年金受給額から目標金額を自動提案
+- 例：教育資金 → 子の年齢・進学先から必要額を試算
+
+---
+
+## 7. データ管理
+
+### データ保存先
+| フェーズ | 保存先 | 備考 |
+|----------|--------|------|
+| 現在（プロトタイプ） | AsyncStorage（端末ローカル） | オフライン動作・実装済み |
+| 将来 | Supabase（クラウド） | 保守しやすさ・無料枠・セキュリティを総合評価して採用検討中 |
+
+### マルチユーザー・共有（将来）
+- **家族共有**を想定（例：夫婦で同一データを参照・編集）
+- 同一アカウントの複数デバイスアクセス、またはメンバー招待による共有が必要
+- Supabase の Row Level Security（RLS）で共有範囲を制御する方針
+
+---
+
+## 8. プラットフォーム・リリース
+
+| 項目 | 内容 |
+|------|------|
+| 対応プラットフォーム | iOS・Android 両方 |
+| リリース方針 | App Store（iOS）および Google Play（Android）への公開を目指す |
+
+---
+
+## 9. 現フェーズの方針
+
+現在は**プロトタイプフェーズ**。以下は将来フェーズで検討する。
+
+- 認証（ログイン・家族共有の権限設計）
+- プライバシー・個人情報方針
+- マネタイズ（無料・有料・サブスクリプション）
+- オンボーディングフロー
+- プッシュ通知・リマインダー
+- Supabaseによるクラウド実装
+- 多言語対応
+- KPI・成功指標
+
+---
+
+## 10. 技術スタック
+
+| カテゴリ | 技術 |
+|----------|------|
+| フレームワーク | Expo (React Native) |
+| ルーティング | Expo Router（ファイルベース） |
+| 状態管理 | Zustand |
+| 永続化（現在） | AsyncStorage |
+| 永続化（将来） | Supabase |
+| グラフ描画 | react-native-svg |
+| アニメーション | react-native-reanimated |
+| 言語 | TypeScript |
+
+---
+
+## 11. デザイン方針
+
+- **カラー**：紺青 `#0C447C`（ブランド）、グリーン `#1D9E75`（成長）、レッド `#E24B4A`（支出）
+- **トーン**：落ち着いた・信頼感のある・前向き
+- **操作量最小化**：低頻度利用を前提に、入力ステップは極力少なく
+- **感情設計優先**：数字を見るだけで「安心」「自信」「ワクワク」が感じられるUI
