@@ -50,8 +50,7 @@ function ChartCard({ title, badge, headerColor, total, sub, items, route }: Char
   return (
     <Link href={route} asChild>
       <Pressable style={s.chartCard}>
-        <View style={s.chartHeader}>
-          <View style={[s.chartHeaderDot, { backgroundColor: headerColor }]} />
+        <View style={[s.chartHeader, { borderTopColor: headerColor }]}>
           <Text style={s.chartHeaderTitle}>{title}</Text>
           <Text style={s.chartHeaderBadge}>{badge}</Text>
         </View>
@@ -308,12 +307,12 @@ const s = StyleSheet.create({
     paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    backgroundColor: '#2c2c2a',
+    justifyContent: 'space-between',
+    backgroundColor: C.card,
+    borderTopWidth: 4,
   },
-  chartHeaderDot: { width: 9, height: 9, borderRadius: 5 },
-  chartHeaderTitle: { fontSize: 14, fontWeight: '700', color: '#fff', flex: 1 },
-  chartHeaderBadge: { fontSize: 11, color: 'rgba(255,255,255,0.5)' },
+  chartHeaderTitle: { fontSize: 14, fontWeight: '700', color: C.textPrimary },
+  chartHeaderBadge: { fontSize: 11, color: C.textSecondary },
   chartBody: { padding: 12, alignItems: 'center' },
   legRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, width: '100%' },
   legLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
