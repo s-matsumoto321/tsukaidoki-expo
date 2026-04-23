@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { router } from 'expo-router';
 import { PF_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
+import { Logo } from '@/components/logo';
 
 const C = {
   brand: '#0C447C',
@@ -71,6 +73,7 @@ function PjCard({ color, name, amount, meta, progress = 0, status, projectId }: 
 
 export default function DreamsScreen() {
   const { balances } = useStore();
+  const [activeTab, setActiveTab] = useState<'dream' | 'anshin'>('dream');
 
   const enriched = PF_ITEMS.map(item => ({
     ...item,
@@ -84,25 +87,43 @@ export default function DreamsScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
-        <Text style={s.headerTitle}>使いみち</Text>
-        <Text style={s.headerSub}>夢と安心、どちらもお金で実現する</Text>
+        <Logo iconSize={26} />
+        <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
+
+      <View style={s.tabBar}>
+        <Pressable
+          style={[s.tabItem, activeTab === 'dream' && { borderBottomColor: C.orange, borderBottomWidth: 2 }]}
+          onPress={() => setActiveTab('dream')}
+        >
+          <Text style={[s.tabText, activeTab === 'dream' && { color: C.orange, fontWeight: '700' }]}>★ 夢</Text>
+        </Pressable>
+        <Pressable
+          style={[s.tabItem, activeTab === 'anshin' && { borderBottomColor: C.green, borderBottomWidth: 2 }]}
+          onPress={() => setActiveTab('anshin')}
+        >
+          <Text style={[s.tabText, activeTab === 'anshin' && { color: C.green, fontWeight: '700' }]}>◎ 安心</Text>
+        </Pressable>
+      </View>
+
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-
-        <View style={[s.sectionBand, { backgroundColor: C.orangeBg, borderLeftColor: C.orange }]}>
-          <Text style={[s.sectionBandTitle, { color: C.orange }]}>★ 夢</Text>
-          <Text style={s.sectionBandSub}>使いたい・叶えたいこと</Text>
-        </View>
-        {dreams.map(item => <PjCard key={item.name} {...item} />)}
-
-        <View style={s.sectionSep} />
-
-        <View style={[s.sectionBand, { backgroundColor: C.greenBg, borderLeftColor: C.green }]}>
-          <Text style={[s.sectionBandTitle, { color: C.greenText }]}>◎ 安心</Text>
-          <Text style={s.sectionBandSub}>将来の不安を解消するために</Text>
-        </View>
-        {anshin.map(item => <PjCard key={item.name} {...item} />)}
-
+        {activeTab === 'dream' ? (
+          <>
+            <View style={[s.sectionBand, { backgroundColor: C.orangeBg, borderLeftColor: C.orange }]}>
+              <Text style={[s.sectionBandTitle, { color: C.orange }]}>★ 夢</Text>
+              <Text style={s.sectionBandSub}>使いたい・叶えたいこと</Text>
+            </View>
+            {dreams.map(item => <PjCard key={item.name} {...item} />)}
+          </>
+        ) : (
+          <>
+            <View style={[s.sectionBand, { backgroundColor: C.greenBg, borderLeftColor: C.green }]}>
+              <Text style={[s.sectionBandTitle, { color: C.greenText }]}>◎ 安心</Text>
+              <Text style={s.sectionBandSub}>将来の不安を解消するために</Text>
+            </View>
+            {anshin.map(item => <PjCard key={item.name} {...item} />)}
+          </>
+        )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -116,8 +137,22 @@ const s = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+
+  tabBar: {
+    flexDirection: 'row',
+    backgroundColor: C.card,
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+  },
+  tabItem: {
+    flex: 1,
+    paddingVertical: 12,
+    alignItems: 'center',
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabText: { fontSize: 15, fontWeight: '500', color: C.textSecondary },
 
   scroll: { flex: 1 },
   content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
@@ -131,7 +166,6 @@ const s = StyleSheet.create({
   },
   sectionBandTitle: { fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
   sectionBandSub: { fontSize: 13, color: C.textSecondary, marginTop: 4 },
-  sectionSep: { height: 1, backgroundColor: C.border, marginHorizontal: -14, marginVertical: 20 },
 
   card: {
     backgroundColor: C.card,

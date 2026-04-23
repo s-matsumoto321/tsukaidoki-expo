@@ -3,6 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-
 import { router } from 'expo-router';
 import { POOL_ITEMS, PF_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
+import { Logo } from '@/components/logo';
 
 const C = {
   brand: '#0C447C',
@@ -52,8 +53,8 @@ export default function ManageScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
-        <Text style={s.headerTitle}>管理</Text>
-        <Text style={s.headerSub}>プール金・ポートフォリオ・口座振替</Text>
+        <Logo iconSize={26} />
+        <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
 
@@ -114,7 +115,6 @@ const s = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
   scroll: { flex: 1 },
