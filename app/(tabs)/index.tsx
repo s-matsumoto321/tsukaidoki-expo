@@ -2,6 +2,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
+import { Logo } from '@/components/logo';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 
@@ -160,10 +161,7 @@ export default function HomeScreen() {
 
         {/* ヘッダー */}
         <View style={s.header}>
-          {/* ロゴ画像（assets/images/logo.png を追加後にコメント解除）
-          <Image source={require('@/assets/images/logo.png')} style={s.logoImg} resizeMode="contain" />
-          */}
-          <Text style={s.headerTitle}>ツカイドキ</Text>
+          <Logo iconSize={26} />
           <Text style={s.headerSub}>ライフマネープラン</Text>
         </View>
 

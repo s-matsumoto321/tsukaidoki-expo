@@ -84,9 +84,6 @@ export default function DreamsScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
-        {/* ロゴ画像（assets/images/logo.png を追加後にコメント解除）
-        <Image source={require('@/assets/images/logo.png')} style={s.logoImg} resizeMode="contain" />
-        */}
         <Text style={s.headerTitle}>夢プロジェクト</Text>
         <Text style={s.headerSub}>夢に近づく実感と、将来への安心を</Text>
       </View>
