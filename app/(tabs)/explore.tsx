@@ -1,112 +1,156 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { router } from 'expo-router';
+import { PF_ITEMS } from '@/constants/data';
+import { useStore } from '@/store/useStore';
 
-import { Collapsible } from '@/components/ui/collapsible';
-import { ExternalLink } from '@/components/external-link';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Fonts } from '@/constants/theme';
+const C = {
+  brand: '#0C447C',
+  green: '#1D9E75',
+  greenBg: '#EAF3DE',
+  greenText: '#27500A',
+  orange: '#EF9F27',
+  orangeBg: '#FEF3E2',
+  bg: '#f5f4ee',
+  card: '#ffffff',
+  textPrimary: '#2c2c2a',
+  textSecondary: '#73726c',
+  border: 'rgba(0,0,0,0.08)',
+  warn: '#E24B4A',
+};
 
-export default function TabTwoScreen() {
+const DREAM_IDS = ['car', 'trip'];
+const ANSHIN_IDS = ['edu', 'ret'];
+
+function ProgressBar({ progress, color }: { progress: number; color: string }) {
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#D0D0D0', dark: '#353636' }}
-      headerImage={
-        <IconSymbol
-          size={310}
-          color="#808080"
-          name="chevron.left.forwardslash.chevron.right"
-          style={styles.headerImage}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText
-          type="title"
-          style={{
-            fontFamily: Fonts.rounded,
-          }}>
-          Explore
-        </ThemedText>
-      </ThemedView>
-      <ThemedText>This app includes example code to help you get started.</ThemedText>
-      <Collapsible title="File-based routing">
-        <ThemedText>
-          This app has two screens:{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">app/(tabs)/explore.tsx</ThemedText>
-        </ThemedText>
-        <ThemedText>
-          The layout file in <ThemedText type="defaultSemiBold">app/(tabs)/_layout.tsx</ThemedText>{' '}
-          sets up the tab navigator.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/router/introduction">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Android, iOS, and web support">
-        <ThemedText>
-          You can open this project on Android, iOS, and the web. To open the web version, press{' '}
-          <ThemedText type="defaultSemiBold">w</ThemedText> in the terminal running this project.
-        </ThemedText>
-      </Collapsible>
-      <Collapsible title="Images">
-        <ThemedText>
-          For static images, you can use the <ThemedText type="defaultSemiBold">@2x</ThemedText> and{' '}
-          <ThemedText type="defaultSemiBold">@3x</ThemedText> suffixes to provide files for
-          different screen densities
-        </ThemedText>
-        <Image
-          source={require('@/assets/images/react-logo.png')}
-          style={{ width: 100, height: 100, alignSelf: 'center' }}
-        />
-        <ExternalLink href="https://reactnative.dev/docs/images">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Light and dark mode components">
-        <ThemedText>
-          This template has light and dark mode support. The{' '}
-          <ThemedText type="defaultSemiBold">useColorScheme()</ThemedText> hook lets you inspect
-          what the user&apos;s current color scheme is, and so you can adjust UI colors accordingly.
-        </ThemedText>
-        <ExternalLink href="https://docs.expo.dev/develop/user-interface/color-themes/">
-          <ThemedText type="link">Learn more</ThemedText>
-        </ExternalLink>
-      </Collapsible>
-      <Collapsible title="Animations">
-        <ThemedText>
-          This template includes an example of an animated component. The{' '}
-          <ThemedText type="defaultSemiBold">components/HelloWave.tsx</ThemedText> component uses
-          the powerful{' '}
-          <ThemedText type="defaultSemiBold" style={{ fontFamily: Fonts.mono }}>
-            react-native-reanimated
-          </ThemedText>{' '}
-          library to create a waving hand animation.
-        </ThemedText>
-        {Platform.select({
-          ios: (
-            <ThemedText>
-              The <ThemedText type="defaultSemiBold">components/ParallaxScrollView.tsx</ThemedText>{' '}
-              component provides a parallax effect for the header image.
-            </ThemedText>
-          ),
-        })}
-      </Collapsible>
-    </ParallaxScrollView>
+    <View style={s.barBg}>
+      <View style={[s.barFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: color }]} />
+    </View>
   );
 }
 
-const styles = StyleSheet.create({
-  headerImage: {
-    color: '#808080',
-    bottom: -90,
-    left: -35,
-    position: 'absolute',
+type CardProps = {
+  color: string;
+  name: string;
+  amount: number;
+  meta?: string;
+  progress?: number;
+  status?: 'ok' | 'warn';
+  projectId?: string;
+};
+
+function PjCard({ color, name, amount, meta, progress = 0, status, projectId }: CardProps) {
+  const pct = Math.round(progress * 100);
+  const onPress = () => projectId && router.push(`/project/${projectId}`);
+
+  return (
+    <Pressable style={s.card} onPress={onPress} disabled={!projectId}>
+      <View style={[s.cardAccent, { backgroundColor: color }]} />
+      <View style={s.cardBody}>
+        <View style={s.cardTop}>
+          <Text style={s.cardName}>{name}</Text>
+          {status && (
+            <Text style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
+              {status === 'ok' ? '◎ 順調' : '△ 要注意'}
+            </Text>
+          )}
+        </View>
+        {meta && <Text style={s.cardMeta}>{meta}</Text>}
+        <View style={s.cardBottom}>
+          <ProgressBar progress={progress} color={color} />
+          <View style={s.cardStats}>
+            <Text style={s.cardAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
+            <Text style={s.cardPct}>{pct}%</Text>
+          </View>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
+export default function DreamsScreen() {
+  const { balances } = useStore();
+
+  const enriched = PF_ITEMS.map(item => ({
+    ...item,
+    amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
+  }));
+
+  const dreams = enriched.filter(i => i.projectId && DREAM_IDS.includes(i.projectId));
+  const anshin = enriched.filter(i => i.projectId && ANSHIN_IDS.includes(i.projectId));
+
+  return (
+    <SafeAreaView style={s.safe}>
+      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
+      <View style={s.header}>
+        <Text style={s.headerTitle}>夢プロジェクト</Text>
+        <Text style={s.headerSub}>夢に近づく実感と、将来への安心を</Text>
+      </View>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+
+        <View style={s.section}>
+          <View style={[s.sectionBadge, { backgroundColor: C.orangeBg }]}>
+            <Text style={[s.sectionBadgeText, { color: C.orange }]}>★ 夢</Text>
+          </View>
+          <Text style={s.sectionLabel}>使いたい・叶えたいこと</Text>
+        </View>
+        {dreams.map(item => <PjCard key={item.name} {...item} />)}
+
+        <View style={[s.section, { marginTop: 20 }]}>
+          <View style={[s.sectionBadge, { backgroundColor: C.greenBg }]}>
+            <Text style={[s.sectionBadgeText, { color: C.green }]}>◎ 安心</Text>
+          </View>
+          <Text style={s.sectionLabel}>将来の不安を解消するために</Text>
+        </View>
+        {anshin.map(item => <PjCard key={item.name} {...item} />)}
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+}
+
+const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.brand },
+  header: {
+    backgroundColor: C.brand,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 16,
   },
-  titleContainer: {
+  headerTitle: { fontSize: 20, fontWeight: '600', color: '#fff' },
+  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+
+  scroll: { flex: 1 },
+  content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
+
+  section: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+  sectionBadge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
+  sectionBadgeText: { fontSize: 11, fontWeight: '700' },
+  sectionLabel: { fontSize: 12, color: C.textSecondary },
+
+  card: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
     flexDirection: 'row',
-    gap: 8,
+    marginBottom: 10,
+    overflow: 'hidden',
   },
+  cardAccent: { width: 4 },
+  cardBody: { flex: 1, padding: 12 },
+  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  badge: { fontSize: 10, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  badgeOk: { backgroundColor: C.greenBg, color: C.green },
+  badgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
+  cardMeta: { fontSize: 11, color: C.textSecondary, marginTop: 4 },
+
+  cardBottom: { marginTop: 10 },
+  barBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
+  barFill: { height: 5, borderRadius: 3 },
+  cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
+  cardAmt: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
+  cardPct: { fontSize: 12, color: C.textSecondary },
 });
