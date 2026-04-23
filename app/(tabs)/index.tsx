@@ -160,15 +160,15 @@ export default function HomeScreen() {
 
         {/* ヘッダー */}
         <View style={s.header}>
-          <View style={s.headerLeft}>
-            <Text style={s.logo}>ツカイドキβ版</Text>
-            <Text style={s.headerSub}>総資産</Text>
-            <Text style={s.headerTotal}>{fmtYen(poolTotal)}</Text>
-            <Text style={s.headerNote}>プール金・ポートフォリオ 両方の合計</Text>
-          </View>
-          <Pressable style={s.transferBtn} onPress={() => router.push('/transfer')}>
-            <Text style={s.transferBtnTxt}>振替</Text>
-          </Pressable>
+          <Text style={s.headerTitle}>ツカイドキβ版</Text>
+          <Text style={s.headerSub}>ライフマネープラン</Text>
+        </View>
+
+        {/* 総資産カード */}
+        <View style={s.totalCard}>
+          <Text style={s.totalLabel}>総資産</Text>
+          <Text style={s.totalAmt}>{fmtYen(poolTotal)}</Text>
+          <Text style={s.totalNote}>プール金・ポートフォリオ 両方の合計</Text>
         </View>
 
         {/* 一致バー */}
@@ -249,27 +249,27 @@ const s = StyleSheet.create({
 
   header: {
     backgroundColor: C.brand,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
     paddingHorizontal: 20,
     paddingTop: 12,
-    paddingBottom: 14,
+    paddingBottom: 16,
   },
-  headerLeft: { flex: 1 },
-  logo: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
-  headerTotal: { fontSize: 28, fontWeight: '500', color: '#fff', marginTop: 2 },
-  headerNote: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
-  transferBtn: {
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.5)',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    marginTop: 4,
+  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
+  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+
+  totalCard: {
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 2,
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
   },
-  transferBtnTxt: { fontSize: 13, color: '#fff', fontWeight: '500' },
+  totalLabel: { fontSize: 12, color: C.textSecondary },
+  totalAmt: { fontSize: 30, fontWeight: '500', color: C.brand, marginTop: 2 },
+  totalNote: { fontSize: 11, color: C.textSecondary, marginTop: 4 },
 
   matchBar: {
     margin: 8,
