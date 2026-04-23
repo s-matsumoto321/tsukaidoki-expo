@@ -340,12 +340,7 @@ export default function ProjectDetailScreen() {
           </View>
           <View style={{ alignItems: 'flex-end' }}>
             <Text style={s.amtLabel}>{isAccount ? '現在の残高' : '現在の積み立て'}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Text style={s.amt}>¥{currentAmount.toLocaleString('ja-JP')}</Text>
-              <Pressable onPress={() => setSheetVisible(true)} style={s.editBtn} hitSlop={8}>
-                <Text style={s.editTxt}>修正</Text>
-              </Pressable>
-            </View>
+            <Text style={s.amt}>¥{currentAmount.toLocaleString('ja-JP')}</Text>
             <Text style={s.amtSub}>{project.goalLabel} · {project.statusTxt}</Text>
           </View>
         </View>
@@ -450,7 +445,6 @@ export default function ProjectDetailScreen() {
                   const showCarImg = id === 'car' && ev.type === 'spend';
                   return (
                     <Fragment key={ev.idx}>
-                      {showCarImg && <CarImageCard />}
                       <Pressable
                         style={[
                           s.evRow,
@@ -468,6 +462,7 @@ export default function ProjectDetailScreen() {
                           <Text style={[s.evAmt, ev.pos ? s.evPos : s.evNeg]}>{ev.amt}</Text>
                         </View>
                       </Pressable>
+                      {showCarImg && <CarImageCard />}
                     </Fragment>
                   );
                 })

@@ -167,14 +167,6 @@ export default function HomeScreen() {
           <View style={s.totalCard}>
             <Text style={s.totalLabel}>総資産</Text>
             <Text style={s.totalAmt}>{fmtYen(poolTotal)}</Text>
-            <Text style={s.totalNote}>プール金・ポートフォリオ 両方の合計</Text>
-          </View>
-
-          {/* セクション区切り */}
-          <View style={s.sectionDivider}>
-            <View style={s.sectionLine} />
-            <Text style={s.sectionDividerLabel}>内訳</Text>
-            <View style={s.sectionLine} />
           </View>
 
           {/* 一致バー */}
@@ -206,7 +198,7 @@ export default function HomeScreen() {
               route="/pool"
             />
             <ChartCard
-              title="ポートフォリオ"
+              title="使いみち"
               badge="用途別"
               headerColor={C.mustard}
               total={fmtMan(pfTotal)}
