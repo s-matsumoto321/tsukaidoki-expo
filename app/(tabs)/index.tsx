@@ -1,6 +1,10 @@
+import { useRef, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
-import { Link, router, type Href } from 'expo-router';
+import {
+  Animated, ScrollView, View, Text, Pressable,
+  StyleSheet, StatusBar, StyleSheet as RN,
+} from 'react-native';
+import { Link, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { Logo } from '@/components/logo';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -8,6 +12,7 @@ import { useStore } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
+  mustard: '#C4981A',
   green: '#1D9E75',
   greenBg: '#EAF3DE',
   greenText: '#27500A',
@@ -19,8 +24,13 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
 };
 
+// ポートフォリオ円グラフ専用カラー（カラシ系・明度違い）
+const PF_CHART_COLORS = ['#5C4200', '#8B6410', '#C4981A', '#E5C040', '#F5DC7A'];
+
+const MENU_WIDTH = 270;
+
 // -------------------------------------------------------
-// 案A: ドーナツ2列（現行）
+// ChartCard
 // -------------------------------------------------------
 type LegendItemProps = { color: string; name: string; val: string };
 
@@ -65,188 +75,203 @@ function ChartCard({ title, badge, headerColor, total, sub, items, route }: Char
 }
 
 // -------------------------------------------------------
-// 案B: 左右ミラーリスト（コメントアウト中）
+// Helpers
 // -------------------------------------------------------
-/*
-type MirrorItemProps = { color: string; name: string; amount: number; total: number };
-
-function MirrorItem({ color, name, amount, total }: MirrorItemProps) {
-  const pct = total > 0 ? amount / total : 0;
-  return (
-    <View style={s.mItem}>
-      <View style={s.mItemTop}>
-        <View style={[s.mDot, { backgroundColor: color }]} />
-        <Text style={s.mName} numberOfLines={1}>{name}</Text>
-      </View>
-      <View style={s.mItemBottom}>
-        <View style={s.mBarBg}>
-          <View style={[s.mBarFill, { width: `${pct * 100}%` as any, backgroundColor: color }]} />
-        </View>
-        <Text style={s.mAmt}>{Math.round(amount / 10000)}万</Text>
-      </View>
-    </View>
-  );
-}
-
-type MirrorCardProps = {
-  poolItems: FinancialItem[];
-  pfItems: FinancialItem[];
-  poolTotal: number;
-  pfTotal: number;
-};
-
-function MirrorCard({ poolItems, pfItems, poolTotal, pfTotal }: MirrorCardProps) {
-  const rows = Math.max(poolItems.length, pfItems.length);
-  return (
-    <View style={s.mCard}>
-      <View style={s.mHeader}>
-        <Pressable style={s.mHeaderHalf} onPress={() => router.push('/pool')}>
-          <Text style={s.mHeaderLabel}>プール金</Text>
-          <Text style={s.mHeaderTotal}>¥{Math.round(poolTotal / 10000).toLocaleString()}万</Text>
-          <Text style={s.mHeaderLink}>詳細 ›</Text>
-        </Pressable>
-        <View style={s.mColDivider} />
-        <Pressable style={s.mHeaderHalf} onPress={() => router.push('/portfolio')}>
-          <Text style={s.mHeaderLabel}>ポートフォリオ</Text>
-          <Text style={s.mHeaderTotal}>¥{Math.round(pfTotal / 10000).toLocaleString()}万</Text>
-          <Text style={s.mHeaderLink}>詳細 ›</Text>
-        </Pressable>
-      </View>
-      <View style={s.mSep} />
-      {Array.from({ length: rows }).map((_, i) => (
-        <View key={i} style={[s.mRow, i < rows - 1 && s.mRowBorder]}>
-          {poolItems[i]
-            ? <MirrorItem {...poolItems[i]} total={poolTotal} />
-            : <View style={s.mItem} />}
-          <View style={s.mColDivider} />
-          {pfItems[i]
-            ? <MirrorItem {...pfItems[i]} total={pfTotal} />
-            : <View style={s.mItem} />}
-        </View>
-      ))}
-    </View>
-  );
-}
-*/
-
 function fmtMan(yen: number): string {
   return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
 }
-
 function fmtYen(yen: number): string {
   return `¥${yen.toLocaleString('ja-JP')}`;
 }
 
+// -------------------------------------------------------
+// HomeScreen
+// -------------------------------------------------------
+const MENU_ITEMS = [
+  { label: 'ホーム',   icon: '⌂' },
+  { label: '使いみち', icon: '★' },
+  { label: '管理',     icon: '≡' },
+  { label: '設定',     icon: '⚙' },
+];
+
 export default function HomeScreen() {
   const { balances } = useStore();
 
+  // --- menu animation ---
+  const [menuVisible, setMenuVisible] = useState(false);
+  const menuAnim   = useRef(new Animated.Value(MENU_WIDTH)).current;
+  const overlayAnim = useRef(new Animated.Value(0)).current;
+  const btnScale   = useRef(new Animated.Value(1)).current;
+
+  const openMenu = () => {
+    setMenuVisible(true);
+    Animated.parallel([
+      Animated.spring(menuAnim,    { toValue: 0, useNativeDriver: true, bounciness: 4 }),
+      Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const closeMenu = () => {
+    Animated.parallel([
+      Animated.timing(menuAnim,    { toValue: MENU_WIDTH, duration: 220, useNativeDriver: true }),
+      Animated.timing(overlayAnim, { toValue: 0,          duration: 200, useNativeDriver: true }),
+    ]).start(() => setMenuVisible(false));
+  };
+
+  const onMenuBtnPress = () => {
+    Animated.sequence([
+      Animated.timing(btnScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
+      Animated.spring(btnScale, { toValue: 1, bounciness: 14, useNativeDriver: true }),
+    ]).start();
+    openMenu();
+  };
+
+  // --- data ---
   const poolItems = POOL_ITEMS.map(item => ({
     ...item,
     amount: balances[item.projectId!] ?? item.amount,
   }));
-  const pfItems = PF_ITEMS.map(item => ({
+  const pfItems = PF_ITEMS.map((item, i) => ({
     ...item,
+    color: PF_CHART_COLORS[i % PF_CHART_COLORS.length],
     amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
   }));
 
   const poolTotal = poolItems.reduce((sum, item) => sum + item.amount, 0);
-  const pfTotal = pfItems.reduce((sum, item) => sum + item.amount, 0);
-  const diff = poolTotal - pfTotal;
+  const pfTotal   = pfItems.reduce((sum, item) => sum + item.amount, 0);
+  const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
-      <ScrollView style={s.scrollView} contentContainerStyle={s.content}>
+    <View style={{ flex: 1, backgroundColor: C.bg }}>
+      <SafeAreaView style={s.safe}>
+        <StatusBar barStyle="light-content" backgroundColor={C.brand} />
+        <ScrollView style={s.scrollView} contentContainerStyle={s.content}>
 
-        {/* ヘッダー */}
-        <View style={s.header}>
-          <Logo iconSize={26} />
-          <Text style={s.headerSub}>ライフマネープラン</Text>
-        </View>
-
-        {/* 総資産カード */}
-        <View style={s.totalCard}>
-          <Text style={s.totalLabel}>総資産</Text>
-          <Text style={s.totalAmt}>{fmtYen(poolTotal)}</Text>
-          <Text style={s.totalNote}>プール金・ポートフォリオ 両方の合計</Text>
-        </View>
-
-        {/* セクション区切り */}
-        <View style={s.sectionDivider}>
-          <View style={s.sectionLine} />
-          <Text style={s.sectionDividerLabel}>内訳</Text>
-          <View style={s.sectionLine} />
-        </View>
-
-        {/* 一致バー */}
-        <View style={[s.matchBar, !isBalanced && s.matchBarWarn]}>
-          <View style={[s.matchDot, !isBalanced && s.matchDotWarn]}>
-            <Text style={s.matchDotTxt}>{isBalanced ? '✓' : '!'}</Text>
+          {/* ヘッダー */}
+          <View style={s.header}>
+            <View>
+              <Logo iconSize={26} />
+              <Text style={s.headerSub}>ライフマネープラン</Text>
+            </View>
+            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+              <Pressable style={s.menuBtn} onPress={onMenuBtnPress}>
+                <View style={s.menuLine} />
+                <View style={s.menuLine} />
+                <View style={s.menuLine} />
+              </Pressable>
+            </Animated.View>
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={[s.matchTxt, !isBalanced && s.matchTxtWarn]}>
-              {isBalanced ? 'プール金 ＝ ポートフォリオ　一致' : 'プール金 ≠ ポートフォリオ　差異あり'}
-            </Text>
-            <Text style={[s.matchSub, !isBalanced && s.matchSubWarn]}>
-              {isBalanced
-                ? '差額 ¥0 · 記録は整合しています'
-                : `差額 ¥${Math.abs(diff).toLocaleString('ja-JP')} · 残高修正が必要です`}
-            </Text>
-          </View>
-        </View>
 
-        {/* 案A: ドーナツ2列 */}
-        <View style={s.dualChart}>
-          <ChartCard
-            title="プール金"
-            badge="口座別"
-            headerColor={C.brand}
-            total={fmtMan(poolTotal)}
-            sub={`${POOL_ITEMS.length}口座`}
-            items={poolItems}
-            route="/pool"
+          {/* 総資産カード */}
+          <View style={s.totalCard}>
+            <Text style={s.totalLabel}>総資産</Text>
+            <Text style={s.totalAmt}>{fmtYen(poolTotal)}</Text>
+            <Text style={s.totalNote}>プール金・ポートフォリオ 両方の合計</Text>
+          </View>
+
+          {/* セクション区切り */}
+          <View style={s.sectionDivider}>
+            <View style={s.sectionLine} />
+            <Text style={s.sectionDividerLabel}>内訳</Text>
+            <View style={s.sectionLine} />
+          </View>
+
+          {/* 一致バー */}
+          <View style={[s.matchBar, !isBalanced && s.matchBarWarn]}>
+            <View style={[s.matchDot, !isBalanced && s.matchDotWarn]}>
+              <Text style={s.matchDotTxt}>{isBalanced ? '✓' : '!'}</Text>
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={[s.matchTxt, !isBalanced && s.matchTxtWarn]}>
+                {isBalanced ? 'プール金 ＝ ポートフォリオ　一致' : 'プール金 ≠ ポートフォリオ　差異あり'}
+              </Text>
+              <Text style={[s.matchSub, !isBalanced && s.matchSubWarn]}>
+                {isBalanced
+                  ? '差額 ¥0 · 記録は整合しています'
+                  : `差額 ¥${Math.abs(diff).toLocaleString('ja-JP')} · 残高修正が必要です`}
+              </Text>
+            </View>
+          </View>
+
+          {/* ドーナツ2列 */}
+          <View style={s.dualChart}>
+            <ChartCard
+              title="プール金"
+              badge="口座別"
+              headerColor={C.brand}
+              total={fmtMan(poolTotal)}
+              sub={`${POOL_ITEMS.length}口座`}
+              items={poolItems}
+              route="/pool"
+            />
+            <ChartCard
+              title="ポートフォリオ"
+              badge="用途別"
+              headerColor={C.mustard}
+              total={fmtMan(pfTotal)}
+              sub={`${PF_ITEMS.length}件`}
+              items={pfItems}
+              route="/portfolio"
+            />
+          </View>
+
+          {/* 差額カード */}
+          <View style={s.diffCard}>
+            <View style={s.diffRow}>
+              <Text style={s.diffLabel}>プール金 合計</Text>
+              <Text style={[s.diffVal, s.diffBig]}>{fmtYen(poolTotal)}</Text>
+            </View>
+            <View style={s.diffRow}>
+              <Text style={s.diffLabel}>ポートフォリオ 合計</Text>
+              <Text style={[s.diffVal, s.diffBig]}>{fmtYen(pfTotal)}</Text>
+            </View>
+            <View style={[s.diffRow, s.diffRowLast]}>
+              <Text style={[s.diffLabel, isBalanced ? s.diffLabelGreen : s.diffLabelWarn]}>差額</Text>
+              <Text style={[s.diffVal, isBalanced ? s.diffValGreen : s.diffValWarn]}>
+                {isBalanced ? '¥0 ✓' : fmtYen(diff)}
+              </Text>
+            </View>
+          </View>
+
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* オーバーレイ */}
+      {menuVisible && (
+        <Animated.View
+          style={[RN.absoluteFill, { opacity: overlayAnim }]}
+          pointerEvents="auto"
+        >
+          <Pressable
+            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)' }}
+            onPress={closeMenu}
           />
-          <ChartCard
-            title="ポートフォリオ"
-            badge="用途別"
-            headerColor={C.green}
-            total={fmtMan(pfTotal)}
-            sub={`${PF_ITEMS.length}件`}
-            items={pfItems}
-            route="/portfolio"
-          />
-        </View>
+        </Animated.View>
+      )}
 
-        {/* 案B: 左右ミラーリスト（コメントアウト中）
-        <MirrorCard
-          poolItems={poolItems}
-          pfItems={pfItems}
-          poolTotal={poolTotal}
-          pfTotal={pfTotal}
-        />
-        */}
-
-        {/* 差額カード */}
-        <View style={s.diffCard}>
-          <View style={s.diffRow}>
-            <Text style={s.diffLabel}>プール金 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>{fmtYen(poolTotal)}</Text>
-          </View>
-          <View style={s.diffRow}>
-            <Text style={s.diffLabel}>ポートフォリオ 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>{fmtYen(pfTotal)}</Text>
-          </View>
-          <View style={[s.diffRow, s.diffRowLast]}>
-            <Text style={[s.diffLabel, isBalanced ? s.diffLabelGreen : s.diffLabelWarn]}>差額</Text>
-            <Text style={[s.diffVal, isBalanced ? s.diffValGreen : s.diffValWarn]}>
-              {isBalanced ? '¥0 ✓' : fmtYen(diff)}
-            </Text>
-          </View>
-        </View>
-
-      </ScrollView>
-    </SafeAreaView>
+      {/* スライドメニュー */}
+      {menuVisible && (
+        <Animated.View style={[s.menuPanel, { transform: [{ translateX: menuAnim }] }]}>
+          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
+            <View style={s.menuHeader}>
+              <Logo iconSize={20} />
+              <Pressable style={s.menuCloseBtn} onPress={closeMenu}>
+                <Text style={s.menuCloseTxt}>✕</Text>
+              </Pressable>
+            </View>
+            <View style={s.menuList}>
+              {MENU_ITEMS.map(item => (
+                <Pressable key={item.label} style={s.menuItem}>
+                  <Text style={s.menuItemIcon}>{item.icon}</Text>
+                  <Text style={s.menuItemLabel}>{item.label}</Text>
+                </Pressable>
+              ))}
+            </View>
+          </SafeAreaView>
+        </Animated.View>
+      )}
+    </View>
   );
 }
 
@@ -255,15 +280,79 @@ const s = StyleSheet.create({
   scrollView: { flex: 1 },
   content: { backgroundColor: C.bg, paddingBottom: 8 },
 
+  // ヘッダー
   header: {
     backgroundColor: C.brand,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
-  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
+  // ハンバーガーボタン
+  menuBtn: {
+    padding: 9,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuLine: {
+    width: 20,
+    height: 2,
+    backgroundColor: 'rgba(255,255,255,0.9)',
+    borderRadius: 1,
+    marginVertical: 2.5,
+  },
+
+  // スライドメニューパネル
+  menuPanel: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    width: MENU_WIDTH,
+    backgroundColor: C.brand,
+    shadowColor: '#000',
+    shadowOffset: { width: -4, height: 0 },
+    shadowOpacity: 0.22,
+    shadowRadius: 12,
+    elevation: 24,
+  },
+  menuHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 20,
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(255,255,255,0.15)',
+  },
+  menuCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  menuCloseTxt: { fontSize: 13, color: '#fff' },
+  menuList: { paddingTop: 8 },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  menuItemIcon: { fontSize: 18, color: 'rgba(255,255,255,0.65)', width: 22, textAlign: 'center' },
+  menuItemLabel: { fontSize: 16, fontWeight: '500', color: '#fff' },
+
+  // 総資産カード
   totalCard: {
     marginHorizontal: 14,
     marginTop: 10,
@@ -309,9 +398,6 @@ const s = StyleSheet.create({
   matchSub: { fontSize: 11, marginTop: 2, color: C.greenSub },
   matchSubWarn: { color: '#633806' },
 
-  // -------------------------------------------------------
-  // 案A: ドーナツ2列のスタイル（現行）
-  // -------------------------------------------------------
   dualChart: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 4 },
   chartCard: {
     flex: 1,
@@ -338,39 +424,6 @@ const s = StyleSheet.create({
   legDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   legName: { fontSize: 12, color: C.textSecondary, flex: 1 },
   legVal: { fontSize: 12, fontWeight: '600', color: C.textPrimary, minWidth: 44, textAlign: 'right' },
-
-  // -------------------------------------------------------
-  // 案B: 左右ミラーリストのスタイル（コメントアウト中）
-  // -------------------------------------------------------
-  /*
-  mCard: {
-    marginHorizontal: 14,
-    marginTop: 2,
-    marginBottom: 8,
-    backgroundColor: C.card,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  mHeader: { flexDirection: 'row' },
-  mHeaderHalf: { flex: 1, paddingVertical: 10, paddingHorizontal: 12 },
-  mHeaderLabel: { fontSize: 10, color: C.textSecondary },
-  mHeaderTotal: { fontSize: 18, fontWeight: '600', color: C.brand, marginTop: 2 },
-  mHeaderLink: { fontSize: 10, color: C.brand, marginTop: 2 },
-  mColDivider: { width: 0.5, backgroundColor: C.border },
-  mSep: { height: 0.5, backgroundColor: C.border },
-  mRow: { flexDirection: 'row' },
-  mRowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
-  mItem: { flex: 1, paddingVertical: 9, paddingHorizontal: 12 },
-  mItemTop: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
-  mDot: { width: 7, height: 7, borderRadius: 3.5 },
-  mName: { fontSize: 11, fontWeight: '500', color: C.textPrimary, flex: 1 },
-  mItemBottom: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  mBarBg: { flex: 1, height: 5, backgroundColor: C.border, borderRadius: 2.5, overflow: 'hidden' },
-  mBarFill: { height: 5, borderRadius: 2.5 },
-  mAmt: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 26, textAlign: 'right' },
-  */
 
   diffCard: {
     marginHorizontal: 14,
