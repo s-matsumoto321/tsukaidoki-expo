@@ -204,7 +204,7 @@ export default function HomeScreen() {
               total={fmtMan(pfTotal)}
               sub={`${PF_ITEMS.length}件`}
               items={pfItems}
-              route="/portfolio"
+              route="/(tabs)/explore"
             />
           </View>
 

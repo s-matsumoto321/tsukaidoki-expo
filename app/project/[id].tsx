@@ -192,11 +192,10 @@ function CarImageCard() {
 // ─── Timeline pair row ───────────────────────────────────────────
 
 function EventPairRow({
-  planEv, actual, isLast, selected, onPlanPress, onEmptyPress,
+  planEv, actual, selected, onPlanPress, onEmptyPress,
 }: {
   planEv: ProjectEvent;
   actual: ActualEvent | null | undefined;
-  isLast: boolean;
   selected: boolean;
   onPlanPress: (ev: ProjectEvent) => void;
   onEmptyPress: () => void;
@@ -205,7 +204,7 @@ function EventPairRow({
 
   return (
     <Fragment>
-      <View style={[s.pairRow, !isLast && s.pairBorder, selected && s.pairRowSel]}>
+      <View style={[s.pairRow, selected && s.pairRowSel]}>
         {/* 計画 */}
         <Pressable style={s.planCol} onPress={() => onPlanPress(planEv)}>
           <View style={s.evTopRow}>
@@ -217,7 +216,11 @@ function EventPairRow({
           <Text style={[s.evAmt, planEv.pos ? s.evPos : s.evNeg]}>{planEv.amt}</Text>
         </Pressable>
 
-        <View style={s.colDiv} />
+        {/* 仕切り（縦線＋ドット） */}
+        <View style={s.colDivWrap}>
+          <View style={s.colDivLine} />
+          <View style={[s.colDivDot, { borderColor: planEv.dot }]} />
+        </View>
 
         {/* 実績 */}
         {actual != null ? (
@@ -238,7 +241,6 @@ function EventPairRow({
         )}
       </View>
 
-      {/* 車画像（買い替えイベントの直後） */}
       {showCarImg && <CarImageCard />}
     </Fragment>
   );
@@ -307,8 +309,8 @@ export default function ProjectDetailScreen() {
     <View style={{ flex: 1 }}>
       {/* ── ヘッダー ── */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
-        <Pressable onPress={() => router.back()} hitSlop={8}>
-          <Text style={s.backTxt}>← {from === 'pool' ? 'プール金' : 'ポートフォリオ'}</Text>
+        <Pressable onPress={() => router.back()} hitSlop={12}>
+          <Text style={s.backTxt}>‹ {from === 'pool' ? 'プール金' : '使いみち'}</Text>
         </Pressable>
         <View style={s.hdrRow}>
           <View style={{ flex: 1, minWidth: 0 }}>
@@ -389,36 +391,38 @@ export default function ProjectDetailScreen() {
             <Text style={s.secTitle}>{isAccount ? '入出金・取引の年表' : '積み立て・支出の年表'}</Text>
           </View>
 
-          <View style={s.evCardWrap}>
-            {/* 列ヘッダー */}
-            <View style={s.colHeaderRow}>
-              <Text style={s.colHeaderTxt}>計画</Text>
-              <View style={s.colDiv} />
-              <Text style={s.colHeaderTxt}>実績</Text>
+          {/* 列ヘッダー */}
+          <View style={s.colHeaderRow}>
+            <View style={s.colHeaderPlan}>
+              <Text style={[s.colHeaderTxt, s.colHeaderPlanTxt]}>計画</Text>
             </View>
-
-            <ScrollView
-              ref={scrollRef}
-              style={{ flex: 1 }}
-              contentContainerStyle={{ paddingHorizontal: 10, paddingVertical: 4 }}
-            >
-              {project.events.map((ev, idx) => (
-                <View
-                  key={ev.idx}
-                  onLayout={e => { rowY.current[ev.idx] = e.nativeEvent.layout.y; }}
-                >
-                  <EventPairRow
-                    planEv={ev}
-                    actual={project.actuals?.[ev.idx]}
-                    isLast={idx === project.events.length - 1}
-                    selected={selectedIdx === ev.idx}
-                    onPlanPress={handleRowPress}
-                    onEmptyPress={() => setSheetVisible(true)}
-                  />
-                </View>
-              ))}
-            </ScrollView>
+            <View style={{ width: 20 }} />
+            <View style={s.colHeaderActual}>
+              <Text style={[s.colHeaderTxt, s.colHeaderActualTxt]}>実績</Text>
+            </View>
           </View>
+
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 24 }}
+          >
+            {project.events.map((ev) => (
+              <View
+                key={ev.idx}
+                style={s.eventCard}
+                onLayout={e => { rowY.current[ev.idx] = e.nativeEvent.layout.y; }}
+              >
+                <EventPairRow
+                  planEv={ev}
+                  actual={project.actuals?.[ev.idx]}
+                  selected={selectedIdx === ev.idx}
+                  onPlanPress={handleRowPress}
+                  onEmptyPress={() => setSheetVisible(true)}
+                />
+              </View>
+            ))}
+          </ScrollView>
         </View>
       </View>
 
@@ -435,7 +439,7 @@ export default function ProjectDetailScreen() {
 
 const s = StyleSheet.create({
   header: { backgroundColor: C.brand, paddingHorizontal: 20, paddingBottom: 12 },
-  backTxt: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 6 },
+  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 8, letterSpacing: 0.2 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
   projName: { fontSize: 16, fontWeight: '500', color: '#fff', lineHeight: 22 },
   timing: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
@@ -499,36 +503,67 @@ const s = StyleSheet.create({
   },
   secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
 
-  evCardWrap: {
-    flex: 1, marginHorizontal: 14,
-    backgroundColor: C.card, borderWidth: 0.5, borderColor: C.border,
-    borderRadius: 12, overflow: 'hidden',
-  },
-
   // 列ヘッダー
   colHeaderRow: {
     flexDirection: 'row',
-    paddingVertical: 7,
-    paddingHorizontal: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.border,
+    marginHorizontal: 14,
     backgroundColor: C.bg,
   },
-  colHeaderTxt: { flex: 1, fontSize: 11, fontWeight: '600', color: C.textSecondary, textAlign: 'center' },
+  colHeaderPlan: {
+    flex: 1,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: C.brand,
+    alignItems: 'center',
+  },
+  colHeaderActual: {
+    flex: 1,
+    paddingVertical: 10,
+    borderBottomWidth: 2,
+    borderBottomColor: C.green,
+    alignItems: 'center',
+  },
+  colHeaderTxt: { fontSize: 14, fontWeight: '700' },
+  colHeaderPlanTxt: { color: C.brand },
+  colHeaderActualTxt: { color: C.green },
+
+  // 個別行カード
+  eventCard: {
+    backgroundColor: C.card,
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    marginBottom: 8,
+    overflow: 'hidden',
+  },
 
   // 横並び行
-  pairRow: { flexDirection: 'row', paddingVertical: 10 },
-  pairBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
+  pairRow: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 10 },
   pairRowSel: { backgroundColor: C.warn },
 
-  planCol:   { flex: 1, paddingRight: 8 },
-  actualCol: { flex: 1, paddingLeft: 8 },
+  planCol:   { flex: 1, paddingRight: 6 },
+  actualCol: { flex: 1, paddingLeft: 6 },
 
-  colDiv: { width: 0.5, backgroundColor: C.border, marginVertical: 2 },
+  // 仕切り（縦線＋ドット）
+  colDivWrap: { width: 20, alignItems: 'center', justifyContent: 'center' },
+  colDivLine: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 1,
+    backgroundColor: C.border,
+  },
+  colDivDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: C.card,
+    borderWidth: 2,
+  },
 
   // 未入力スロット
   emptyCol: {
-    flex: 1, marginLeft: 8,
+    flex: 1,
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.14)', borderStyle: 'dashed', borderRadius: 8,
     justifyContent: 'center', alignItems: 'center', minHeight: 64,
   },

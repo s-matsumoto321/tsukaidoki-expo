@@ -29,15 +29,6 @@ export default function RootLayout() {
           }}
         />
         <Stack.Screen
-          name="portfolio"
-          options={{
-            title: 'ポートフォリオ',
-            headerStyle: { backgroundColor: '#0C447C' },
-            headerTintColor: '#ffffff',
-            headerBackTitle: 'ホーム',
-          }}
-        />
-        <Stack.Screen
           name="project/[id]"
           options={{ headerShown: false }}
         />

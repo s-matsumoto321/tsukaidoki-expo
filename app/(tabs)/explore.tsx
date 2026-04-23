@@ -22,6 +22,7 @@ const C = {
 };
 
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
+const PF_CHART_COLORS = ['#5C4200', '#8B6410', '#C4981A', '#E5C040', '#F5DC7A'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
@@ -32,6 +33,7 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
   if (total === 0) return null;
   return (
     <View style={s.allocWrap}>
+      <Text style={s.allocLabel}>総資産</Text>
       <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
       <View style={s.allocBar}>
         {items.map(item => (
@@ -133,11 +135,12 @@ export default function DreamsScreen() {
 
   const enriched: CardItem[] = useMemo(() =>
     PF_ITEMS
-      .filter(i => i.projectId && SHOWN_IDS.includes(i.projectId))
-      .map(item => ({
+      .map((item, i) => ({
         ...item,
+        color: PF_CHART_COLORS[i % PF_CHART_COLORS.length],
         amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
-      })),
+      }))
+      .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId)),
     [balances],
   );
 
@@ -241,6 +244,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 0.5,
     borderBottomColor: C.border,
   },
+  allocLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 1 },
   allocTotal: {
     fontSize: 24,
     fontWeight: '700',
@@ -256,16 +260,18 @@ const s = StyleSheet.create({
   },
   allocLegRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
   },
   allocLegItem: {
-    flex: 1,
+    width: '50%',
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    paddingVertical: 3,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   allocLegName: { fontSize: 11, color: C.textSecondary, flex: 1 },
-  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary },
+  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 26, textAlign: 'right' },
 
   content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
 
