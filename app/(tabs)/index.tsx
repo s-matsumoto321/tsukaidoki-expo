@@ -55,7 +55,7 @@ function ChartCard({ title, badge, headerColor, total, sub, items, route }: Char
           <Text style={s.chartHeaderBadge}>{badge}</Text>
         </View>
         <View style={s.chartBody}>
-          <DonutChart segments={segments} size={90} thickness={10} centerLabel={total} centerSub={sub} />
+          <DonutChart segments={segments} size={106} thickness={11} centerLabel={total} centerSub={sub} />
           {items.map(item => <LegendItem key={item.name} {...item} />)}
         </View>
       </Pressable>
@@ -245,7 +245,7 @@ export default function HomeScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.brand },
   scrollView: { flex: 1 },
-  content: { backgroundColor: C.bg, paddingBottom: 20 },
+  content: { backgroundColor: C.bg, paddingBottom: 8 },
 
   header: {
     backgroundColor: C.brand,
@@ -257,43 +257,43 @@ const s = StyleSheet.create({
     paddingBottom: 14,
   },
   headerLeft: { flex: 1 },
-  logo: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  headerSub: { fontSize: 10, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
-  headerTotal: { fontSize: 24, fontWeight: '500', color: '#fff', marginTop: 1 },
-  headerNote: { fontSize: 9, color: 'rgba(255,255,255,0.5)', marginTop: 1 },
+  logo: { fontSize: 13, fontWeight: '700', color: '#fff' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 8 },
+  headerTotal: { fontSize: 28, fontWeight: '500', color: '#fff', marginTop: 2 },
+  headerNote: { fontSize: 11, color: 'rgba(255,255,255,0.5)', marginTop: 2 },
   transferBtn: {
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.5)',
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     marginTop: 4,
   },
-  transferBtnTxt: { fontSize: 11, color: '#fff', fontWeight: '500' },
+  transferBtnTxt: { fontSize: 13, color: '#fff', fontWeight: '500' },
 
   matchBar: {
     margin: 8,
     borderRadius: 12,
-    paddingVertical: 8,
+    paddingVertical: 10,
     paddingHorizontal: 12,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 9,
+    gap: 10,
     backgroundColor: C.greenBg,
   },
-  matchDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: C.green, justifyContent: 'center', alignItems: 'center' },
-  matchDotTxt: { fontSize: 11, fontWeight: '500', color: '#fff' },
+  matchDot: { width: 26, height: 26, borderRadius: 13, backgroundColor: C.green, justifyContent: 'center', alignItems: 'center' },
+  matchDotTxt: { fontSize: 13, fontWeight: '500', color: '#fff' },
   matchBarWarn: { backgroundColor: '#FAEEDA' },
   matchDotWarn: { backgroundColor: '#E24B4A' },
-  matchTxt: { fontSize: 11, fontWeight: '500', color: C.greenText },
+  matchTxt: { fontSize: 13, fontWeight: '500', color: C.greenText },
   matchTxtWarn: { color: '#633806' },
-  matchSub: { fontSize: 9, marginTop: 1, color: C.greenSub },
+  matchSub: { fontSize: 11, marginTop: 2, color: C.greenSub },
   matchSubWarn: { color: '#633806' },
 
   // -------------------------------------------------------
   // 案A: ドーナツ2列のスタイル（現行）
   // -------------------------------------------------------
-  dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
+  dualChart: { flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 4 },
   chartCard: {
     flex: 1,
     backgroundColor: C.card,
@@ -303,20 +303,20 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   chartHeader: {
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
-  chartHeaderTitle: { fontSize: 12, fontWeight: '700', color: '#fff' },
-  chartHeaderBadge: { fontSize: 9, color: 'rgba(255,255,255,0.7)' },
-  chartBody: { padding: 9, alignItems: 'center' },
-  legRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, width: '100%' },
-  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 },
-  legDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
-  legName: { fontSize: 11, color: C.textSecondary, flex: 1 },
-  legVal: { fontSize: 11, fontWeight: '500', color: C.textPrimary, minWidth: 44, textAlign: 'right' },
+  chartHeaderTitle: { fontSize: 14, fontWeight: '700', color: '#fff' },
+  chartHeaderBadge: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
+  chartBody: { padding: 12, alignItems: 'center' },
+  legRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 5, width: '100%' },
+  legLeft: { flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1, minWidth: 0 },
+  legDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  legName: { fontSize: 12, color: C.textSecondary, flex: 1 },
+  legVal: { fontSize: 12, fontWeight: '600', color: C.textPrimary, minWidth: 44, textAlign: 'right' },
 
   // -------------------------------------------------------
   // 案B: 左右ミラーリストのスタイル（コメントアウト中）
@@ -369,9 +369,9 @@ const s = StyleSheet.create({
     borderBottomColor: C.border,
   },
   diffRowLast: { borderBottomWidth: 0 },
-  diffLabel: { fontSize: 11, color: C.textSecondary },
-  diffVal: { fontSize: 11, fontWeight: '500', color: C.textPrimary },
-  diffBig: { fontSize: 13, color: C.brand },
+  diffLabel: { fontSize: 13, color: C.textSecondary },
+  diffVal: { fontSize: 13, fontWeight: '500', color: C.textPrimary },
+  diffBig: { fontSize: 15, color: C.brand },
   diffLabelGreen: { color: C.green, fontWeight: '500' },
   diffValGreen: { color: C.green },
   diffLabelWarn: { color: '#E24B4A', fontWeight: '500' },
