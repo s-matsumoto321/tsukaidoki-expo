@@ -24,8 +24,42 @@ const C = {
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
-
 type CardItem = FinancialItem & { amount: number };
+
+// ─── 横積み比率バー ───────────────────────────────────────────────
+
+function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
+  if (total === 0) return null;
+  return (
+    <View style={s.allocWrap}>
+      <View style={s.allocHeaderRow}>
+        <Text style={s.allocTitle}>使いみち配分</Text>
+        <Text style={s.allocTotalAmt}>¥{total.toLocaleString('ja-JP')}</Text>
+      </View>
+      <View style={s.allocBar}>
+        {items.map(item => (
+          <View
+            key={item.projectId ?? item.name}
+            style={{ flex: item.amount, backgroundColor: item.color }}
+          />
+        ))}
+      </View>
+      <View style={s.allocLegRow}>
+        {items.map(item => (
+          <View key={item.projectId ?? item.name} style={s.allocLegItem}>
+            <View style={[s.allocDot, { backgroundColor: item.color }]} />
+            <Text style={s.allocLegName} numberOfLines={1}>{item.name}</Text>
+            <Text style={s.allocLegPct}>
+              {Math.round((item.amount / total) * 100)}%
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ─── プログレスバー ───────────────────────────────────────────────
 
 function ProgressBar({ progress, color }: { progress: number; color: string }) {
   return (
@@ -35,8 +69,10 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
   );
 }
 
+// ─── カード ──────────────────────────────────────────────────────
+
 function PjCard({
-  color, name, amount, meta, progress = 0, status, projectId, drag, isActive,
+  color, name, amount, progress = 0, status, projectId, drag, isActive,
 }: CardItem & { drag?: () => void; isActive?: boolean }) {
   const pct = Math.round(progress * 100);
   const onPress = () => projectId && router.push(`/project/${projectId}`);
@@ -58,7 +94,6 @@ function PjCard({
             </Text>
           )}
         </View>
-        {meta && <Text style={s.cardMeta}>{meta}</Text>}
         <View style={s.cardBottom}>
           <ProgressBar progress={progress} color={color} />
           <View style={s.cardStats}>
@@ -71,6 +106,8 @@ function PjCard({
     </Pressable>
   );
 }
+
+// ─── ソートバー ───────────────────────────────────────────────────
 
 function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) => void }) {
   const options: { key: SortMode; label: string }[] = [
@@ -93,6 +130,8 @@ function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) =
   );
 }
 
+// ─── メイン画面 ───────────────────────────────────────────────────
+
 export default function DreamsScreen() {
   const { balances, dreamOrder, setDreamOrder } = useStore();
   const [sortMode, setSortMode] = useState<SortMode>('custom');
@@ -105,6 +144,11 @@ export default function DreamsScreen() {
         amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
       })),
     [balances],
+  );
+
+  const totalAmount = useMemo(
+    () => enriched.reduce((sum, i) => sum + i.amount, 0),
+    [enriched],
   );
 
   const sortedItems = useMemo(() => {
@@ -123,7 +167,6 @@ export default function DreamsScreen() {
         return (a.progress ?? 1) - (b.progress ?? 1);
       });
     }
-    // deadline: year from meta string e.g. "2028年 買い替え"
     return [...enriched].sort((a, b) => {
       const ay = parseInt(a.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
       const by = parseInt(b.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
@@ -153,6 +196,9 @@ export default function DreamsScreen() {
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
         contentContainerStyle={s.content}
+        ListHeaderComponent={
+          <AllocationBar items={enriched} total={totalAmount} />
+        }
         renderItem={renderItem}
         onDragEnd={({ data }) => {
           if (sortMode === 'custom') {
@@ -189,12 +235,48 @@ const s = StyleSheet.create({
     borderWidth: 0.5,
     borderColor: C.border,
   },
-  sortPillActive: {
-    backgroundColor: C.brand,
-    borderColor: C.brand,
-  },
+  sortPillActive: { backgroundColor: C.brand, borderColor: C.brand },
   sortPillText: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
   sortPillTextActive: { color: '#fff' },
+
+  // 横積み比率バー
+  allocWrap: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    padding: 12,
+    marginBottom: 10,
+  },
+  allocHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  allocTitle: { fontSize: 12, fontWeight: '500', color: C.textSecondary },
+  allocTotalAmt: { fontSize: 14, fontWeight: '600', color: C.brand },
+  allocBar: {
+    flexDirection: 'row',
+    height: 14,
+    borderRadius: 7,
+    overflow: 'hidden',
+    marginBottom: 8,
+  },
+  allocLegRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  allocLegItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    width: '50%',
+    paddingVertical: 3,
+  },
+  allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  allocLegName: { fontSize: 11, color: C.textSecondary, flex: 1 },
+  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 28, textAlign: 'right' },
 
   content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
 
@@ -215,14 +297,13 @@ const s = StyleSheet.create({
     elevation: 8,
   },
   cardAccent: { width: 4 },
-  cardBody: { flex: 1, padding: 12 },
+  cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   cardName: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
   badge: { fontSize: 12, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
   badgeOk: { backgroundColor: C.greenBg, color: C.green },
   badgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
-  cardMeta: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
-  cardBottom: { marginTop: 10 },
+  cardBottom: { marginTop: 6 },
   barBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
   cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
