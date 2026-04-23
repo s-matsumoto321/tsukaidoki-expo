@@ -1,5 +1,5 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -11,7 +11,6 @@ const C = {
   greenBg: '#EAF3DE',
   greenText: '#27500A',
   greenSub: '#3B6D11',
-  greenDark: '#173404',
   bg: '#f5f4ee',
   card: '#ffffff',
   textPrimary: '#2c2c2a',
@@ -72,7 +71,47 @@ function fmtMan(yen: number): string {
   return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
 }
 
+type PjSwipeCardProps = {
+  color: string;
+  name: string;
+  amount: number;
+  meta?: string;
+  progress?: number;
+  status?: 'ok' | 'warn';
+  projectId?: string;
+  cardWidth: number;
+};
+
+function PjSwipeCard({ color, name, amount, meta, progress = 0, status, projectId, cardWidth }: PjSwipeCardProps) {
+  const pct = Math.round(progress * 100);
+  const onPress = () => projectId && router.push(`/project/${projectId}`);
+  return (
+    <Pressable style={[s.swipeCard, { width: cardWidth }]} onPress={onPress} disabled={!projectId}>
+      <View style={[s.swipeAccent, { backgroundColor: color }]} />
+      <View style={s.swipeBody}>
+        <View style={s.swipeTop}>
+          <Text style={s.swipeName}>{name}</Text>
+          {status && (
+            <Text style={[s.swipeBadge, status === 'ok' ? s.swipeBadgeOk : s.swipeBadgeWarn]}>
+              {status === 'ok' ? '◎' : '△'}
+            </Text>
+          )}
+        </View>
+        {meta && <Text style={s.swipeMeta} numberOfLines={1}>{meta}</Text>}
+        <View style={s.swipeBarBg}>
+          <View style={[s.swipeBarFill, { width: `${Math.min(pct, 100)}%`, backgroundColor: color }]} />
+        </View>
+        <View style={s.swipeBottom}>
+          <Text style={s.swipeAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
+          <Text style={s.swipePct}>{pct}%</Text>
+        </View>
+      </View>
+    </Pressable>
+  );
+}
+
 export default function HomeScreen() {
+  const { width: screenWidth } = useWindowDimensions();
   const { balances } = useStore();
 
   const poolItems = POOL_ITEMS.map(item => ({
@@ -124,6 +163,24 @@ export default function HomeScreen() {
           </View>
         </View>
 
+        {/* PJスワイプカード */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={s.swipeScroll}
+          decelerationRate="fast"
+          snapToInterval={screenWidth * 0.72 + 10}
+          snapToAlignment="start"
+        >
+          {pfItems.filter(i => i.projectId).map(item => (
+            <PjSwipeCard
+              key={item.name}
+              {...item}
+              cardWidth={screenWidth * 0.72}
+            />
+          ))}
+        </ScrollView>
+
         {/* チャート 2列 */}
         <View style={s.dualChart}>
           <ChartCard
@@ -164,13 +221,6 @@ export default function HomeScreen() {
               {isBalanced ? '¥0 ✓' : `¥${diff.toLocaleString('ja-JP')}`}
             </Text>
           </View>
-        </View>
-
-        {/* 安心ラインカード */}
-        <View style={s.safeCard}>
-          <Text style={s.safeLabel}>今月の安心ライン</Text>
-          <Text style={s.safeAmt}>¥87,000</Text>
-          <Text style={s.safeNote}>全プロジェクト計画達成後の余力。この範囲なら自由に使えます。</Text>
         </View>
 
       </ScrollView>
@@ -226,6 +276,30 @@ const s = StyleSheet.create({
   matchSub: { fontSize: 9, marginTop: 1, color: C.greenSub },
   matchSubWarn: { color: '#633806' },
 
+  swipeScroll: { paddingHorizontal: 14, paddingVertical: 8, gap: 10 },
+  swipeCard: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    flexDirection: 'row',
+    overflow: 'hidden',
+    height: 100,
+  },
+  swipeAccent: { width: 4 },
+  swipeBody: { flex: 1, padding: 12, justifyContent: 'space-between' },
+  swipeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  swipeName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  swipeBadge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
+  swipeBadgeOk: { backgroundColor: C.greenBg, color: C.green },
+  swipeBadgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
+  swipeMeta: { fontSize: 10, color: C.textSecondary },
+  swipeBarBg: { height: 4, backgroundColor: C.border, borderRadius: 2, overflow: 'hidden' },
+  swipeBarFill: { height: 4, borderRadius: 2 },
+  swipeBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  swipeAmt: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
+  swipePct: { fontSize: 11, color: C.textSecondary },
+
   dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
   chartCard: {
     flex: 1,
@@ -275,15 +349,4 @@ const s = StyleSheet.create({
   diffLabelWarn: { color: '#E24B4A', fontWeight: '500' },
   diffValWarn: { color: '#E24B4A' },
 
-  safeCard: {
-    marginHorizontal: 14,
-    marginBottom: 10,
-    backgroundColor: C.greenBg,
-    borderRadius: 12,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-  },
-  safeLabel: { fontSize: 10, color: C.greenText, marginBottom: 2 },
-  safeAmt: { fontSize: 20, fontWeight: '500', color: C.greenDark },
-  safeNote: { fontSize: 9, color: C.greenSub, marginTop: 2, lineHeight: 14 },
 });
