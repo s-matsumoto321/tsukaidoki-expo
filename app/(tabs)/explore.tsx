@@ -32,10 +32,7 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
   if (total === 0) return null;
   return (
     <View style={s.allocWrap}>
-      <View style={s.allocHeaderRow}>
-        <Text style={s.allocTitle}>使いみち配分</Text>
-        <Text style={s.allocTotalAmt}>¥{total.toLocaleString('ja-JP')}</Text>
-      </View>
+      <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
       <View style={s.allocBar}>
         {items.map(item => (
           <View
@@ -49,9 +46,7 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
           <View key={item.projectId ?? item.name} style={s.allocLegItem}>
             <View style={[s.allocDot, { backgroundColor: item.color }]} />
             <Text style={s.allocLegName} numberOfLines={1}>{item.name}</Text>
-            <Text style={s.allocLegPct}>
-              {Math.round((item.amount / total) * 100)}%
-            </Text>
+            <Text style={s.allocLegPct}>{Math.round((item.amount / total) * 100)}%</Text>
           </View>
         ))}
       </View>
@@ -191,14 +186,12 @@ export default function DreamsScreen() {
         <Logo iconSize={26} />
         <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
+      <AllocationBar items={enriched} total={totalAmount} />
       <SortBar mode={sortMode} onSelect={setSortMode} />
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
         contentContainerStyle={s.content}
-        ListHeaderComponent={
-          <AllocationBar items={enriched} total={totalAmount} />
-        }
         renderItem={renderItem}
         onDragEnd={({ data }) => {
           if (sortMode === 'custom') {
@@ -242,20 +235,18 @@ const s = StyleSheet.create({
   // 横積み比率バー
   allocWrap: {
     backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    padding: 12,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 0.5,
+    borderBottomColor: C.border,
+  },
+  allocTotal: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: C.brand,
     marginBottom: 10,
   },
-  allocHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  allocTitle: { fontSize: 12, fontWeight: '500', color: C.textSecondary },
-  allocTotalAmt: { fontSize: 14, fontWeight: '600', color: C.brand },
   allocBar: {
     flexDirection: 'row',
     height: 14,
@@ -265,18 +256,16 @@ const s = StyleSheet.create({
   },
   allocLegRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
   },
   allocLegItem: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    width: '50%',
-    paddingVertical: 3,
+    gap: 4,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   allocLegName: { fontSize: 11, color: C.textSecondary, flex: 1 },
-  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 28, textAlign: 'right' },
+  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary },
 
   content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
 
