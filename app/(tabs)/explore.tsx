@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
-import { PF_ITEMS } from '@/constants/data';
+import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { Logo } from '@/components/logo';
 
@@ -18,11 +19,13 @@ const C = {
   textPrimary: '#2c2c2a',
   textSecondary: '#73726c',
   border: 'rgba(0,0,0,0.08)',
-  warn: '#E24B4A',
 };
 
-const DREAM_IDS = ['car', 'trip'];
-const ANSHIN_IDS = ['edu', 'ret'];
+const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
+
+type SortMode = 'custom' | 'urgent' | 'deadline';
+
+type CardItem = FinancialItem & { amount: number };
 
 function ProgressBar({ progress, color }: { progress: number; color: string }) {
   return (
@@ -32,22 +35,19 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
   );
 }
 
-type CardProps = {
-  color: string;
-  name: string;
-  amount: number;
-  meta?: string;
-  progress?: number;
-  status?: 'ok' | 'warn';
-  projectId?: string;
-};
-
-function PjCard({ color, name, amount, meta, progress = 0, status, projectId }: CardProps) {
+function PjCard({
+  color, name, amount, meta, progress = 0, status, projectId, drag, isActive,
+}: CardItem & { drag?: () => void; isActive?: boolean }) {
   const pct = Math.round(progress * 100);
   const onPress = () => projectId && router.push(`/project/${projectId}`);
 
   return (
-    <Pressable style={s.card} onPress={onPress} disabled={!projectId}>
+    <Pressable
+      style={[s.card, isActive && s.cardActive]}
+      onPress={onPress}
+      onLongPress={drag}
+      delayLongPress={300}
+    >
       <View style={[s.cardAccent, { backgroundColor: color }]} />
       <View style={s.cardBody}>
         <View style={s.cardTop}>
@@ -67,21 +67,79 @@ function PjCard({ color, name, amount, meta, progress = 0, status, projectId }: 
           </View>
         </View>
       </View>
+      {drag && <Text style={s.dragHandle}>⠿</Text>}
     </Pressable>
   );
 }
 
+function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) => void }) {
+  const options: { key: SortMode; label: string }[] = [
+    { key: 'custom', label: 'カスタム' },
+    { key: 'urgent', label: '緊急順' },
+    { key: 'deadline', label: '時期順' },
+  ];
+  return (
+    <View style={s.sortBar}>
+      {options.map(o => (
+        <Pressable
+          key={o.key}
+          style={[s.sortPill, mode === o.key && s.sortPillActive]}
+          onPress={() => onSelect(o.key)}
+        >
+          <Text style={[s.sortPillText, mode === o.key && s.sortPillTextActive]}>{o.label}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
+
 export default function DreamsScreen() {
-  const { balances } = useStore();
-  const [activeTab, setActiveTab] = useState<'dream' | 'anshin'>('dream');
+  const { balances, dreamOrder, setDreamOrder } = useStore();
+  const [sortMode, setSortMode] = useState<SortMode>('custom');
 
-  const enriched = PF_ITEMS.map(item => ({
-    ...item,
-    amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
-  }));
+  const enriched: CardItem[] = useMemo(() =>
+    PF_ITEMS
+      .filter(i => i.projectId && SHOWN_IDS.includes(i.projectId))
+      .map(item => ({
+        ...item,
+        amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
+      })),
+    [balances],
+  );
 
-  const dreams = enriched.filter(i => i.projectId && DREAM_IDS.includes(i.projectId));
-  const anshin = enriched.filter(i => i.projectId && ANSHIN_IDS.includes(i.projectId));
+  const sortedItems = useMemo(() => {
+    if (sortMode === 'custom') {
+      const orderMap = dreamOrder.reduce<Record<string, number>>(
+        (m, id, i) => ({ ...m, [id]: i }), {},
+      );
+      return [...enriched].sort((a, b) =>
+        (orderMap[a.projectId ?? ''] ?? 999) - (orderMap[b.projectId ?? ''] ?? 999),
+      );
+    }
+    if (sortMode === 'urgent') {
+      return [...enriched].sort((a, b) => {
+        if (a.status === 'warn' && b.status !== 'warn') return -1;
+        if (a.status !== 'warn' && b.status === 'warn') return 1;
+        return (a.progress ?? 1) - (b.progress ?? 1);
+      });
+    }
+    // deadline: year from meta string e.g. "2028年 買い替え"
+    return [...enriched].sort((a, b) => {
+      const ay = parseInt(a.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
+      const by = parseInt(b.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
+      return ay - by;
+    });
+  }, [sortMode, enriched, dreamOrder]);
+
+  const renderItem = ({ item, drag, isActive }: RenderItemParams<CardItem>) => (
+    <ScaleDecorator activeScale={1.03}>
+      <PjCard
+        {...item}
+        drag={sortMode === 'custom' ? drag : undefined}
+        isActive={isActive}
+      />
+    </ScaleDecorator>
+  );
 
   return (
     <SafeAreaView style={s.safe}>
@@ -90,41 +148,18 @@ export default function DreamsScreen() {
         <Logo iconSize={26} />
         <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
-
-      <View style={s.tabBar}>
-        <Pressable
-          style={[s.tabItem, activeTab === 'dream' && { borderBottomColor: C.orange, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab('dream')}
-        >
-          <Text style={[s.tabText, activeTab === 'dream' && { color: C.orange, fontWeight: '700' }]}>★ 夢</Text>
-        </Pressable>
-        <Pressable
-          style={[s.tabItem, activeTab === 'anshin' && { borderBottomColor: C.green, borderBottomWidth: 2 }]}
-          onPress={() => setActiveTab('anshin')}
-        >
-          <Text style={[s.tabText, activeTab === 'anshin' && { color: C.green, fontWeight: '700' }]}>◎ 安心</Text>
-        </Pressable>
-      </View>
-
-      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
-        {activeTab === 'dream' ? (
-          <>
-            <View style={[s.sectionBand, { backgroundColor: C.orangeBg, borderLeftColor: C.orange }]}>
-              <Text style={[s.sectionBandTitle, { color: C.orange }]}>★ 夢</Text>
-              <Text style={s.sectionBandSub}>使いたい・叶えたいこと</Text>
-            </View>
-            {dreams.map(item => <PjCard key={item.name} {...item} />)}
-          </>
-        ) : (
-          <>
-            <View style={[s.sectionBand, { backgroundColor: C.greenBg, borderLeftColor: C.green }]}>
-              <Text style={[s.sectionBandTitle, { color: C.greenText }]}>◎ 安心</Text>
-              <Text style={s.sectionBandSub}>将来の不安を解消するために</Text>
-            </View>
-            {anshin.map(item => <PjCard key={item.name} {...item} />)}
-          </>
-        )}
-      </ScrollView>
+      <SortBar mode={sortMode} onSelect={setSortMode} />
+      <DraggableFlatList
+        data={sortedItems}
+        keyExtractor={item => item.projectId ?? item.name}
+        contentContainerStyle={s.content}
+        renderItem={renderItem}
+        onDragEnd={({ data }) => {
+          if (sortMode === 'custom') {
+            setDreamOrder(data.map(i => i.projectId ?? i.name));
+          }
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -139,33 +174,29 @@ const s = StyleSheet.create({
   },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
-  tabBar: {
+  sortBar: {
     flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    backgroundColor: C.bg,
+  },
+  sortPill: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: C.card,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.border,
+    borderWidth: 0.5,
+    borderColor: C.border,
   },
-  tabItem: {
-    flex: 1,
-    paddingVertical: 12,
-    alignItems: 'center',
-    borderBottomWidth: 2,
-    borderBottomColor: 'transparent',
+  sortPillActive: {
+    backgroundColor: C.brand,
+    borderColor: C.brand,
   },
-  tabText: { fontSize: 15, fontWeight: '500', color: C.textSecondary },
+  sortPillText: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  sortPillTextActive: { color: '#fff' },
 
-  scroll: { flex: 1 },
-  content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
-
-  sectionBand: {
-    marginHorizontal: -14,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderLeftWidth: 5,
-    marginBottom: 14,
-  },
-  sectionBandTitle: { fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
-  sectionBandSub: { fontSize: 13, color: C.textSecondary, marginTop: 4 },
+  content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
 
   card: {
     backgroundColor: C.card,
@@ -176,6 +207,13 @@ const s = StyleSheet.create({
     marginBottom: 10,
     overflow: 'hidden',
   },
+  cardActive: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 8,
+  },
   cardAccent: { width: 4 },
   cardBody: { flex: 1, padding: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
@@ -184,11 +222,16 @@ const s = StyleSheet.create({
   badgeOk: { backgroundColor: C.greenBg, color: C.green },
   badgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
   cardMeta: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
-
   cardBottom: { marginTop: 10 },
   barBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
   cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
   cardAmt: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
   cardPct: { fontSize: 13, color: C.textSecondary },
+  dragHandle: {
+    fontSize: 20,
+    color: C.border,
+    paddingHorizontal: 10,
+    alignSelf: 'center',
+  },
 });

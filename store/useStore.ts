@@ -16,6 +16,7 @@ export type UserEvent = {
 type State = {
   balances: Record<string, number>;
   userEvents: Record<string, UserEvent[]>;
+  dreamOrder: string[];
 };
 
 type Actions = {
@@ -33,6 +34,7 @@ type Actions = {
     amount: number,
     note: string,
   ) => void;
+  setDreamOrder: (order: string[]) => void;
 };
 
 function dateLabel(): string {
@@ -45,6 +47,7 @@ export const useStore = create<State & Actions>()(
     (set) => ({
       balances: {},
       userEvents: {},
+      dreamOrder: ['edu', 'ret', 'car', 'trip'],
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -66,6 +69,8 @@ export const useStore = create<State & Actions>()(
           },
         }));
       },
+
+      setDreamOrder: (order) => set({ dreamOrder: order }),
 
       addTransfer: (fromId, fromPrev, toId, toPrev, amount, note) => {
         const label = note || '口座振替';
