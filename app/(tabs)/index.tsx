@@ -212,7 +212,7 @@ export default function HomeScreen() {
             badge="用途別"
             headerColor={C.green}
             total={fmtMan(pfTotal)}
-            sub={`${PF_ITEMS.length}PJ`}
+            sub={`${PF_ITEMS.length}件`}
             items={pfItems}
             route="/portfolio"
           />

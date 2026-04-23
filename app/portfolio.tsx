@@ -48,7 +48,7 @@ export default function PortfolioScreen() {
             size={160}
             thickness={18}
             centerLabel={`¥${totalMan}万`}
-            centerSub={`${PF_ITEMS.length}PJ`}
+            centerSub={`${PF_ITEMS.length}件`}
           />
           <Text style={s.totalLabel}>合計</Text>
           <Text style={s.totalAmt}>{fmtJpy(total)}</Text>

@@ -29,7 +29,7 @@ export const PROJECTS: Record<string, Project> = {
   // ── ポートフォリオ ──────────────────────────────────────────────
   edu: {
     id: 'edu', kind: 'project',
-    name: '教育プロジェクト', timing: '2044年 大学入学まで',
+    name: '教育資金', timing: '2044年 大学入学まで',
     now: 3_000_000, goalLabel: '目標 ¥500万', statusTxt: '計画通り', color: '#0C447C',
     ai: '教育費ピークの2044年大学入学までに、計画通り積み上がっています。あと8年で目標達成見込み。',
     years: ["'25","'27","'29","'31","'33","'35","'37","'39","'41","'43","'45","'47"],
@@ -47,7 +47,7 @@ export const PROJECTS: Record<string, Project> = {
   },
   ret: {
     id: 'ret', kind: 'project',
-    name: '老後プロジェクト', timing: '2050年 定年まで',
+    name: '老後資金', timing: '2050年 定年まで',
     now: 2_500_000, goalLabel: '目標 ¥3,000万', statusTxt: '要注意', color: '#1D9E75',
     ai: 'このペースでは2058年達成見込み（8年遅れ）。月+¥15,000の増額で計画通りになります。',
     years: ["'25","'28","'31","'34","'37","'40","'43","'46","'49","'52","'55","'58"],
@@ -62,7 +62,7 @@ export const PROJECTS: Record<string, Project> = {
   },
   car: {
     id: 'car', kind: 'project',
-    name: '車プロジェクト', timing: '2028年 買い替え予定',
+    name: '車資金', timing: '2028年 買い替え予定',
     now: 1_000_000, goalLabel: '目標 ¥200万', statusTxt: '順調', color: '#888780',
     ai: 'このペースなら2027年12月に達成見込みです。2028年の買い替えに余裕で間に合います。',
     years: ["'25","'26","'27","'28"],
@@ -70,12 +70,12 @@ export const PROJECTS: Record<string, Project> = {
     actual: [100,148,null,null],
     events: [
       {idx:0,type:'start',dot:'#0C447C',year:'2025',name:'積立スタート',detail:'月¥40,000 配分中',amt:'+¥40,000/月',pos:true},
-      {idx:3,type:'spend',dot:'#E24B4A',year:'2028',name:'車 買い替え（使用）',detail:'車PJから全額使用',amt:'-¥2,000,000',pos:false},
+      {idx:3,type:'spend',dot:'#E24B4A',year:'2028',name:'車 買い替え（使用）',detail:'車資金から全額使用',amt:'-¥2,000,000',pos:false},
     ],
   },
   trip: {
     id: 'trip', kind: 'project',
-    name: '旅行プロジェクト', timing: '来年夏 ハワイ旅行',
+    name: '旅行資金', timing: '来年夏 旅行',
     now: 100_000, goalLabel: '目標 ¥30万', statusTxt: '順調', color: '#EF9F27',
     ai: 'このペースなら来年5月に達成見込みです。夏の旅行に余裕で間に合います。',
     years: ['4月','6月','8月','10月','12月','2月','4月'],
@@ -83,7 +83,7 @@ export const PROJECTS: Record<string, Project> = {
     actual: [10, 40, 80,100,null,null,null],
     events: [
       {idx:0,type:'start',dot:'#0C447C',year:'2025',name:'積立スタート',detail:'月¥10,000 配分中',amt:'+¥10,000/月',pos:true},
-      {idx:6,type:'spend',dot:'#E24B4A',year:'2026',name:'ハワイ旅行（使用）',detail:'旅行PJから全額使用',amt:'-¥300,000',pos:false},
+      {idx:6,type:'spend',dot:'#E24B4A',year:'2026',name:'旅行（使用）',detail:'旅行資金から全額使用',amt:'-¥300,000',pos:false},
     ],
   },
 

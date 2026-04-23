@@ -84,8 +84,8 @@ export default function DreamsScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
-        <Text style={s.headerTitle}>夢プロジェクト</Text>
-        <Text style={s.headerSub}>夢に近づく実感と、将来への安心を</Text>
+        <Text style={s.headerTitle}>使いみち</Text>
+        <Text style={s.headerSub}>夢と安心、どちらもお金で実現する</Text>
       </View>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
 

@@ -82,7 +82,7 @@ export default function ManageScreen() {
             <View style={s.divider} />
             <MenuItem
               label="ポートフォリオ"
-              sub={`${PF_ITEMS.length}プロジェクト · ¥${pfTotal.toLocaleString('ja-JP')}`}
+              sub={`${PF_ITEMS.length}件 · ¥${pfTotal.toLocaleString('ja-JP')}`}
               accent={C.green}
               onPress={() => router.push('/portfolio')}
             />
