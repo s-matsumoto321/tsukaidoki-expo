@@ -1,7 +1,8 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, useWindowDimensions } from 'react-native';
-import { Link, router, type Href } from 'expo-router';
-import { DonutChart } from '@/components/donut-chart';
+import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { router } from 'expo-router';
+// import { Link, type Href } from 'expo-router'; // 案A(ドーナツ)で使用
+// import { DonutChart } from '@/components/donut-chart'; // 案A(ドーナツ)で使用
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 
@@ -18,6 +19,10 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
 };
 
+// -------------------------------------------------------
+// 案A: ドーナツ2列（コメントアウト中）
+// -------------------------------------------------------
+/*
 type LegendItemProps = { color: string; name: string; val: string };
 
 function LegendItem({ color, name, val }: LegendItemProps) {
@@ -54,64 +59,82 @@ function ChartCard({ title, badge, badgeStyle, badgeTextStyle, total, sub, items
             <Text style={badgeTextStyle}>{badge}</Text>
           </View>
         </View>
-        <DonutChart
-          segments={segments}
-          size={90}
-          thickness={10}
-          centerLabel={total}
-          centerSub={sub}
-        />
+        <DonutChart segments={segments} size={90} thickness={10} centerLabel={total} centerSub={sub} />
         {items.map(item => <LegendItem key={item.name} {...item} />)}
       </Pressable>
     </Link>
   );
 }
+*/
 
-function fmtMan(yen: number): string {
-  return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
-}
+// -------------------------------------------------------
+// 案B: 左右ミラーリスト（現行）
+// -------------------------------------------------------
+type MirrorItemProps = { color: string; name: string; amount: number; total: number };
 
-type PjSwipeCardProps = {
-  color: string;
-  name: string;
-  amount: number;
-  meta?: string;
-  progress?: number;
-  status?: 'ok' | 'warn';
-  projectId?: string;
-  cardWidth: number;
-};
-
-function PjSwipeCard({ color, name, amount, meta, progress = 0, status, projectId, cardWidth }: PjSwipeCardProps) {
-  const pct = Math.round(progress * 100);
-  const onPress = () => projectId && router.push(`/project/${projectId}`);
+function MirrorItem({ color, name, amount, total }: MirrorItemProps) {
+  const pct = total > 0 ? amount / total : 0;
   return (
-    <Pressable style={[s.swipeCard, { width: cardWidth }]} onPress={onPress} disabled={!projectId}>
-      <View style={[s.swipeAccent, { backgroundColor: color }]} />
-      <View style={s.swipeBody}>
-        <View style={s.swipeTop}>
-          <Text style={s.swipeName}>{name}</Text>
-          {status && (
-            <Text style={[s.swipeBadge, status === 'ok' ? s.swipeBadgeOk : s.swipeBadgeWarn]}>
-              {status === 'ok' ? '◎' : '△'}
-            </Text>
-          )}
-        </View>
-        {meta && <Text style={s.swipeMeta} numberOfLines={1}>{meta}</Text>}
-        <View style={s.swipeBarBg}>
-          <View style={[s.swipeBarFill, { width: `${Math.min(pct, 100)}%`, backgroundColor: color }]} />
-        </View>
-        <View style={s.swipeBottom}>
-          <Text style={s.swipeAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
-          <Text style={s.swipePct}>{pct}%</Text>
-        </View>
+    <View style={s.mItem}>
+      <View style={s.mItemTop}>
+        <View style={[s.mDot, { backgroundColor: color }]} />
+        <Text style={s.mName} numberOfLines={1}>{name}</Text>
       </View>
-    </Pressable>
+      <View style={s.mItemBottom}>
+        <View style={s.mBarBg}>
+          <View style={[s.mBarFill, { width: `${pct * 100}%` as any, backgroundColor: color }]} />
+        </View>
+        <Text style={s.mAmt}>{Math.round(amount / 10000)}万</Text>
+      </View>
+    </View>
   );
 }
 
+type MirrorCardProps = {
+  poolItems: FinancialItem[];
+  pfItems: FinancialItem[];
+  poolTotal: number;
+  pfTotal: number;
+};
+
+function MirrorCard({ poolItems, pfItems, poolTotal, pfTotal }: MirrorCardProps) {
+  const rows = Math.max(poolItems.length, pfItems.length);
+  return (
+    <View style={s.mCard}>
+      <View style={s.mHeader}>
+        <Pressable style={s.mHeaderHalf} onPress={() => router.push('/pool')}>
+          <Text style={s.mHeaderLabel}>プール金</Text>
+          <Text style={s.mHeaderTotal}>¥{Math.round(poolTotal / 10000).toLocaleString()}万</Text>
+          <Text style={s.mHeaderLink}>詳細 ›</Text>
+        </Pressable>
+        <View style={s.mColDivider} />
+        <Pressable style={s.mHeaderHalf} onPress={() => router.push('/portfolio')}>
+          <Text style={s.mHeaderLabel}>ポートフォリオ</Text>
+          <Text style={s.mHeaderTotal}>¥{Math.round(pfTotal / 10000).toLocaleString()}万</Text>
+          <Text style={s.mHeaderLink}>詳細 ›</Text>
+        </Pressable>
+      </View>
+      <View style={s.mSep} />
+      {Array.from({ length: rows }).map((_, i) => (
+        <View key={i} style={[s.mRow, i < rows - 1 && s.mRowBorder]}>
+          {poolItems[i]
+            ? <MirrorItem {...poolItems[i]} total={poolTotal} />
+            : <View style={s.mItem} />}
+          <View style={s.mColDivider} />
+          {pfItems[i]
+            ? <MirrorItem {...pfItems[i]} total={pfTotal} />
+            : <View style={s.mItem} />}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function fmtYen(yen: number): string {
+  return `¥${yen.toLocaleString('ja-JP')}`;
+}
+
 export default function HomeScreen() {
-  const { width: screenWidth } = useWindowDimensions();
   const { balances } = useStore();
 
   const poolItems = POOL_ITEMS.map(item => ({
@@ -138,7 +161,7 @@ export default function HomeScreen() {
           <View style={s.headerLeft}>
             <Text style={s.logo}>ツカイドキβ版</Text>
             <Text style={s.headerSub}>総資産</Text>
-            <Text style={s.headerTotal}>¥{poolTotal.toLocaleString('ja-JP')}</Text>
+            <Text style={s.headerTotal}>{fmtYen(poolTotal)}</Text>
             <Text style={s.headerNote}>プール金・ポートフォリオ 両方の合計</Text>
           </View>
           <Pressable style={s.transferBtn} onPress={() => router.push('/transfer')}>
@@ -163,25 +186,15 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* PJスワイプカード */}
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={s.swipeScroll}
-          decelerationRate="fast"
-          snapToInterval={screenWidth * 0.72 + 10}
-          snapToAlignment="start"
-        >
-          {pfItems.filter(i => i.projectId).map(item => (
-            <PjSwipeCard
-              key={item.name}
-              {...item}
-              cardWidth={screenWidth * 0.72}
-            />
-          ))}
-        </ScrollView>
+        {/* 案B: 左右ミラーリスト */}
+        <MirrorCard
+          poolItems={poolItems}
+          pfItems={pfItems}
+          poolTotal={poolTotal}
+          pfTotal={pfTotal}
+        />
 
-        {/* チャート 2列 */}
+        {/* 案A: ドーナツ2列（コメントアウト中）
         <View style={s.dualChart}>
           <ChartCard
             title="プール金"
@@ -204,21 +217,22 @@ export default function HomeScreen() {
             route="/portfolio"
           />
         </View>
+        */}
 
         {/* 差額カード */}
         <View style={s.diffCard}>
           <View style={s.diffRow}>
             <Text style={s.diffLabel}>プール金 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>¥{poolTotal.toLocaleString('ja-JP')}</Text>
+            <Text style={[s.diffVal, s.diffBig]}>{fmtYen(poolTotal)}</Text>
           </View>
           <View style={s.diffRow}>
             <Text style={s.diffLabel}>ポートフォリオ 合計</Text>
-            <Text style={[s.diffVal, s.diffBig]}>¥{pfTotal.toLocaleString('ja-JP')}</Text>
+            <Text style={[s.diffVal, s.diffBig]}>{fmtYen(pfTotal)}</Text>
           </View>
           <View style={[s.diffRow, s.diffRowLast]}>
             <Text style={[s.diffLabel, isBalanced ? s.diffLabelGreen : s.diffLabelWarn]}>差額</Text>
             <Text style={[s.diffVal, isBalanced ? s.diffValGreen : s.diffValWarn]}>
-              {isBalanced ? '¥0 ✓' : `¥${diff.toLocaleString('ja-JP')}`}
+              {isBalanced ? '¥0 ✓' : fmtYen(diff)}
             </Text>
           </View>
         </View>
@@ -276,30 +290,41 @@ const s = StyleSheet.create({
   matchSub: { fontSize: 9, marginTop: 1, color: C.greenSub },
   matchSubWarn: { color: '#633806' },
 
-  swipeScroll: { paddingHorizontal: 14, paddingVertical: 8, gap: 10 },
-  swipeCard: {
+  // -------------------------------------------------------
+  // 案B: 左右ミラーリストのスタイル（現行）
+  // -------------------------------------------------------
+  mCard: {
+    marginHorizontal: 14,
+    marginTop: 2,
+    marginBottom: 8,
     backgroundColor: C.card,
-    borderRadius: 12,
     borderWidth: 0.5,
     borderColor: C.border,
-    flexDirection: 'row',
+    borderRadius: 12,
     overflow: 'hidden',
-    height: 100,
   },
-  swipeAccent: { width: 4 },
-  swipeBody: { flex: 1, padding: 12, justifyContent: 'space-between' },
-  swipeTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  swipeName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  swipeBadge: { fontSize: 11, fontWeight: '700', paddingHorizontal: 6, paddingVertical: 1, borderRadius: 10 },
-  swipeBadgeOk: { backgroundColor: C.greenBg, color: C.green },
-  swipeBadgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
-  swipeMeta: { fontSize: 10, color: C.textSecondary },
-  swipeBarBg: { height: 4, backgroundColor: C.border, borderRadius: 2, overflow: 'hidden' },
-  swipeBarFill: { height: 4, borderRadius: 2 },
-  swipeBottom: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  swipeAmt: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
-  swipePct: { fontSize: 11, color: C.textSecondary },
+  mHeader: { flexDirection: 'row' },
+  mHeaderHalf: { flex: 1, paddingVertical: 10, paddingHorizontal: 12 },
+  mHeaderLabel: { fontSize: 10, color: C.textSecondary },
+  mHeaderTotal: { fontSize: 18, fontWeight: '600', color: C.brand, marginTop: 2 },
+  mHeaderLink: { fontSize: 10, color: C.brand, marginTop: 2 },
+  mColDivider: { width: 0.5, backgroundColor: C.border },
+  mSep: { height: 0.5, backgroundColor: C.border },
+  mRow: { flexDirection: 'row' },
+  mRowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
+  mItem: { flex: 1, paddingVertical: 9, paddingHorizontal: 12 },
+  mItemTop: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 5 },
+  mDot: { width: 7, height: 7, borderRadius: 3.5 },
+  mName: { fontSize: 11, fontWeight: '500', color: C.textPrimary, flex: 1 },
+  mItemBottom: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  mBarBg: { flex: 1, height: 5, backgroundColor: C.border, borderRadius: 2.5, overflow: 'hidden' },
+  mBarFill: { height: 5, borderRadius: 2.5 },
+  mAmt: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 26, textAlign: 'right' },
 
+  // -------------------------------------------------------
+  // 案A: ドーナツ2列のスタイル（コメントアウト中）
+  // -------------------------------------------------------
+  /*
   dualChart: { flexDirection: 'row', gap: 7, paddingHorizontal: 14, paddingTop: 2, paddingBottom: 6 },
   chartCard: {
     flex: 1,
@@ -316,12 +341,12 @@ const s = StyleSheet.create({
   badgeBlueText: { fontSize: 8, color: C.brand },
   badgeGreen: { backgroundColor: C.greenBg, borderRadius: 20, paddingHorizontal: 5, paddingVertical: 1 },
   badgeGreenText: { fontSize: 8, color: C.greenText },
-
   legRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: 2, width: '100%' },
   legLeft: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
   legDot: { width: 6, height: 6, borderRadius: 3 },
   legName: { fontSize: 9, color: C.textSecondary, flex: 1 },
   legVal: { fontSize: 9, fontWeight: '500', color: C.textPrimary },
+  */
 
   diffCard: {
     marginHorizontal: 14,
@@ -348,5 +373,4 @@ const s = StyleSheet.create({
   diffValGreen: { color: C.green },
   diffLabelWarn: { color: '#E24B4A', fontWeight: '500' },
   diffValWarn: { color: '#E24B4A' },
-
 });
