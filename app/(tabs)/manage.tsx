@@ -107,15 +107,15 @@ export default function ManageScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.brand },
+  safe: { flex: 1, backgroundColor: C.bg },
   header: {
     backgroundColor: C.brand,
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
   },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#fff' },
-  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
+  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
   scroll: { flex: 1 },
   content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
@@ -130,11 +130,11 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
   summaryCard: { flex: 1, paddingVertical: 14, paddingHorizontal: 16 },
-  summaryLabel: { fontSize: 11, color: C.textSecondary },
-  summaryAmt: { fontSize: 18, fontWeight: '600', color: C.brand, marginTop: 4 },
+  summaryLabel: { fontSize: 13, color: C.textSecondary },
+  summaryAmt: { fontSize: 22, fontWeight: '600', color: C.brand, marginTop: 4 },
 
   section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 11, color: C.textSecondary, marginBottom: 8, paddingHorizontal: 4 },
+  sectionTitle: { fontSize: 13, color: C.textSecondary, marginBottom: 8, paddingHorizontal: 4 },
 
   menuCard: {
     backgroundColor: C.card,
@@ -151,8 +151,8 @@ const s = StyleSheet.create({
   },
   menuAccent: { width: 4, height: 36, borderRadius: 2, marginRight: 12 },
   menuBody: { flex: 1 },
-  menuLabel: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  menuSub: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
+  menuLabel: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
+  menuSub: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
   menuArrow: { fontSize: 20, color: C.textSecondary },
 
   divider: { height: 0.5, backgroundColor: C.border, marginLeft: 30 },

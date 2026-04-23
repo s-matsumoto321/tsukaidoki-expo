@@ -243,7 +243,7 @@ export default function HomeScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.brand },
+  safe: { flex: 1, backgroundColor: C.bg },
   scrollView: { flex: 1 },
   content: { backgroundColor: C.bg, paddingBottom: 8 },
 

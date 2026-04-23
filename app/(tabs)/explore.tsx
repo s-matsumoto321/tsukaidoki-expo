@@ -118,16 +118,16 @@ const s = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 16,
   },
-  headerTitle: { fontSize: 20, fontWeight: '600', color: '#fff' },
-  headerSub: { fontSize: 11, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+  headerTitle: { fontSize: 24, fontWeight: '600', color: '#fff' },
+  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
   scroll: { flex: 1 },
   content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
 
   section: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
   sectionBadge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
-  sectionBadgeText: { fontSize: 11, fontWeight: '700' },
-  sectionLabel: { fontSize: 12, color: C.textSecondary },
+  sectionBadgeText: { fontSize: 12, fontWeight: '700' },
+  sectionLabel: { fontSize: 13, color: C.textSecondary },
 
   card: {
     backgroundColor: C.card,
@@ -141,16 +141,16 @@ const s = StyleSheet.create({
   cardAccent: { width: 4 },
   cardBody: { flex: 1, padding: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  badge: { fontSize: 10, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
+  cardName: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
+  badge: { fontSize: 12, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
   badgeOk: { backgroundColor: C.greenBg, color: C.green },
   badgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
-  cardMeta: { fontSize: 11, color: C.textSecondary, marginTop: 4 },
+  cardMeta: { fontSize: 12, color: C.textSecondary, marginTop: 4 },
 
   cardBottom: { marginTop: 10 },
   barBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
   cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
-  cardAmt: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
-  cardPct: { fontSize: 12, color: C.textSecondary },
+  cardAmt: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
+  cardPct: { fontSize: 13, color: C.textSecondary },
 });
