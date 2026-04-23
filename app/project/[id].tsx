@@ -34,6 +34,11 @@ const C = {
 
 // ─── Chart helpers ───────────────────────────────────────────────
 
+function parseYear(s: string): number {
+  const n = parseInt(s.replace("'", ''), 10);
+  return n < 50 ? 2000 + n : 1900 + n;
+}
+
 function niceTickStep(maxVal: number, targetTicks: number): number {
   const rough = maxVal / targetTicks;
   const mag = Math.pow(10, Math.floor(Math.log10(rough)));
@@ -55,25 +60,38 @@ const PT = 10;
 const PB = 20;
 
 type TooltipState = { x: number; y: number; event: ProjectEvent };
+type Period = '生涯' | '5年' | '1年';
 
 // ─── LineChart ───────────────────────────────────────────────────
 
-function LineChart({ id, svgW, selectedIdx, onSelect }: {
+function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
   id: string;
   svgW: number;
   selectedIdx: number | null;
   onSelect: (ev: ProjectEvent, x: number, y: number) => void;
+  period: Period;
 }) {
   const project = PROJECTS[id];
   if (!project) return null;
 
+  const limitMap: Record<Period, number> = { '生涯': Infinity, '5年': 5, '1年': 1 };
+  const firstYear = parseYear(project.years[0]);
+  const limit = firstYear + limitMap[period];
+  const cutIdx = project.years.findIndex(yr => parseYear(yr) > limit);
+  const endN = cutIdx === -1 ? project.years.length : Math.max(2, cutIdx);
+
+  const years = project.years.slice(0, endN);
+  const plan = project.plan.slice(0, endN);
+  const actual = project.actual.slice(0, endN);
+  const visibleEvents = project.events.filter(ev => ev.idx < endN);
+
   const gW = svgW - PL - PR;
   const gH = SVG_H - PT - PB;
-  const n = project.years.length;
+  const n = years.length;
 
   const allVals = [
-    ...project.plan,
-    ...project.actual.filter((v): v is number => v !== null),
+    ...plan,
+    ...actual.filter((v): v is number => v !== null),
   ];
   const rawMax = Math.max(...allVals);
   const step = niceTickStep(rawMax, 4);
@@ -86,12 +104,12 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
   for (let v = 0; v <= maxVal; v += step) ticks.push(v);
 
   const xStep = Math.max(1, Math.ceil(n / 5));
-  const actualIdx = project.actual
+  const actualIdx = actual
     .map((v, i) => (v !== null ? i : -1))
     .filter(i => i !== -1);
 
-  const planPts = project.plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
-  const actualPts = actualIdx.map(i => `${xi(i)},${yv(project.actual[i]!)}`).join(' ');
+  const planPts = plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
+  const actualPts = actualIdx.map(i => `${xi(i)},${yv(actual[i]!)}`).join(' ');
 
   return (
     <Svg width={svgW} height={SVG_H}>
@@ -102,16 +120,16 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
             x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
             stroke="rgba(128,128,128,0.2)" strokeWidth={0.5}
           />
-          <SvgText x={PL - 4} y={yv(v) + 3} textAnchor="end" fontSize={8} fill="#888">
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={10} fill="#888">
             {fmtY(v)}
           </SvgText>
         </G>
       ))}
 
       {/* X labels */}
-      {project.years.map((yr, i) =>
+      {years.map((yr, i) =>
         (i % xStep === 0 || i === n - 1) ? (
-          <SvgText key={i} x={xi(i)} y={SVG_H - 4} textAnchor="middle" fontSize={8} fill="#888">
+          <SvgText key={i} x={xi(i)} y={SVG_H - 4} textAnchor="middle" fontSize={10} fill="#888">
             {yr}
           </SvgText>
         ) : null
@@ -134,7 +152,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
       )}
 
       {/* Spend vertical dashes */}
-      {project.events
+      {visibleEvents
         .filter(ev => ev.type === 'spend')
         .map(ev => (
           <SvgLine
@@ -145,7 +163,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
         ))}
 
       {/* Event hit areas + dots */}
-      {project.events.map(ev => {
+      {visibleEvents.map(ev => {
         const cx = xi(ev.idx);
         const cy = yv(project.plan[ev.idx]);
         const color = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
@@ -166,13 +184,13 @@ function LineChart({ id, svgW, selectedIdx, onSelect }: {
 
       {/* Actual dots */}
       {actualIdx.map(i => (
-        <Circle key={`ad-${i}`} cx={xi(i)} cy={yv(project.actual[i]!)} r={2.5} fill={C.green} />
+        <Circle key={`ad-${i}`} cx={xi(i)} cy={yv(actual[i]!)} r={2.5} fill={C.green} />
       ))}
 
       {/* Glow on last actual point */}
       {actualIdx.length > 0 && (() => {
         const li = actualIdx[actualIdx.length - 1];
-        return <Circle cx={xi(li)} cy={yv(project.actual[li]!)} r={6} fill={C.green} opacity={0.2} />;
+        return <Circle cx={xi(li)} cy={yv(actual[li]!)} r={6} fill={C.green} opacity={0.2} />;
       })()}
     </Svg>
   );
@@ -191,6 +209,7 @@ export default function ProjectDetailScreen() {
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
   const myUserEvents = userEvents[id ?? ''] ?? [];
 
+  const [period, setPeriod] = useState<Period>('生涯');
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
   const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
@@ -282,21 +301,34 @@ export default function ProjectDetailScreen() {
 
         {/* Graph card */}
         <View style={s.graphCard}>
-          {/* Legend */}
-          <View style={s.legendRow}>
-            <View style={s.legendItem}>
-              <Svg width={14} height={4}>
-                <SvgLine x1={0} y1={2} x2={14} y2={2} stroke={C.brand} strokeWidth={1.5} strokeDasharray="4 3" />
-              </Svg>
-              <Text style={s.legendTxt}>計画</Text>
+          {/* Legend + period selector */}
+          <View style={s.legendPeriodRow}>
+            <View style={s.legendRow}>
+              <View style={s.legendItem}>
+                <Svg width={14} height={4}>
+                  <SvgLine x1={0} y1={2} x2={14} y2={2} stroke={C.brand} strokeWidth={1.5} strokeDasharray="4 3" />
+                </Svg>
+                <Text style={s.legendTxt}>計画</Text>
+              </View>
+              <View style={s.legendItem}>
+                <View style={[s.legendSolid, { backgroundColor: C.green }]} />
+                <Text style={s.legendTxt}>実績</Text>
+              </View>
+              <View style={s.legendItem}>
+                <View style={s.legendDotR} />
+                <Text style={s.legendTxt}>支出</Text>
+              </View>
             </View>
-            <View style={s.legendItem}>
-              <View style={[s.legendSolid, { backgroundColor: C.green }]} />
-              <Text style={s.legendTxt}>実績</Text>
-            </View>
-            <View style={s.legendItem}>
-              <View style={s.legendDotR} />
-              <Text style={s.legendTxt}>支出</Text>
+            <View style={s.periodRow}>
+              {(['生涯', '5年', '1年'] as const).map(p => (
+                <Pressable
+                  key={p}
+                  style={[s.periodBtn, period === p && s.periodBtnActive]}
+                  onPress={() => { setPeriod(p); setSelectedIdx(null); setTooltip(null); }}
+                >
+                  <Text style={[s.periodTxt, period === p && s.periodTxtActive]}>{p}</Text>
+                </Pressable>
+              ))}
             </View>
           </View>
 
@@ -307,6 +339,7 @@ export default function ProjectDetailScreen() {
               svgW={svgW}
               selectedIdx={selectedIdx}
               onSelect={handleSelect}
+              period={period}
             />
             {tooltip && (
               <View style={[s.tooltip, { left: tipLeft, top: tipTop }]}>
@@ -401,15 +434,15 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 12,
   },
-  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.7)', marginBottom: 6 },
+  backTxt: { fontSize: 13, color: 'rgba(255,255,255,0.7)', marginBottom: 6 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
-  projName: { fontSize: 15, fontWeight: '500', color: '#fff', lineHeight: 20 },
-  timing: { fontSize: 10, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
-  amtLabel: { fontSize: 9, color: 'rgba(255,255,255,0.55)' },
+  projName: { fontSize: 16, fontWeight: '500', color: '#fff', lineHeight: 22 },
+  timing: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
+  amtLabel: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
   editBtn: { backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 },
-  editTxt: { fontSize: 10, color: '#fff', fontWeight: '500' },
-  amt: { fontSize: 18, fontWeight: '500', color: '#fff', lineHeight: 22 },
-  amtSub: { fontSize: 9, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  editTxt: { fontSize: 12, color: '#fff', fontWeight: '500' },
+  amt: { fontSize: 20, fontWeight: '500', color: '#fff', lineHeight: 26 },
+  amtSub: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
 
   // AI card
   aiCard: {
@@ -422,9 +455,9 @@ const s = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 8,
   },
-  aiIcon: { fontSize: 13, color: '#185FA5', lineHeight: 20 },
-  aiLabel: { fontSize: 9, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
-  aiTxt: { fontSize: 11, color: C.brand, lineHeight: 16 },
+  aiIcon: { fontSize: 14, color: '#185FA5', lineHeight: 22 },
+  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
+  aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
 
   // Graph card
   graphCard: {
@@ -438,12 +471,25 @@ const s = StyleSheet.create({
     paddingTop: 10,
     paddingBottom: 8,
   },
-  legendRow: { flexDirection: 'row', gap: 12, marginBottom: 6 },
+  legendPeriodRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  legendRow: { flexDirection: 'row', gap: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendSolid: { width: 14, height: 2, borderRadius: 1 },
-  legendDotR: { width: 7, height: 7, borderRadius: 3.5, backgroundColor: C.red },
-  legendTxt: { fontSize: 10, color: C.textSecondary },
-  graphHint: { fontSize: 9, color: C.textSecondary, marginTop: 4, textAlign: 'center' },
+  legendDotR: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red },
+  legendTxt: { fontSize: 12, color: C.textSecondary },
+  graphHint: { fontSize: 11, color: C.textSecondary, marginTop: 6, textAlign: 'center' },
+  periodRow: { flexDirection: 'row', gap: 5 },
+  periodBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    backgroundColor: C.bg,
+    borderWidth: 0.5,
+    borderColor: C.borderMd,
+  },
+  periodBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
+  periodTxt: { fontSize: 12, color: C.textSecondary, fontWeight: '500' },
+  periodTxtActive: { color: '#fff' },
 
   // Tooltip
   tooltip: {
@@ -462,8 +508,8 @@ const s = StyleSheet.create({
     zIndex: 10,
     minWidth: 100,
   },
-  tipTitle: { fontSize: 10, fontWeight: '500', color: C.textPrimary, marginBottom: 1 },
-  tipAmt: { fontSize: 9 },
+  tipTitle: { fontSize: 12, fontWeight: '500', color: C.textPrimary, marginBottom: 1 },
+  tipAmt: { fontSize: 11 },
   tipPos: { color: C.posText },
   tipNeg: { color: C.negText },
   tipArrow: {
@@ -489,8 +535,8 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 4,
   },
-  secTitle: { fontSize: 10, fontWeight: '500', color: C.textSecondary },
-  secSub: { fontSize: 9, color: C.textTertiary },
+  secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  secSub: { fontSize: 11, color: C.textTertiary },
   evCardWrap: {
     flex: 1,
     marginHorizontal: 14,
@@ -509,11 +555,11 @@ const s = StyleSheet.create({
     marginHorizontal: -6,
   },
   evRowBorder: { borderBottomWidth: 0.5, borderBottomColor: C.border },
-  evYr: { fontSize: 10, color: C.textSecondary, width: 34, paddingTop: 1 },
-  evDot: { width: 8, height: 8, borderRadius: 4, marginTop: 3, flexShrink: 0 },
-  evName: { fontSize: 11, fontWeight: '500', color: C.textPrimary },
-  evDetail: { fontSize: 9, color: C.textSecondary, marginTop: 1 },
-  evAmt: { fontSize: 10, fontWeight: '500', marginTop: 1 },
+  evYr: { fontSize: 12, color: C.textSecondary, width: 36, paddingTop: 1 },
+  evDot: { width: 9, height: 9, borderRadius: 4.5, marginTop: 3, flexShrink: 0 },
+  evName: { fontSize: 14, fontWeight: '500', color: C.textPrimary },
+  evDetail: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
+  evAmt: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   evPos: { color: C.posText },
   evNeg: { color: C.negText },
 });

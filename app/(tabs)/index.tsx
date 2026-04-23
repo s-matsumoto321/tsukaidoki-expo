@@ -175,7 +175,7 @@ export default function HomeScreen() {
         {/* セクション区切り */}
         <View style={s.sectionDivider}>
           <View style={s.sectionLine} />
-          <Text style={s.sectionDividerLabel}>内訳チェック</Text>
+          <Text style={s.sectionDividerLabel}>内訳</Text>
           <View style={s.sectionLine} />
         </View>
 

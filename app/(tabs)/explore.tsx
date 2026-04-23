@@ -89,19 +89,17 @@ export default function DreamsScreen() {
       </View>
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
 
-        <View style={s.section}>
-          <View style={[s.sectionBadge, { backgroundColor: C.orangeBg }]}>
-            <Text style={[s.sectionBadgeText, { color: C.orange }]}>★ 夢</Text>
-          </View>
-          <Text style={s.sectionLabel}>使いたい・叶えたいこと</Text>
+        <View style={[s.sectionBand, { backgroundColor: C.orangeBg, borderLeftColor: C.orange }]}>
+          <Text style={[s.sectionBandTitle, { color: C.orange }]}>★ 夢</Text>
+          <Text style={s.sectionBandSub}>使いたい・叶えたいこと</Text>
         </View>
         {dreams.map(item => <PjCard key={item.name} {...item} />)}
 
-        <View style={[s.section, { marginTop: 20 }]}>
-          <View style={[s.sectionBadge, { backgroundColor: C.greenBg }]}>
-            <Text style={[s.sectionBadgeText, { color: C.green }]}>◎ 安心</Text>
-          </View>
-          <Text style={s.sectionLabel}>将来の不安を解消するために</Text>
+        <View style={s.sectionSep} />
+
+        <View style={[s.sectionBand, { backgroundColor: C.greenBg, borderLeftColor: C.green }]}>
+          <Text style={[s.sectionBandTitle, { color: C.greenText }]}>◎ 安心</Text>
+          <Text style={s.sectionBandSub}>将来の不安を解消するために</Text>
         </View>
         {anshin.map(item => <PjCard key={item.name} {...item} />)}
 
@@ -124,10 +122,16 @@ const s = StyleSheet.create({
   scroll: { flex: 1 },
   content: { backgroundColor: C.bg, paddingHorizontal: 14, paddingTop: 16, paddingBottom: 32 },
 
-  section: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  sectionBadge: { borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 },
-  sectionBadgeText: { fontSize: 12, fontWeight: '700' },
-  sectionLabel: { fontSize: 13, color: C.textSecondary },
+  sectionBand: {
+    marginHorizontal: -14,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderLeftWidth: 5,
+    marginBottom: 14,
+  },
+  sectionBandTitle: { fontSize: 18, fontWeight: '800', letterSpacing: 0.3 },
+  sectionBandSub: { fontSize: 13, color: C.textSecondary, marginTop: 4 },
+  sectionSep: { height: 1, backgroundColor: C.border, marginHorizontal: -14, marginVertical: 20 },
 
   card: {
     backgroundColor: C.card,
