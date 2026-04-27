@@ -4,7 +4,7 @@ import {
   Animated, ScrollView, View, Text, Pressable,
   StyleSheet, StatusBar, StyleSheet as RN,
 } from 'react-native';
-import { Link, type Href } from 'expo-router';
+import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { Logo } from '@/components/logo';
 import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -93,7 +93,8 @@ const MENU_ITEMS = [
 ];
 
 export default function HomeScreen() {
-  const { balances } = useStore();
+  const { balances, scenarios, activeScenarioId } = useStore();
+  const activeScenario = scenarios.find(sc => sc.id === activeScenarioId) ?? scenarios[0];
 
   // --- menu animation ---
   const [menuVisible, setMenuVisible] = useState(false);
@@ -159,6 +160,15 @@ export default function HomeScreen() {
               </Pressable>
             </Animated.View>
           </View>
+
+          {/* シナリオバナー */}
+          <Pressable style={s.scenarioBanner} onPress={() => router.push('/(tabs)/scenario' as any)}>
+            <Text style={s.scenarioIcon}>📊</Text>
+            <Text style={s.scenarioTxt}>
+              プラン{activeScenario?.systemLabel}：{activeScenario?.userLabel}
+            </Text>
+            <Text style={s.scenarioArrow}>›</Text>
+          </Pressable>
 
           {/* 総資産カード */}
           <View style={s.totalCard}>
@@ -340,6 +350,25 @@ const s = StyleSheet.create({
   },
   menuItemIcon: { fontSize: 18, color: 'rgba(255,255,255,0.65)', width: 22, textAlign: 'center' },
   menuItemLabel: { fontSize: 16, fontWeight: '500', color: '#fff' },
+
+  // シナリオバナー
+  scenarioBanner: {
+    marginHorizontal: 14,
+    marginTop: 10,
+    marginBottom: 4,
+    backgroundColor: 'rgba(12,68,124,0.08)',
+    borderRadius: 10,
+    borderWidth: 0.5,
+    borderColor: 'rgba(12,68,124,0.2)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  scenarioIcon: { fontSize: 14 },
+  scenarioTxt: { flex: 1, fontSize: 13, fontWeight: '600', color: C.brand },
+  scenarioArrow: { fontSize: 16, color: C.brand, opacity: 0.6 },
 
   // 総資産カード
   totalCard: {
