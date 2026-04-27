@@ -15,34 +15,27 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
-        <Stack.Screen
-          name="pool"
-          options={{
-            title: 'プール金',
-            headerStyle: { backgroundColor: '#0C447C' },
-            headerTintColor: '#ffffff',
-            headerBackTitle: 'ホーム',
-          }}
-        />
-        <Stack.Screen
-          name="project/[id]"
-          options={{ headerShown: false }}
-        />
-        <Stack.Screen
-          name="transfer"
-          options={{ presentation: 'modal', headerShown: false }}
-        />
-        <Stack.Screen
-          name="allocation"
-          options={{ headerShown: false }}
-        />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="onboarding" options={{ headerShown: false, gestureEnabled: false }} />
+          <Stack.Screen name="dream-timeline" options={{ headerShown: false }} />
+          <Stack.Screen name="modal" options={{ presentation: 'modal', title: 'Modal' }} />
+          <Stack.Screen
+            name="pool"
+            options={{
+              title: 'プール金',
+              headerStyle: { backgroundColor: '#0C447C' },
+              headerTintColor: '#ffffff',
+              headerBackTitle: 'ホーム',
+            }}
+          />
+          <Stack.Screen name="project/[id]" options={{ headerShown: false }} />
+          <Stack.Screen name="transfer" options={{ presentation: 'modal', headerShown: false }} />
+          <Stack.Screen name="allocation" options={{ headerShown: false }} />
+        </Stack>
+        <StatusBar style="auto" />
+      </ThemeProvider>
     </GestureHandlerRootView>
   );
 }

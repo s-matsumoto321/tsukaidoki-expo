@@ -85,7 +85,7 @@ export default function ManageScreen() {
               label="ポートフォリオ"
               sub={`${PF_ITEMS.length}件 · ¥${pfTotal.toLocaleString('ja-JP')}`}
               accent={C.green}
-              onPress={() => router.push('/portfolio')}
+              onPress={() => {}}
             />
           </View>
         </View>

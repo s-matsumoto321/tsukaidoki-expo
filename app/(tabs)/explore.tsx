@@ -14,6 +14,7 @@ const C = {
   greenText: '#27500A',
   orange: '#EF9F27',
   orangeBg: '#FEF3E2',
+  aiCard: '#E6F1FB',
   bg: '#f5f4ee',
   card: '#ffffff',
   textPrimary: '#2c2c2a',
@@ -26,14 +27,38 @@ const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
 
-// ─── 横積み比率バー ───────────────────────────────────────────────
+// ─── AIインサイトカード ──────────────────────────────────────────
+
+function AiInsightCard({ text }: { text: string }) {
+  if (!text) return null;
+  return (
+    <View style={s.aiWrap}>
+      <View style={s.aiCard}>
+        <Text style={s.aiIcon}>✦</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={s.aiLabel}>AI インサイト</Text>
+          <Text style={s.aiTxt}>{text}</Text>
+        </View>
+      </View>
+    </View>
+  );
+}
+
+// ─── 横積み比率バー + 夢年表リンク ──────────────────────────────
 
 function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
   if (total === 0) return null;
   return (
     <View style={s.allocWrap}>
-      <Text style={s.allocLabel}>総資産</Text>
-      <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
+      <View style={s.allocHeader}>
+        <View>
+          <Text style={s.allocLabel}>総資産</Text>
+          <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
+        </View>
+        <Pressable style={s.dreamBtn} onPress={() => router.push('/dream-timeline' as any)}>
+          <Text style={s.dreamBtnTxt}>★ 夢年表を見る →</Text>
+        </Pressable>
+      </View>
       <View style={s.allocBar}>
         {items.map((item, i) => (
           <Fragment key={item.projectId ?? item.name}>
@@ -65,7 +90,7 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
   );
 }
 
-// ─── カード ──────────────────────────────────────────────────────
+// ─── PJカード ────────────────────────────────────────────────────
 
 function PjCard({
   color, name, amount, progress = 0, status, projectId, drag, isActive,
@@ -128,8 +153,18 @@ function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) =
 
 // ─── メイン画面 ───────────────────────────────────────────────────
 
+function generateAiInsight(items: CardItem[], dreams: { year: number; title: string; projectId: string }[]): string {
+  const warnItems = items.filter(i => i.status === 'warn');
+  const totalDreams = dreams.length;
+  if (warnItems.length > 0) {
+    const warnNames = warnItems.map(i => i.name).join('と');
+    return `${totalDreams}つの夢のうち、現状ペースで届く夢が多いです。${warnNames}の達成が遅れ気味です。積立額を見直すと改善できます。`;
+  }
+  return `${totalDreams}つの夢に向けて順調に積み上がっています。現在のペースを維持しましょう。`;
+}
+
 export default function DreamsScreen() {
-  const { balances, dreamOrder, setDreamOrder } = useStore();
+  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights } = useStore();
   const [sortMode, setSortMode] = useState<SortMode>('custom');
 
   const enriched: CardItem[] = useMemo(() =>
@@ -146,6 +181,8 @@ export default function DreamsScreen() {
     () => enriched.reduce((sum, i) => sum + i.amount, 0),
     [enriched],
   );
+
+  const aiText = aiInsights['explore'] ?? generateAiInsight(enriched, dreams);
 
   const sortedItems = useMemo(() => {
     if (sortMode === 'custom') {
@@ -188,6 +225,7 @@ export default function DreamsScreen() {
         <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
       <AllocationBar items={enriched} total={totalAmount} />
+      <AiInsightCard text={aiText} />
       <SortBar mode={sortMode} onSelect={setSortMode} />
       <DraggableFlatList
         data={sortedItems}
@@ -214,6 +252,19 @@ const s = StyleSheet.create({
   },
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
+  // AIインサイト
+  aiWrap: {
+    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2,
+    backgroundColor: C.bg,
+  },
+  aiCard: {
+    backgroundColor: C.aiCard, borderRadius: 12, padding: 10,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+  },
+  aiIcon: { fontSize: 14, color: '#185FA5', lineHeight: 22 },
+  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
+  aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
+
   sortBar: {
     flexDirection: 'row',
     gap: 8,
@@ -222,12 +273,9 @@ const s = StyleSheet.create({
     backgroundColor: C.bg,
   },
   sortPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: C.card,
-    borderWidth: 0.5,
-    borderColor: C.border,
+    paddingHorizontal: 12, paddingVertical: 6,
+    borderRadius: 20, backgroundColor: C.card,
+    borderWidth: 0.5, borderColor: C.border,
   },
   sortPillActive: { backgroundColor: C.brand, borderColor: C.brand },
   sortPillText: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
@@ -236,36 +284,28 @@ const s = StyleSheet.create({
   // 横積み比率バー
   allocWrap: {
     backgroundColor: C.card,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-    paddingBottom: 10,
-    borderBottomWidth: 0.5,
-    borderBottomColor: C.border,
+    paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10,
+    borderBottomWidth: 0.5, borderBottomColor: C.border,
   },
-  allocLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 1 },
-  allocTotal: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: C.brand,
+  allocHeader: {
+    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
     marginBottom: 10,
   },
+  allocLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 1 },
+  allocTotal: { fontSize: 24, fontWeight: '700', color: C.brand },
+  dreamBtn: {
+    backgroundColor: '#FEF3E2', paddingHorizontal: 10, paddingVertical: 6,
+    borderRadius: 10, borderWidth: 0.5, borderColor: '#EF9F27',
+  },
+  dreamBtnTxt: { fontSize: 12, fontWeight: '600', color: '#D46000' },
   allocBar: {
-    flexDirection: 'row',
-    height: 14,
-    borderRadius: 7,
-    overflow: 'hidden',
-    marginBottom: 8,
+    flexDirection: 'row', height: 14, borderRadius: 7,
+    overflow: 'hidden', marginBottom: 8,
   },
-  allocLegRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-  },
+  allocLegRow: { flexDirection: 'row', flexWrap: 'wrap' },
   allocLegItem: {
-    width: '50%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: 3,
+    width: '50%', flexDirection: 'row', alignItems: 'center',
+    gap: 4, paddingVertical: 3,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   allocLegName: { fontSize: 11, color: C.textSecondary, flex: 1 },
@@ -274,20 +314,13 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
 
   card: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    flexDirection: 'row',
-    marginBottom: 10,
-    overflow: 'hidden',
+    backgroundColor: C.card, borderRadius: 12,
+    borderWidth: 0.5, borderColor: C.border,
+    flexDirection: 'row', marginBottom: 10, overflow: 'hidden',
   },
   cardActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
   },
   cardAccent: { width: 4 },
   cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
@@ -302,10 +335,5 @@ const s = StyleSheet.create({
   cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
   cardAmt: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
   cardPct: { fontSize: 13, color: C.textSecondary },
-  dragHandle: {
-    fontSize: 20,
-    color: C.border,
-    paddingHorizontal: 10,
-    alignSelf: 'center',
-  },
+  dragHandle: { fontSize: 20, color: C.border, paddingHorizontal: 10, alignSelf: 'center' },
 });

@@ -1,20 +1,18 @@
-import { Fragment, useState, useRef, useCallback, useMemo } from 'react';
-import { View, Text, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
+import { useState, useRef, useCallback, useMemo } from 'react';
+import {
+  View, Text, ScrollView, Pressable, StyleSheet,
+  useWindowDimensions, Modal, TextInput, Alert,
+} from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, {
-  Line as SvgLine,
-  Polyline,
-  Circle,
-  Text as SvgText,
-  G,
-  Rect,
-  Path,
+  Line as SvgLine, Polyline, Circle,
+  Text as SvgText, G, Rect, Path,
 } from 'react-native-svg';
-import { PROJECTS, type Project, type ProjectEvent, type ActualEvent } from '@/constants/projects';
-import { useStore, type ActualOverride, type SpendPlanOverride } from '@/store/useStore';
+import { PROJECTS, type Project, type ProjectEvent } from '@/constants/projects';
+import { useStore, type AllocationEntry } from '@/store/useStore';
+import { PF_ITEMS } from '@/constants/data';
 import { BalanceSheet } from '@/components/balance-sheet';
-import { EventInputSheet } from '@/components/event-input-sheet';
 
 const C = {
   brand: '#0C447C',
@@ -30,36 +28,8 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
   borderMd: 'rgba(0,0,0,0.18)',
   warn: '#FAEEDA',
-  danger: '#FCEBEB',
-  posText: '#27500A',
-  negText: '#791F1F',
+  starGold: '#D4A017',
 };
-
-function getEventCoords(
-  project: Project,
-  evIdx: number,
-  period: Period,
-  svgW: number,
-): { x: number; y: number } | null {
-  const limitMap: Record<Period, number> = { '生涯': Infinity, '5年': 5, '1年': 1 };
-  const firstYear = parseYear(project.years[0]);
-  const limit = firstYear + limitMap[period];
-  const cutIdx = project.years.findIndex(yr => parseYear(yr) > limit);
-  const endN = cutIdx === -1 ? project.years.length : Math.max(2, cutIdx);
-  if (evIdx >= endN) return null;
-  const plan = project.plan.slice(0, endN);
-  const actual = project.actual.slice(0, endN);
-  const gW = svgW - PL - PR;
-  const gH = SVG_H - PT - PB;
-  const n = endN;
-  const allVals = [...plan, ...actual.filter((v): v is number => v !== null)];
-  const rawMax = Math.max(...allVals);
-  const step = niceTickStep(rawMax, 4);
-  const maxVal = Math.ceil(rawMax / step) * step;
-  const xi = (i: number) => PL + (n === 1 ? gW / 2 : i * (gW / (n - 1)));
-  const yv = (v: number) => PT + gH - (v / maxVal) * gH;
-  return { x: xi(evIdx), y: yv(plan[evIdx]) };
-}
 
 function parseYear(s: string): number {
   const n = parseInt(s.replace("'", ''), 10);
@@ -80,21 +50,31 @@ function fmtY(v: number): string {
   return `${v}万`;
 }
 
+function getProjectColor(projectId: string): string {
+  return PF_ITEMS.find(i => i.projectId === projectId)?.color ?? C.brand;
+}
+
+function getMonthlyForProject(entries: AllocationEntry[], projectId: string, year: number): number {
+  const sorted = [...entries].sort((a, b) => b.fromYear - a.fromYear);
+  const entry = sorted.find(e => e.fromYear <= year);
+  return entry?.monthlyAmounts[projectId] ?? 0;
+}
+
 const SVG_H = 140;
 const PL = 42;
 const PR = 10;
 const PT = 10;
 const PB = 20;
 
-type TooltipState = { x: number; y: number; event: ProjectEvent };
 type Period = '生涯' | '5年' | '1年';
 
-function LineChart({ id, svgW, selectedIdx, actualData, period }: {
+// ─── 折れ線グラフ（試算ライン + ★マーカー） ──────────────────────
+
+function LineChart({ id, svgW, period, dreamYears }: {
   id: string;
   svgW: number;
-  selectedIdx: number | null;
-  actualData: (number | null)[];
   period: Period;
+  dreamYears: number[];
 }) {
   const project = PROJECTS[id];
   if (!project) return null;
@@ -107,15 +87,11 @@ function LineChart({ id, svgW, selectedIdx, actualData, period }: {
 
   const years = project.years.slice(0, endN);
   const plan = project.plan.slice(0, endN);
-  const actual = actualData.slice(0, endN);
-  const visibleEvents = project.events.filter(ev => ev.idx < endN);
-
   const gW = svgW - PL - PR;
   const gH = SVG_H - PT - PB;
   const n = years.length;
 
-  const allVals = [...plan, ...actual.filter((v): v is number => v !== null)];
-  const rawMax = Math.max(...allVals);
+  const rawMax = Math.max(...plan);
   const step = niceTickStep(rawMax, 4);
   const maxVal = Math.ceil(rawMax / step) * step;
 
@@ -126,10 +102,7 @@ function LineChart({ id, svgW, selectedIdx, actualData, period }: {
   for (let v = 0; v <= maxVal; v += step) ticks.push(v);
 
   const xStep = period === '1年' ? 1 : Math.max(1, Math.ceil(n / 5));
-  const actualIdx = actual.map((v, i) => (v !== null ? i : -1)).filter(i => i !== -1);
-
   const planPts = plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
-  const actualPts = actualIdx.map(i => `${xi(i)},${yv(actual[i]!)}`).join(' ');
 
   return (
     <Svg width={svgW} height={SVG_H}>
@@ -144,122 +117,348 @@ function LineChart({ id, svgW, selectedIdx, actualData, period }: {
           <SvgText key={i} x={xi(i)} y={SVG_H - 4} textAnchor="middle" fontSize={10} fill="#888">{yr}</SvgText>
         ) : null
       )}
-      {period === '1年' && years.map((_, i) =>
-        i > 0 && i < n - 1 ? (
-          <SvgLine key={`vg-${i}`} x1={xi(i)} y1={PT} x2={xi(i)} y2={PT + gH} stroke="rgba(128,128,128,0.1)" strokeWidth={0.5} />
-        ) : null
-      )}
-      <Polyline points={planPts} fill="none" stroke={C.brand} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.7} />
-      {actualIdx.length > 1 && (
-        <Polyline points={actualPts} fill="none" stroke={C.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      )}
-      {visibleEvents.filter(ev => ev.type === 'spend').map(ev => (
-        <SvgLine key={`vl-${ev.idx}`} x1={xi(ev.idx)} y1={PT} x2={xi(ev.idx)} y2={PT + gH} stroke={C.red} strokeWidth={0.5} strokeDasharray="3 2" opacity={0.3} />
+
+      {/* 試算ライン（緑） */}
+      <Polyline points={planPts} fill="none" stroke={C.green} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+
+      {/* 支出イベント縦線 */}
+      {project.events.filter(ev => ev.type === 'spend' && ev.idx < endN).map(ev => (
+        <SvgLine key={`vl-${ev.idx}`} x1={xi(ev.idx)} y1={PT} x2={xi(ev.idx)} y2={PT + gH}
+          stroke={C.red} strokeWidth={0.5} strokeDasharray="3 2" opacity={0.35} />
       ))}
-      {visibleEvents.map(ev => {
+
+      {/* 出来事マーカー */}
+      {project.events.filter(ev => ev.idx < endN).map(ev => {
         const cx = xi(ev.idx);
-        const cy = yv(project.plan[ev.idx]);
+        const cy = yv(plan[ev.idx]);
         const color = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
-        const sel = selectedIdx === ev.idx;
         return (
           <G key={`ev-${ev.idx}`}>
-            <Circle cx={cx} cy={cy} r={14} fill="rgba(0,0,0,0)" />
-            {sel && <Circle cx={cx} cy={cy} r={9} fill={color} opacity={0.2} />}
-            {ev.type === 'spend'
-              ? <Circle cx={cx} cy={cy} r={sel ? 6 : 5} fill={color} />
-              : <Circle cx={cx} cy={cy} r={sel ? 5 : 4} fill={color} stroke="#fff" strokeWidth={1.5} />
-            }
+            <Circle cx={cx} cy={cy} r={5} fill={color} stroke="#fff" strokeWidth={1.5} />
           </G>
         );
       })}
-      {actualIdx.map(i => (
-        <Circle key={`ad-${i}`} cx={xi(i)} cy={yv(actual[i]!)} r={2.5} fill={C.green} />
-      ))}
-      {actualIdx.length > 0 && (() => {
-        const li = actualIdx[actualIdx.length - 1];
-        return <Circle cx={xi(li)} cy={yv(actual[li]!)} r={6} fill={C.green} opacity={0.2} />;
-      })()}
+
+      {/* 夢★マーカー（このPJに紐づく夢） */}
+      {dreamYears.map((yr, di) => {
+        const idx = years.findIndex(y => parseYear(y) === yr);
+        if (idx < 0 || idx >= endN) return null;
+        const cx = xi(idx);
+        const cy = yv(plan[idx]) - 12;
+        return (
+          <G key={`dream-${di}`}>
+            <Circle cx={cx} cy={cy + 12} r={10} fill={C.starGold} opacity={0.15} />
+            <SvgText x={cx} y={cy + 5} textAnchor="middle" fontSize={12} fill={C.starGold}>★</SvgText>
+          </G>
+        );
+      })}
     </Svg>
   );
 }
 
-function CarImageCard() {
+// ─── 積立調整モーダル ─────────────────────────────────────────────
+
+type AllocationModalProps = {
+  visible: boolean;
+  projectId: string;
+  onClose: () => void;
+};
+
+const NOW_YEAR = new Date().getFullYear();
+const MONTH_STEP = 1000;
+const MONTH_STEP_LONG = 10000;
+
+function AllocationModal({ visible, projectId, onClose }: AllocationModalProps) {
+  const { savingsAllocation, saveSavingsAllocation } = useStore();
+  const [entries, setEntries] = useState<AllocationEntry[]>([]);
+  const [selectedFromYear, setSelectedFromYear] = useState(NOW_YEAR);
+  const [inputAmt, setInputAmt] = useState('');
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // モーダルが開いた時に初期化
+  const onShow = () => {
+    const saved = savingsAllocation.entries.length > 0
+      ? savingsAllocation.entries
+      : [{ fromYear: NOW_YEAR, monthlyAmounts: { [projectId]: 30000 } }];
+    setEntries(saved);
+    setSelectedFromYear(saved[0].fromYear);
+    const current = getMonthlyForProject(saved, projectId, saved[0].fromYear);
+    setInputAmt(String(current));
+  };
+
+  const currentAmt = parseInt(inputAmt, 10) || 0;
+
+  const updateAmount = (delta: number) => {
+    const next = Math.max(0, currentAmt + delta);
+    setInputAmt(String(next));
+    setEntries(prev => prev.map(e =>
+      e.fromYear === selectedFromYear
+        ? { ...e, monthlyAmounts: { ...e.monthlyAmounts, [projectId]: next } }
+        : e
+    ));
+  };
+
+  const startLongPress = (delta: number) => {
+    longPressTimer.current = setInterval(() => updateAmount(delta), 150);
+  };
+
+  const stopLongPress = () => {
+    if (longPressTimer.current) clearInterval(longPressTimer.current);
+  };
+
+  const handleAddChangePoint = () => {
+    Alert.prompt('変更ポイントを追加', '開始年を入力してください（例：2030）', (text) => {
+      const yr = parseInt(text ?? '', 10);
+      if (!yr || yr < NOW_YEAR) return;
+      const base = getMonthlyForProject(entries, projectId, yr);
+      setEntries(prev =>
+        [...prev, { fromYear: yr, monthlyAmounts: { ...prev[0].monthlyAmounts, [projectId]: base } }]
+          .sort((a, b) => a.fromYear - b.fromYear)
+      );
+      setSelectedFromYear(yr);
+      setInputAmt(String(base));
+    }, 'plain-text', String(NOW_YEAR + 5));
+  };
+
+  const handleSave = () => {
+    saveSavingsAllocation({ entries });
+    onClose();
+  };
+
+  const sortedEntries = [...entries].sort((a, b) => a.fromYear - b.fromYear);
+
   return (
-    <View style={s.carCard}>
-      <View style={s.carImgArea}>
-        <Svg width={160} height={80} viewBox="0 0 160 80">
-          <Rect x={0} y={66} width={160} height={4} rx={2} fill="rgba(0,0,0,0.15)" />
-          <Path d="M12,62 L12,42 Q12,38 16,38 L42,38 Q50,28 58,24 L110,24 Q118,24 124,34 L140,38 Q146,38 148,42 L148,62 Z" fill="#888780" />
-          <Path d="M52,37 L60,25 L108,25 L118,37 Z" fill="#A0A09A" />
-          <Path d="M56,36 L63,26 L100,26 L110,36 Z" fill="rgba(174,214,241,0.75)" />
-          <Rect x={63} y={26} width={44} height={10} rx={2} fill="rgba(174,214,241,0.75)" />
-          <SvgLine x1={88} y1={37} x2={88} y2={62} stroke="rgba(0,0,0,0.15)" strokeWidth={0.8} />
-          <Rect x={142} y={46} width={6} height={5} rx={2} fill="#F5E08A" />
-          <Rect x={12} y={46} width={5} height={5} rx={2} fill="#E24B4A" opacity={0.8} />
-          <Circle cx={120} cy={63} r={13} fill="#333" />
-          <Circle cx={120} cy={63} r={7} fill="#888" />
-          <Circle cx={120} cy={63} r={3} fill="#aaa" />
-          <Circle cx={46} cy={63} r={13} fill="#333" />
-          <Circle cx={46} cy={63} r={7} fill="#888" />
-          <Circle cx={46} cy={63} r={3} fill="#aaa" />
-        </Svg>
-      </View>
-      <Text style={s.carCaption}>新車イメージ · 2028年 買い替え予定</Text>
-    </View>
-  );
-}
-
-function EventPairRow({
-  planEv, actual, selected, onPlanPress, onActualPress,
-}: {
-  planEv: ProjectEvent;
-  actual: ActualEvent | null | undefined;
-  selected: boolean;
-  onPlanPress: (ev: ProjectEvent) => void;
-  onActualPress: (ev: ProjectEvent, existing: ActualEvent | null) => void;
-}) {
-  const showCarImg = planEv.type === 'spend' && planEv.name.includes('車');
-
-  return (
-    <Fragment>
-      <View style={[s.pairRow, selected && s.pairRowSel]}>
-        <Pressable style={s.planCol} onPress={() => onPlanPress(planEv)}>
-          <View style={s.evTopRow}>
-            <Text style={s.evYr}>{planEv.year}</Text>
-            <View style={[s.evDot, { backgroundColor: planEv.dot }]} />
-          </View>
-          <Text style={s.evName}>{planEv.name}</Text>
-          <Text style={s.evDetail} numberOfLines={1} ellipsizeMode="tail">{planEv.detail}</Text>
-          <Text style={[s.evAmt, planEv.pos ? s.evPos : s.evNeg]}>{planEv.amt}</Text>
-        </Pressable>
-
-        <View style={s.colDivWrap}>
-          <View style={s.colDivLine} />
-          <View style={[s.colDivDot, { borderColor: planEv.dot }]} />
+    <Modal
+      visible={visible}
+      animationType="slide"
+      presentationStyle="pageSheet"
+      onRequestClose={onClose}
+      onShow={onShow}
+    >
+      <View style={al.safe}>
+        <View style={al.header}>
+          <Text style={al.title}>積立を調整する</Text>
+          <Pressable style={al.closeBtn} onPress={onClose}>
+            <Text style={al.closeTxt}>✕</Text>
+          </Pressable>
         </View>
 
-        {actual != null ? (
-          <Pressable style={s.actualCol} onPress={() => onActualPress(planEv, actual)}>
-            <View style={s.evTopRow}>
-              <Text style={s.evYr}>{actual.date}</Text>
-              <View style={[s.evDot, { backgroundColor: actual.dot }]} />
-            </View>
-            <Text style={s.evName}>{actual.name}</Text>
-            <Text style={s.evDetail} numberOfLines={1} ellipsizeMode="tail">{actual.detail}</Text>
-            <Text style={[s.evAmt, actual.pos ? s.evPos : s.evNeg]}>{actual.amt}</Text>
-          </Pressable>
-        ) : (
-          <Pressable style={s.emptyCol} onPress={() => onActualPress(planEv, null)}>
-            <Text style={s.emptyTxt}>未入力</Text>
-            <Text style={s.emptySub}>タップして記録</Text>
-          </Pressable>
-        )}
-      </View>
+        <ScrollView style={al.scroll} contentContainerStyle={al.content}>
+          <Text style={al.sectionLabel}>月の積立額</Text>
+          <View style={al.stepper}>
+            <Pressable
+              style={al.stepBtn}
+              onPress={() => updateAmount(-MONTH_STEP)}
+              onLongPress={() => startLongPress(-MONTH_STEP_LONG)}
+              onPressOut={stopLongPress}
+              delayLongPress={400}
+            >
+              <Text style={al.stepBtnTxt}>−</Text>
+            </Pressable>
+            <TextInput
+              style={al.stepInput}
+              value={inputAmt}
+              onChangeText={(v) => {
+                const n = parseInt(v.replace(/[^0-9]/g, ''), 10);
+                setInputAmt(isNaN(n) ? '0' : String(n));
+                setEntries(prev => prev.map(e =>
+                  e.fromYear === selectedFromYear
+                    ? { ...e, monthlyAmounts: { ...e.monthlyAmounts, [projectId]: isNaN(n) ? 0 : n } }
+                    : e
+                ));
+              }}
+              keyboardType="number-pad"
+              selectTextOnFocus
+            />
+            <Pressable
+              style={al.stepBtn}
+              onPress={() => updateAmount(MONTH_STEP)}
+              onLongPress={() => startLongPress(MONTH_STEP_LONG)}
+              onPressOut={stopLongPress}
+              delayLongPress={400}
+            >
+              <Text style={al.stepBtnTxt}>＋</Text>
+            </Pressable>
+          </View>
+          <Text style={al.stepUnit}>¥{currentAmt.toLocaleString('ja-JP')} / 月</Text>
+          <Text style={al.stepHint}>タップで¥1,000刻み・長押しで¥10,000刻み</Text>
 
-      {showCarImg && <CarImageCard />}
-    </Fragment>
+          <Text style={[al.sectionLabel, { marginTop: 20 }]}>変更ポイント</Text>
+          {sortedEntries.map((entry) => {
+            const amt = entry.monthlyAmounts[projectId] ?? 0;
+            const isSel = entry.fromYear === selectedFromYear;
+            return (
+              <Pressable
+                key={entry.fromYear}
+                style={[al.entryRow, isSel && al.entryRowSel]}
+                onPress={() => {
+                  setSelectedFromYear(entry.fromYear);
+                  setInputAmt(String(amt));
+                }}
+              >
+                <View style={[al.entryBar, { backgroundColor: isSel ? C.brand : C.textSecondary }]} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[al.entryYear, isSel && { color: C.brand }]}>
+                    ▶ {entry.fromYear}年〜
+                  </Text>
+                  <Text style={al.entryAmt}>¥{amt.toLocaleString('ja-JP')}/月</Text>
+                </View>
+              </Pressable>
+            );
+          })}
+
+          <Pressable style={al.addPointBtn} onPress={handleAddChangePoint}>
+            <Text style={al.addPointTxt}>＋ 変更ポイントを追加</Text>
+          </Pressable>
+        </ScrollView>
+
+        <View style={al.footer}>
+          <Pressable style={al.applyBtn} onPress={handleSave}>
+            <Text style={al.applyBtnTxt}>適用する</Text>
+          </Pressable>
+        </View>
+      </View>
+    </Modal>
   );
 }
+
+const al = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: C.bg },
+  header: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderBottomWidth: 0.5, borderBottomColor: C.border,
+    backgroundColor: C.card,
+  },
+  title: { fontSize: 18, fontWeight: '700', color: C.textPrimary },
+  closeBtn: {
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center',
+  },
+  closeTxt: { fontSize: 13, color: C.textSecondary },
+  scroll: { flex: 1 },
+  content: { padding: 20, paddingBottom: 20 },
+  sectionLabel: { fontSize: 12, color: C.textSecondary, fontWeight: '500', marginBottom: 10 },
+  stepper: {
+    flexDirection: 'row', alignItems: 'center', gap: 0,
+    backgroundColor: C.card, borderRadius: 12,
+    borderWidth: 0.5, borderColor: C.borderMd,
+    overflow: 'hidden',
+  },
+  stepBtn: {
+    width: 56, height: 56,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: '#f0f0f8',
+  },
+  stepBtnTxt: { fontSize: 24, color: C.brand, fontWeight: '300' },
+  stepInput: {
+    flex: 1, textAlign: 'center',
+    fontSize: 22, fontWeight: '700', color: C.textPrimary,
+    paddingVertical: 10,
+  },
+  stepUnit: { fontSize: 16, fontWeight: '500', color: C.brand, textAlign: 'center', marginTop: 8 },
+  stepHint: { fontSize: 11, color: C.textSecondary, textAlign: 'center', marginTop: 4 },
+
+  entryRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingVertical: 10, paddingHorizontal: 8,
+    borderRadius: 8, marginBottom: 4,
+  },
+  entryRowSel: { backgroundColor: '#EBF2FB' },
+  entryBar: { width: 3, height: 32, borderRadius: 2 },
+  entryYear: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  entryAmt: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
+
+  addPointBtn: {
+    marginTop: 8, paddingVertical: 12, borderRadius: 10,
+    borderWidth: 1, borderColor: C.brand, borderStyle: 'dashed',
+    alignItems: 'center',
+  },
+  addPointTxt: { fontSize: 13, fontWeight: '600', color: C.brand },
+
+  footer: {
+    paddingHorizontal: 20, paddingVertical: 16,
+    borderTopWidth: 0.5, borderTopColor: C.border,
+    backgroundColor: C.bg,
+  },
+  applyBtn: {
+    backgroundColor: C.brand, borderRadius: 12,
+    paddingVertical: 15, alignItems: 'center',
+  },
+  applyBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
+});
+
+// ─── 夢年表ストリップ ──────────────────────────────────────────────
+
+function DreamStrip({ projectId }: { projectId: string }) {
+  const { dreams } = useStore();
+  const projectDreams = dreams.filter(d => d.projectId === projectId).sort((a, b) => a.year - b.year);
+  const color = getProjectColor(projectId);
+
+  if (projectDreams.length === 0) return null;
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ds.strip} contentContainerStyle={ds.stripContent}>
+      {projectDreams.map(dream => (
+        <View key={dream.id} style={[ds.item, { borderColor: color }]}>
+          <Text style={[ds.star, { color }]}>★</Text>
+          <Text style={ds.year}>{dream.year}</Text>
+          <Text style={ds.title} numberOfLines={2}>{dream.title}</Text>
+        </View>
+      ))}
+    </ScrollView>
+  );
+}
+
+const ds = StyleSheet.create({
+  strip: { marginHorizontal: 14, marginBottom: 6 },
+  stripContent: { gap: 8, paddingVertical: 4 },
+  item: {
+    width: 76, padding: 8, borderRadius: 10,
+    borderWidth: 1, backgroundColor: C.card,
+    alignItems: 'center',
+  },
+  star: { fontSize: 16, lineHeight: 20 },
+  year: { fontSize: 11, fontWeight: '600', color: C.textSecondary, marginTop: 2 },
+  title: { fontSize: 10, color: C.textPrimary, textAlign: 'center', marginTop: 2, lineHeight: 13 },
+});
+
+// ─── 出来事リスト ─────────────────────────────────────────────────
+
+function EventRow({ ev, onPress }: { ev: ProjectEvent; onPress: (ev: ProjectEvent) => void }) {
+  const typeColor = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
+  return (
+    <Pressable style={ev2.row} onPress={() => onPress(ev)}>
+      <View style={[ev2.dot, { backgroundColor: typeColor }]} />
+      <View style={ev2.body}>
+        <Text style={ev2.year}>{ev.year}</Text>
+        <Text style={ev2.name}>{ev.name}</Text>
+        <Text style={ev2.detail} numberOfLines={1}>{ev.detail}</Text>
+      </View>
+      <Text style={[ev2.amt, ev.pos ? ev2.pos : ev2.neg]}>{ev.amt}</Text>
+    </Pressable>
+  );
+}
+
+const ev2 = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: C.card, borderRadius: 10,
+    borderWidth: 0.5, borderColor: C.border,
+    paddingHorizontal: 12, paddingVertical: 10,
+    marginBottom: 6,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  body: { flex: 1 },
+  year: { fontSize: 11, color: C.textSecondary },
+  name: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  detail: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
+  amt: { fontSize: 13, fontWeight: '600' },
+  pos: { color: '#27500A' },
+  neg: { color: '#791F1F' },
+});
+
+// ─── PJ詳細 メイン ────────────────────────────────────────────────
 
 export default function ProjectDetailScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
@@ -268,58 +467,33 @@ export default function ProjectDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  const { balances, actualOverrides, spendPlanOverrides } = useStore();
+  const { balances, dreams, savingsAllocation, aiInsights } = useStore();
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
 
   const [period, setPeriod] = useState<Period>('生涯');
-  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
-  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
-  const [eventSheet, setEventSheet] = useState<{
-    mode: 'actual' | 'plan';
-    event: ProjectEvent;
-    planBalanceMan: number;
-  } | null>(null);
-
-  const scrollRef = useRef<ScrollView>(null);
-  const rowY = useRef<Record<number, number>>({});
-  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [allocationModalVisible, setAllocationModalVisible] = useState(false);
 
   const svgW = screenWidth - 52;
-  const TIP_W = 136;
-  const TIP_H = 46;
 
-  const mergedActual = useMemo(() =>
-    project?.actual.map((v, i) => actualOverrides[id ?? '']?.[i]?.balanceMan ?? v) ?? [],
-    [project?.actual, actualOverrides, id]
+  const projectDreamYears = useMemo(
+    () => dreams.filter(d => d.projectId === id).map(d => d.year),
+    [dreams, id],
   );
 
-  const dismiss = useCallback(() => {
-    setSelectedIdx(null);
-    setTooltip(null);
-  }, []);
+  const currentMonthly = useMemo(
+    () => getMonthlyForProject(savingsAllocation.entries, id ?? '', NOW_YEAR),
+    [savingsAllocation, id],
+  );
 
-  const handlePlanTap = useCallback((ev: ProjectEvent) => {
-    if (tipTimer.current) clearTimeout(tipTimer.current);
-    setSelectedIdx(ev.idx);
-    const coords = getEventCoords(project, ev.idx, period, svgW);
-    setTooltip(coords ? { x: coords.x, y: coords.y, event: ev } : null);
-    tipTimer.current = setTimeout(dismiss, 3500);
+  const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
+
+  const handleEventPress = useCallback((ev: ProjectEvent) => {
     if (ev.type === 'start') {
-      router.push('/allocation' as never);
-    } else {
-      setEventSheet({ mode: 'plan', event: ev, planBalanceMan: project.plan[ev.idx] });
+      setAllocationModalVisible(true);
     }
-  }, [dismiss, project, period, svgW]);
-
-  const handleActualTap = useCallback((ev: ProjectEvent, _existing: ActualEvent | null) => {
-    if (tipTimer.current) clearTimeout(tipTimer.current);
-    setSelectedIdx(ev.idx);
-    const coords = getEventCoords(project, ev.idx, period, svgW);
-    setTooltip(coords ? { x: coords.x, y: coords.y, event: ev } : null);
-    tipTimer.current = setTimeout(dismiss, 3500);
-    setEventSheet({ mode: 'actual', event: ev, planBalanceMan: project.plan[ev.idx] });
-  }, [dismiss, project, period, svgW]);
+    // 将来: 出来事編集モーダル
+  }, []);
 
   if (!project) {
     return (
@@ -329,13 +503,9 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  const tipLeft = tooltip ? Math.max(0, Math.min(tooltip.x - TIP_W / 2, svgW - TIP_W)) : 0;
-  const showAbove = tooltip ? tooltip.y - TIP_H - 10 >= 0 : false;
-  const tipTop = tooltip ? (showAbove ? tooltip.y - TIP_H - 10 : tooltip.y + 10) : 0;
-  const arrowLeft = tooltip ? Math.max(6, Math.min(tooltip.x - tipLeft - 5, TIP_W - 16)) : 0;
-
   return (
     <View style={{ flex: 1 }}>
+      {/* ヘッダー */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={s.backTxt}>‹ {from === 'pool' ? 'プール金' : '使いみち'}</Text>
@@ -345,38 +515,41 @@ export default function ProjectDetailScreen() {
             <Text style={s.projName}>{project.name}</Text>
             <Text style={s.timing}>{project.timing}</Text>
           </View>
-          <View style={{ alignItems: 'flex-end' }}>
+          <Pressable onPress={() => setSheetVisible(true)} style={{ alignItems: 'flex-end' }}>
             <Text style={s.amtLabel}>{isAccount ? '現在の残高' : '現在の積み立て'}</Text>
             <Text style={s.amt}>¥{currentAmount.toLocaleString('ja-JP')}</Text>
             <Text style={s.amtSub}>{project.goalLabel} · {project.statusTxt}</Text>
-          </View>
+          </Pressable>
         </View>
       </View>
 
-      <View style={{ flex: 1, backgroundColor: C.bg }}>
-        <View style={s.aiCard}>
-          <Text style={s.aiIcon}>✦</Text>
-          <View style={{ flex: 1 }}>
-            <Text style={s.aiLabel}>AI インサイト</Text>
-            <Text style={s.aiTxt}>{project.ai}</Text>
-          </View>
-        </View>
+      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}>
 
+        {/* AIインサイト */}
+        {aiText ? (
+          <View style={s.aiCard}>
+            <Text style={s.aiIcon}>✦</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={s.aiLabel}>AI インサイト</Text>
+              <Text style={s.aiTxt}>{aiText}</Text>
+            </View>
+          </View>
+        ) : null}
+
+        {/* グラフ */}
         <View style={s.graphCard}>
           <View style={s.legendPeriodRow}>
             <View style={s.legendRow}>
               <View style={s.legendItem}>
-                <Svg width={14} height={4}>
-                  <SvgLine x1={0} y1={2} x2={14} y2={2} stroke={C.brand} strokeWidth={1.5} strokeDasharray="4 3" />
-                </Svg>
-                <Text style={s.legendTxt}>計画</Text>
-              </View>
-              <View style={s.legendItem}>
                 <View style={[s.legendSolid, { backgroundColor: C.green }]} />
-                <Text style={s.legendTxt}>実績</Text>
+                <Text style={s.legendTxt}>試算</Text>
               </View>
               <View style={s.legendItem}>
-                <View style={s.legendDotR} />
+                <View style={[s.legendDot, { backgroundColor: C.starGold }]} />
+                <Text style={s.legendTxt}>夢★</Text>
+              </View>
+              <View style={s.legendItem}>
+                <View style={[s.legendDot, { backgroundColor: C.red }]} />
                 <Text style={s.legendTxt}>支出</Text>
               </View>
             </View>
@@ -385,85 +558,42 @@ export default function ProjectDetailScreen() {
                 <Pressable
                   key={p}
                   style={[s.periodBtn, period === p && s.periodBtnActive]}
-                  onPress={() => { setPeriod(p); setSelectedIdx(null); setTooltip(null); }}
+                  onPress={() => setPeriod(p)}
                 >
                   <Text style={[s.periodTxt, period === p && s.periodTxtActive]}>{p}</Text>
                 </Pressable>
               ))}
             </View>
           </View>
-
-          <View style={{ position: 'relative' }}>
-            <LineChart id={id ?? ''} svgW={svgW} selectedIdx={selectedIdx} actualData={mergedActual} period={period} />
-            {tooltip && (
-              <View style={[s.tooltip, { left: tipLeft, top: tipTop }]}>
-                <Text style={s.tipTitle}>{tooltip.event.year}　{tooltip.event.name}</Text>
-                <Text style={[s.tipAmt, tooltip.event.pos ? s.tipPos : s.tipNeg]}>{tooltip.event.amt}</Text>
-                <View style={[
-                  s.tipArrow,
-                  showAbove ? { bottom: -5, borderTopColor: C.card } : { top: -5, borderBottomColor: C.card },
-                  { left: arrowLeft },
-                ]} />
-              </View>
-            )}
-          </View>
-          <Text style={s.graphHint}>年表の行をタップ → 実績入力 / 計画修正</Text>
+          <LineChart id={id ?? ''} svgW={svgW} period={period} dreamYears={projectDreamYears} />
         </View>
 
-        <View style={{ flex: 1, paddingBottom: insets.bottom }}>
-          <View style={s.secRow}>
-            <Text style={s.secTitle}>{isAccount ? '入出金・取引の年表' : '積み立て・支出の年表'}</Text>
-          </View>
+        {/* 夢年表ストリップ */}
+        {!isAccount && <DreamStrip projectId={id ?? ''} />}
 
-          <View style={s.colHeaderRow}>
-            <View style={s.colHeaderPlan}>
-              <Text style={[s.colHeaderTxt, s.colHeaderPlanTxt]}>計画</Text>
-            </View>
-            <View style={{ width: 20 }} />
-            <View style={s.colHeaderActual}>
-              <Text style={[s.colHeaderTxt, s.colHeaderActualTxt]}>実績</Text>
-            </View>
-          </View>
-
-          <ScrollView
-            ref={scrollRef}
-            style={{ flex: 1 }}
-            contentContainerStyle={{ paddingHorizontal: 14, paddingTop: 8, paddingBottom: 24 }}
-          >
-            {project.events.map((ev) => (
-              <View
-                key={ev.idx}
-                style={s.eventCard}
-                onLayout={e => { rowY.current[ev.idx] = e.nativeEvent.layout.y; }}
-              >
-                <EventPairRow
-                  planEv={ev}
-                  actual={project.actuals?.[ev.idx]}
-                  selected={selectedIdx === ev.idx}
-                  onPlanPress={handlePlanTap}
-                  onActualPress={handleActualTap}
-                />
-              </View>
-            ))}
-          </ScrollView>
+        {/* 出来事リスト */}
+        <View style={s.secRow}>
+          <Text style={s.secTitle}>{isAccount ? '入出金の年表' : '出来事の年表'}</Text>
+          {!isAccount && (
+            <Text style={s.secSub}>月 ¥{currentMonthly.toLocaleString('ja-JP')} 積立中</Text>
+          )}
         </View>
-      </View>
+        <View style={{ paddingHorizontal: 14, paddingBottom: 8 }}>
+          {project.events.map(ev => (
+            <EventRow key={ev.idx} ev={ev} onPress={handleEventPress} />
+          ))}
+        </View>
 
-      <EventInputSheet
-        visible={eventSheet !== null}
-        mode={eventSheet?.mode ?? 'actual'}
-        projectId={id ?? ''}
-        event={eventSheet?.event ?? null}
-        planBalanceMan={eventSheet?.planBalanceMan ?? 0}
-        existingActual={eventSheet?.mode === 'actual' && eventSheet.event
-          ? (actualOverrides[id ?? '']?.[eventSheet.event.idx] ?? null)
-          : null}
-        existingPlan={eventSheet?.mode === 'plan' && eventSheet.event
-          ? (spendPlanOverrides[id ?? '']?.[eventSheet.event.idx] ?? null)
-          : null}
-        onClose={() => setEventSheet(null)}
-        onSaved={() => setEventSheet(null)}
-      />
+      </ScrollView>
+
+      {/* 積立調整ボタン（下部固定） */}
+      {!isAccount && (
+        <View style={[s.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+          <Pressable style={s.allocBtn} onPress={() => setAllocationModalVisible(true)}>
+            <Text style={s.allocBtnTxt}>⚙ 積立を調整する</Text>
+          </Pressable>
+        </View>
+      )}
 
       <BalanceSheet
         visible={sheetVisible}
@@ -472,13 +602,19 @@ export default function ProjectDetailScreen() {
         label={project.name}
         onClose={() => setSheetVisible(false)}
       />
+
+      <AllocationModal
+        visible={allocationModalVisible}
+        projectId={id ?? ''}
+        onClose={() => setAllocationModalVisible(false)}
+      />
     </View>
   );
 }
 
 const s = StyleSheet.create({
   header: { backgroundColor: C.brand, paddingHorizontal: 20, paddingBottom: 12 },
-  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 8, letterSpacing: 0.2 },
+  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 8 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
   projName: { fontSize: 16, fontWeight: '500', color: '#fff', lineHeight: 22 },
   timing: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
@@ -504,9 +640,8 @@ const s = StyleSheet.create({
   legendRow: { flexDirection: 'row', gap: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   legendSolid: { width: 14, height: 2, borderRadius: 1 },
-  legendDotR: { width: 8, height: 8, borderRadius: 4, backgroundColor: C.red },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
   legendTxt: { fontSize: 12, color: C.textSecondary },
-  graphHint: { fontSize: 11, color: C.textSecondary, marginTop: 6, textAlign: 'center' },
   periodRow: { flexDirection: 'row', gap: 5 },
   periodBtn: {
     paddingHorizontal: 10, paddingVertical: 4,
@@ -517,106 +652,23 @@ const s = StyleSheet.create({
   periodTxt: { fontSize: 12, color: C.textSecondary, fontWeight: '500' },
   periodTxtActive: { color: '#fff' },
 
-  tooltip: {
-    position: 'absolute', backgroundColor: C.card,
-    borderWidth: 0.5, borderColor: C.borderMd, borderRadius: 8,
-    paddingVertical: 6, paddingHorizontal: 9,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1, shadowRadius: 4, elevation: 4, zIndex: 10, minWidth: 100,
-  },
-  tipTitle: { fontSize: 12, fontWeight: '500', color: C.textPrimary, marginBottom: 1 },
-  tipAmt: { fontSize: 11 },
-  tipPos: { color: C.posText },
-  tipNeg: { color: C.negText },
-  tipArrow: {
-    position: 'absolute', width: 0, height: 0, borderStyle: 'solid',
-    borderLeftWidth: 5, borderRightWidth: 5,
-    borderTopWidth: 5, borderBottomWidth: 5,
-    borderLeftColor: 'transparent', borderRightColor: 'transparent',
-    borderTopColor: 'transparent', borderBottomColor: 'transparent',
-  },
-
   secRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 4,
+    paddingHorizontal: 16, paddingVertical: 6,
   },
   secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  secSub: { fontSize: 12, color: C.brand, fontWeight: '500' },
 
-  colHeaderRow: {
-    flexDirection: 'row',
-    marginHorizontal: 14,
-    backgroundColor: C.bg,
-  },
-  colHeaderPlan: {
-    flex: 1,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: C.brand,
-    alignItems: 'center',
-  },
-  colHeaderActual: {
-    flex: 1,
-    paddingVertical: 10,
-    borderBottomWidth: 2,
-    borderBottomColor: C.green,
-    alignItems: 'center',
-  },
-  colHeaderTxt: { fontSize: 14, fontWeight: '700' },
-  colHeaderPlanTxt: { color: C.brand },
-  colHeaderActualTxt: { color: C.green },
-
-  eventCard: {
-    backgroundColor: C.card,
-    borderRadius: 10,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    marginBottom: 8,
-    overflow: 'hidden',
-  },
-
-  pairRow: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 10 },
-  pairRowSel: { backgroundColor: C.warn },
-
-  planCol: { flex: 1, paddingRight: 6 },
-  actualCol: { flex: 1, paddingLeft: 6 },
-
-  colDivWrap: { width: 20, alignItems: 'center', justifyContent: 'center' },
-  colDivLine: {
+  bottomBar: {
     position: 'absolute',
-    top: 0,
-    bottom: 0,
-    width: 1,
-    backgroundColor: C.border,
+    bottom: 0, left: 0, right: 0,
+    paddingHorizontal: 16, paddingTop: 10,
+    backgroundColor: C.bg,
+    borderTopWidth: 0.5, borderTopColor: C.border,
   },
-  colDivDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: C.card,
-    borderWidth: 2,
+  allocBtn: {
+    backgroundColor: C.brand, borderRadius: 12,
+    paddingVertical: 14, alignItems: 'center',
   },
-
-  emptyCol: {
-    flex: 1,
-    borderWidth: 1, borderColor: 'rgba(0,0,0,0.14)', borderStyle: 'dashed', borderRadius: 8,
-    justifyContent: 'center', alignItems: 'center', minHeight: 64,
-  },
-  emptyTxt: { fontSize: 12, color: C.textTertiary, fontWeight: '500' },
-  emptySub: { fontSize: 10, color: C.textTertiary, marginTop: 3 },
-
-  evTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  evYr: { fontSize: 11, color: C.textSecondary },
-  evDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  evName: { fontSize: 13, fontWeight: '500', color: C.textPrimary, lineHeight: 18 },
-  evDetail: { fontSize: 10, color: C.textSecondary, marginTop: 1 },
-  evAmt: { fontSize: 12, fontWeight: '500', marginTop: 3 },
-  evPos: { color: C.posText },
-  evNeg: { color: C.negText },
-
-  carCard: {
-    marginVertical: 8, borderRadius: 10, overflow: 'hidden',
-    backgroundColor: '#EDECEA', borderWidth: 0.5, borderColor: C.border,
-  },
-  carImgArea: { height: 100, justifyContent: 'center', alignItems: 'center', backgroundColor: '#E0DDD9' },
-  carCaption: { fontSize: 11, color: C.textSecondary, textAlign: 'center', paddingVertical: 6 },
+  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });

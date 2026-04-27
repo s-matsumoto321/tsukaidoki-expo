@@ -36,8 +36,8 @@ export type SavingsAllocation = {
 
 export type ScenarioMeta = {
   id: string;
-  systemLabel: string;  // 'A', 'B', 'C'...
-  userLabel: string;    // 'メイン', 'FIREプラン' etc.
+  systemLabel: string;
+  userLabel: string;
 };
 
 export type ScenarioData = {
@@ -47,6 +47,20 @@ export type ScenarioData = {
   actualOverrides: Record<string, Record<number, ActualOverride>>;
   spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
   savingsAllocation: SavingsAllocation;
+};
+
+export type Dream = {
+  id: string;
+  year: number;
+  title: string;
+  projectId: string;
+};
+
+export type FamilyMember = {
+  id: string;
+  name: string;
+  role: 'self' | 'partner' | 'child' | 'pet' | 'other';
+  birthYear: number;
 };
 
 const DEFAULT_SCENARIO_DATA: ScenarioData = {
@@ -62,46 +76,55 @@ const DEFAULT_SCENARIO_DATA: ScenarioData = {
   },
 };
 
+const DEFAULT_DREAMS: Dream[] = [
+  { id: 'd1', year: 2027, title: 'ハワイ旅行', projectId: 'trip' },
+  { id: 'd2', year: 2028, title: '車の買い替え', projectId: 'car' },
+  { id: 'd3', year: 2034, title: '子の大学入学', projectId: 'edu' },
+  { id: 'd4', year: 2050, title: '定年退職', projectId: 'ret' },
+];
+
+const DEFAULT_FAMILY: FamilyMember[] = [
+  { id: 'self', name: 'あなた', role: 'self', birthYear: 1988 },
+  { id: 'partner', name: '配偶者', role: 'partner', birthYear: 1990 },
+  { id: 'child1', name: '太郎', role: 'child', birthYear: 2025 },
+];
+
 type State = {
-  // シナリオ管理
   scenarios: ScenarioMeta[];
   activeScenarioId: string;
   scenariosData: Record<string, ScenarioData>;
 
-  // アクティブシナリオのフラットデータ（既存コンポーネント互換）
   balances: Record<string, number>;
   userEvents: Record<string, UserEvent[]>;
   dreamOrder: string[];
   actualOverrides: Record<string, Record<number, ActualOverride>>;
   spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
   savingsAllocation: SavingsAllocation;
+
+  dreams: Dream[];
+  familyMembers: FamilyMember[];
+  onboardingDone: boolean;
+  aiInsights: Record<string, string>;
 };
 
 type Actions = {
-  updateBalance: (
-    projectId: string,
-    prevAmount: number,
-    newAmount: number,
-    note: string,
-  ) => void;
-  addTransfer: (
-    fromId: string,
-    fromPrev: number,
-    toId: string,
-    toPrev: number,
-    amount: number,
-    note: string,
-  ) => void;
+  updateBalance: (projectId: string, prevAmount: number, newAmount: number, note: string) => void;
+  addTransfer: (fromId: string, fromPrev: number, toId: string, toPrev: number, amount: number, note: string) => void;
   setDreamOrder: (order: string[]) => void;
   saveActualOverride: (projectId: string, evIdx: number, data: ActualOverride) => void;
   saveSpendPlanOverride: (projectId: string, evIdx: number, data: SpendPlanOverride) => void;
   saveSavingsAllocation: (allocation: SavingsAllocation) => void;
 
-  // シナリオ操作
   switchScenario: (id: string) => void;
   addScenario: (userLabel: string, copyFromId?: string) => void;
   renameScenario: (id: string, userLabel: string) => void;
   deleteScenario: (id: string) => void;
+
+  addDream: (dream: Omit<Dream, 'id'>) => void;
+  removeDream: (id: string) => void;
+  setFamilyMembers: (members: FamilyMember[]) => void;
+  setOnboardingDone: (done: boolean) => void;
+  setAiInsight: (key: string, text: string) => void;
 };
 
 function dateLabel(): string {
@@ -128,12 +151,10 @@ function snapshotActiveData(s: State): ScenarioData {
 export const useStore = create<State & Actions>()(
   persist(
     (set, get) => ({
-      // シナリオ初期値
       scenarios: [{ id: 'plan-a', systemLabel: 'A', userLabel: 'メイン' }],
       activeScenarioId: 'plan-a',
       scenariosData: {},
 
-      // フラットデータ初期値（plan-a のデフォルト）
       balances: {},
       userEvents: {},
       dreamOrder: ['edu', 'ret', 'car', 'trip'],
@@ -144,6 +165,11 @@ export const useStore = create<State & Actions>()(
           { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
         ],
       },
+
+      dreams: DEFAULT_DREAMS,
+      familyMembers: DEFAULT_FAMILY,
+      onboardingDone: true,
+      aiInsights: {},
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -188,27 +214,19 @@ export const useStore = create<State & Actions>()(
         })),
 
       addTransfer: (fromId, fromPrev, toId, toPrev, amount, note) => {
-        const label = note || '口座振替';
+        const label = note || '振替';
         const amtStr = `¥${amount.toLocaleString('ja-JP')}`;
         const fromEvent: UserEvent = {
           id: `${Date.now()}-from`,
-          type: 'spend',
-          dot: '#E24B4A',
-          date: dateLabel(),
-          name: label,
-          detail: '振替出金',
-          amt: `-${amtStr}`,
-          pos: false,
+          type: 'spend', dot: '#E24B4A', date: dateLabel(),
+          name: label, detail: '出金',
+          amt: `-${amtStr}`, pos: false,
         };
         const toEvent: UserEvent = {
           id: `${Date.now()}-to`,
-          type: 'in',
-          dot: '#1D9E75',
-          date: dateLabel(),
-          name: label,
-          detail: '振替入金',
-          amt: `+${amtStr}`,
-          pos: true,
+          type: 'in', dot: '#1D9E75', date: dateLabel(),
+          name: label, detail: '入金',
+          amt: `+${amtStr}`, pos: true,
         };
         set(s => {
           const newBalances = {
@@ -240,10 +258,7 @@ export const useStore = create<State & Actions>()(
         set(s => {
           const newOverrides = {
             ...s.actualOverrides,
-            [projectId]: {
-              ...(s.actualOverrides[projectId] ?? {}),
-              [evIdx]: data,
-            },
+            [projectId]: { ...(s.actualOverrides[projectId] ?? {}), [evIdx]: data },
           };
           return {
             actualOverrides: newOverrides,
@@ -258,10 +273,7 @@ export const useStore = create<State & Actions>()(
         set(s => {
           const newOverrides = {
             ...s.spendPlanOverrides,
-            [projectId]: {
-              ...(s.spendPlanOverrides[projectId] ?? {}),
-              [evIdx]: data,
-            },
+            [projectId]: { ...(s.spendPlanOverrides[projectId] ?? {}), [evIdx]: data },
           };
           return {
             spendPlanOverrides: newOverrides,
@@ -304,11 +316,7 @@ export const useStore = create<State & Actions>()(
         const s = get();
         const id = `plan-${Date.now()}`;
         const newIndex = s.scenarios.length;
-        const newMeta: ScenarioMeta = {
-          id,
-          systemLabel: systemLabelFromIndex(newIndex),
-          userLabel,
-        };
+        const newMeta: ScenarioMeta = { id, systemLabel: systemLabelFromIndex(newIndex), userLabel };
         const sourceData = copyFromId
           ? (s.scenariosData[copyFromId] ?? (copyFromId === s.activeScenarioId ? snapshotActiveData(s) : DEFAULT_SCENARIO_DATA))
           : DEFAULT_SCENARIO_DATA;
@@ -333,7 +341,6 @@ export const useStore = create<State & Actions>()(
         const newScenarios = s.scenarios.filter(sc => sc.id !== id);
         const newScenariosData = { ...s.scenariosData };
         delete newScenariosData[id];
-        // もし削除したシナリオがアクティブなら最初のシナリオに切り替え
         let newActiveId = s.activeScenarioId;
         let patch: Partial<State> = {};
         if (newActiveId === id) {
@@ -355,6 +362,21 @@ export const useStore = create<State & Actions>()(
           ...patch,
         });
       },
+
+      addDream: (dream) =>
+        set(s => ({
+          dreams: [...s.dreams, { ...dream, id: `dream-${Date.now()}` }],
+        })),
+
+      removeDream: (id) =>
+        set(s => ({ dreams: s.dreams.filter(d => d.id !== id) })),
+
+      setFamilyMembers: (members) => set({ familyMembers: members }),
+
+      setOnboardingDone: (done) => set({ onboardingDone: done }),
+
+      setAiInsight: (key, text) =>
+        set(s => ({ aiInsights: { ...s.aiInsights, [key]: text } })),
     }),
     {
       name: 'tsukaidoki-store',

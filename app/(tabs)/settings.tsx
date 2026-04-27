@@ -1,7 +1,8 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, Alert } from 'react-native';
 import { router } from 'expo-router';
 import { Logo } from '@/components/logo';
+import { useStore } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
@@ -36,6 +37,25 @@ function MenuItem({ label, sub, onPress, accent = C.brand, showArrow = true }: M
 }
 
 export default function SettingsScreen() {
+  const { setOnboardingDone } = useStore();
+
+  const handleResetOnboarding = () => {
+    Alert.alert(
+      'オンボーディングをやり直す',
+      '初期設定からやり直します。現在のデータは保持されます。',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'やり直す',
+          onPress: () => {
+            setOnboardingDone(false);
+            router.replace('/onboarding' as any);
+          },
+        },
+      ],
+    );
+  };
+
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
@@ -103,6 +123,18 @@ export default function SettingsScreen() {
               sub="シナリオ無制限などの特典"
               accent="#534AB7"
               onPress={() => {}}
+            />
+          </View>
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>初期設定</Text>
+          <View style={s.menuCard}>
+            <MenuItem
+              label="オンボーディングをやり直す"
+              sub="最初の設定フローをもう一度実行"
+              accent={C.amber}
+              onPress={handleResetOnboarding}
             />
           </View>
         </View>
