@@ -37,7 +37,7 @@ function MenuItem({ label, sub, onPress, accent = C.brand, showArrow = true }: M
 }
 
 export default function SettingsScreen() {
-  const { setOnboardingDone } = useStore();
+  const { setOnboardingDone, isPremium } = useStore();
 
   const handleResetOnboarding = () => {
     Alert.alert(
@@ -118,12 +118,22 @@ export default function SettingsScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>プラン</Text>
           <View style={s.menuCard}>
-            <MenuItem
-              label="プレミアムプラン"
-              sub="シナリオ無制限などの特典"
-              accent="#534AB7"
-              onPress={() => {}}
-            />
+            {isPremium ? (
+              <MenuItem
+                label="プレミアム会員"
+                sub="✓ シナリオ無制限 · ありがとうございます"
+                accent="#534AB7"
+                showArrow={false}
+                onPress={() => {}}
+              />
+            ) : (
+              <MenuItem
+                label="プレミアムにアップグレード"
+                sub="シナリオを無制限に作れるようになります"
+                accent="#534AB7"
+                onPress={() => router.push('/premium' as any)}
+              />
+            )}
           </View>
         </View>
 

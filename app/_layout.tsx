@@ -33,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="project/[id]" options={{ headerShown: false }} />
           <Stack.Screen name="transfer" options={{ presentation: 'modal', headerShown: false }} />
           <Stack.Screen name="allocation" options={{ headerShown: false }} />
+          <Stack.Screen name="premium" options={{ presentation: 'modal', headerShown: false }} />
         </Stack>
         <StatusBar style="auto" />
       </ThemeProvider>

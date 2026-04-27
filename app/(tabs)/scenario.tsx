@@ -4,6 +4,7 @@ import {
   ScrollView, View, Text, Pressable, StyleSheet,
   StatusBar, Alert, TextInput, Modal,
 } from 'react-native';
+import { router } from 'expo-router';
 import { useStore, type ScenarioMeta } from '@/store/useStore';
 import { POOL_ITEMS, PF_ITEMS } from '@/constants/data';
 
@@ -213,7 +214,7 @@ const ma = StyleSheet.create({
 export default function ScenarioScreen() {
   const { scenarios, activeScenarioId, scenariosData, balances, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
   const [addModalVisible, setAddModalVisible] = useState(false);
-  const isPremium = false; // TODO: 課金状態と連携
+  const isPremium = useStore(s => s.isPremium);
 
   const poolTotal = POOL_ITEMS.reduce(
     (sum, item) => sum + (balances[item.projectId!] ?? item.amount),
@@ -272,15 +273,7 @@ export default function ScenarioScreen() {
 
   const handleAddPress = () => {
     if (!isPremium) {
-      // 課金プロンプト（後でマネタイズ画面に差し替え）
-      Alert.alert(
-        '✨ プレミアム機能',
-        'シナリオを複数作るにはプレミアムプランが必要です。\n\n✓ FIREプランの試算\n✓ 転職時のプラン\n✓ 移住シミュレート\n✓ 比較し放題',
-        [
-          { text: '今はやめておく', style: 'cancel' },
-          { text: 'プレミアムにする', onPress: () => { /* TODO */ } },
-        ],
-      );
+      router.push('/premium' as any);
       return;
     }
     setAddModalVisible(true);

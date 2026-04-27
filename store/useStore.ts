@@ -105,6 +105,7 @@ type State = {
   familyMembers: FamilyMember[];
   onboardingDone: boolean;
   aiInsights: Record<string, string>;
+  isPremium: boolean;
 };
 
 type Actions = {
@@ -125,6 +126,7 @@ type Actions = {
   setFamilyMembers: (members: FamilyMember[]) => void;
   setOnboardingDone: (done: boolean) => void;
   setAiInsight: (key: string, text: string) => void;
+  setPremium: (val: boolean) => void;
 };
 
 function dateLabel(): string {
@@ -170,6 +172,7 @@ export const useStore = create<State & Actions>()(
       familyMembers: DEFAULT_FAMILY,
       onboardingDone: true,
       aiInsights: {},
+      isPremium: false,
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -377,6 +380,8 @@ export const useStore = create<State & Actions>()(
 
       setAiInsight: (key, text) =>
         set(s => ({ aiInsights: { ...s.aiInsights, [key]: text } })),
+
+      setPremium: (val) => set({ isPremium: val }),
     }),
     {
       name: 'tsukaidoki-store',
