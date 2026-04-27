@@ -22,7 +22,6 @@ const C = {
 };
 
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
-const PF_CHART_COLORS = ['#2E1800', '#7A3F00', '#C46D00', '#F59B00', '#FFD080'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
@@ -135,9 +134,8 @@ export default function DreamsScreen() {
 
   const enriched: CardItem[] = useMemo(() =>
     PF_ITEMS
-      .map((item, i) => ({
+      .map(item => ({
         ...item,
-        color: PF_CHART_COLORS[i % PF_CHART_COLORS.length],
         amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
       }))
       .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId)),

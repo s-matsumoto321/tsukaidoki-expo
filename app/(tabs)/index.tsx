@@ -24,8 +24,6 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
 };
 
-// ポートフォリオ円グラフ専用カラー（カラシ系・明度違い）
-const PF_CHART_COLORS = ['#5C4200', '#8B6410', '#C4981A', '#E5C040', '#F5DC7A'];
 
 const MENU_WIDTH = 270;
 
@@ -131,9 +129,8 @@ export default function HomeScreen() {
     ...item,
     amount: balances[item.projectId!] ?? item.amount,
   }));
-  const pfItems = PF_ITEMS.map((item, i) => ({
+  const pfItems = PF_ITEMS.map(item => ({
     ...item,
-    color: PF_CHART_COLORS[i % PF_CHART_COLORS.length],
     amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
   }));
 
