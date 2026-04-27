@@ -1,4 +1,4 @@
-import { Fragment } from 'react';
+import { Fragment, useState, useRef, useCallback, useMemo } from 'react';
 import { View, Text, ScrollView, Pressable, StyleSheet, useWindowDimensions } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,10 +11,10 @@ import Svg, {
   Rect,
   Path,
 } from 'react-native-svg';
-import { useState, useRef, useCallback } from 'react';
 import { PROJECTS, type Project, type ProjectEvent, type ActualEvent } from '@/constants/projects';
-import { useStore } from '@/store/useStore';
+import { useStore, type ActualOverride, type SpendPlanOverride } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
+import { EventInputSheet } from '@/components/event-input-sheet';
 
 const C = {
   brand: '#0C447C',
@@ -34,8 +34,6 @@ const C = {
   posText: '#27500A',
   negText: '#791F1F',
 };
-
-// ─── Chart helpers ───────────────────────────────────────────────
 
 function getEventCoords(
   project: Project,
@@ -91,13 +89,11 @@ const PB = 20;
 type TooltipState = { x: number; y: number; event: ProjectEvent };
 type Period = '生涯' | '5年' | '1年';
 
-// ─── LineChart ───────────────────────────────────────────────────
-
-function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
+function LineChart({ id, svgW, selectedIdx, actualData, period }: {
   id: string;
   svgW: number;
   selectedIdx: number | null;
-  onSelect: (ev: ProjectEvent, x: number, y: number) => void;
+  actualData: (number | null)[];
   period: Period;
 }) {
   const project = PROJECTS[id];
@@ -111,7 +107,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
 
   const years = project.years.slice(0, endN);
   const plan = project.plan.slice(0, endN);
-  const actual = project.actual.slice(0, endN);
+  const actual = actualData.slice(0, endN);
   const visibleEvents = project.events.filter(ev => ev.idx < endN);
 
   const gW = svgW - PL - PR;
@@ -166,7 +162,7 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
         const color = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
         const sel = selectedIdx === ev.idx;
         return (
-          <G key={`ev-${ev.idx}`} onPress={() => onSelect(ev, cx, cy)}>
+          <G key={`ev-${ev.idx}`}>
             <Circle cx={cx} cy={cy} r={14} fill="rgba(0,0,0,0)" />
             {sel && <Circle cx={cx} cy={cy} r={9} fill={color} opacity={0.2} />}
             {ev.type === 'spend'
@@ -186,8 +182,6 @@ function LineChart({ id, svgW, selectedIdx, onSelect, period }: {
     </Svg>
   );
 }
-
-// ─── Car image ───────────────────────────────────────────────────
 
 function CarImageCard() {
   return (
@@ -215,23 +209,20 @@ function CarImageCard() {
   );
 }
 
-// ─── Timeline pair row ───────────────────────────────────────────
-
 function EventPairRow({
-  planEv, actual, selected, onPlanPress, onEmptyPress,
+  planEv, actual, selected, onPlanPress, onActualPress,
 }: {
   planEv: ProjectEvent;
   actual: ActualEvent | null | undefined;
   selected: boolean;
   onPlanPress: (ev: ProjectEvent) => void;
-  onEmptyPress: () => void;
+  onActualPress: (ev: ProjectEvent, existing: ActualEvent | null) => void;
 }) {
   const showCarImg = planEv.type === 'spend' && planEv.name.includes('車');
 
   return (
     <Fragment>
       <View style={[s.pairRow, selected && s.pairRowSel]}>
-        {/* 計画 */}
         <Pressable style={s.planCol} onPress={() => onPlanPress(planEv)}>
           <View style={s.evTopRow}>
             <Text style={s.evYr}>{planEv.year}</Text>
@@ -242,15 +233,13 @@ function EventPairRow({
           <Text style={[s.evAmt, planEv.pos ? s.evPos : s.evNeg]}>{planEv.amt}</Text>
         </Pressable>
 
-        {/* 仕切り（縦線＋ドット） */}
         <View style={s.colDivWrap}>
           <View style={s.colDivLine} />
           <View style={[s.colDivDot, { borderColor: planEv.dot }]} />
         </View>
 
-        {/* 実績 */}
         {actual != null ? (
-          <View style={s.actualCol}>
+          <Pressable style={s.actualCol} onPress={() => onActualPress(planEv, actual)}>
             <View style={s.evTopRow}>
               <Text style={s.evYr}>{actual.date}</Text>
               <View style={[s.evDot, { backgroundColor: actual.dot }]} />
@@ -258,9 +247,9 @@ function EventPairRow({
             <Text style={s.evName}>{actual.name}</Text>
             <Text style={s.evDetail} numberOfLines={1} ellipsizeMode="tail">{actual.detail}</Text>
             <Text style={[s.evAmt, actual.pos ? s.evPos : s.evNeg]}>{actual.amt}</Text>
-          </View>
+          </Pressable>
         ) : (
-          <Pressable style={s.emptyCol} onPress={onEmptyPress}>
+          <Pressable style={s.emptyCol} onPress={() => onActualPress(planEv, null)}>
             <Text style={s.emptyTxt}>未入力</Text>
             <Text style={s.emptySub}>タップして記録</Text>
           </Pressable>
@@ -272,8 +261,6 @@ function EventPairRow({
   );
 }
 
-// ─── Main screen ─────────────────────────────────────────────────
-
 export default function ProjectDetailScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
   const project = PROJECTS[id ?? ''];
@@ -281,42 +268,57 @@ export default function ProjectDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  const { balances } = useStore();
+  const { balances, actualOverrides, spendPlanOverrides } = useStore();
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
 
-  const [period, setPeriod]   = useState<Period>('生涯');
-  const [selectedIdx, setSelectedIdx]   = useState<number | null>(null);
-  const [tooltip, setTooltip]           = useState<TooltipState | null>(null);
+  const [period, setPeriod] = useState<Period>('生涯');
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
+  const [eventSheet, setEventSheet] = useState<{
+    mode: 'actual' | 'plan';
+    event: ProjectEvent;
+    planBalanceMan: number;
+  } | null>(null);
 
   const scrollRef = useRef<ScrollView>(null);
-  const rowY      = useRef<Record<number, number>>({});
-  const tipTimer  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rowY = useRef<Record<number, number>>({});
+  const tipTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const svgW  = screenWidth - 52;
+  const svgW = screenWidth - 52;
   const TIP_W = 136;
   const TIP_H = 46;
+
+  const mergedActual = useMemo(() =>
+    project?.actual.map((v, i) => actualOverrides[id ?? '']?.[i]?.balanceMan ?? v) ?? [],
+    [project?.actual, actualOverrides, id]
+  );
 
   const dismiss = useCallback(() => {
     setSelectedIdx(null);
     setTooltip(null);
   }, []);
 
-  const handleSelect = useCallback((ev: ProjectEvent, x: number, y: number) => {
-    if (tipTimer.current) clearTimeout(tipTimer.current);
-    setSelectedIdx(ev.idx);
-    setTooltip({ x, y, event: ev });
-    const ry = rowY.current[ev.idx];
-    if (ry !== undefined) scrollRef.current?.scrollTo({ y: ry, animated: true });
-    tipTimer.current = setTimeout(dismiss, 3500);
-  }, [dismiss]);
-
-  const handleRowPress = useCallback((ev: ProjectEvent) => {
+  const handlePlanTap = useCallback((ev: ProjectEvent) => {
     if (tipTimer.current) clearTimeout(tipTimer.current);
     setSelectedIdx(ev.idx);
     const coords = getEventCoords(project, ev.idx, period, svgW);
     setTooltip(coords ? { x: coords.x, y: coords.y, event: ev } : null);
     tipTimer.current = setTimeout(dismiss, 3500);
+    if (ev.type === 'start') {
+      router.push('/allocation' as never);
+    } else {
+      setEventSheet({ mode: 'plan', event: ev, planBalanceMan: project.plan[ev.idx] });
+    }
+  }, [dismiss, project, period, svgW]);
+
+  const handleActualTap = useCallback((ev: ProjectEvent, _existing: ActualEvent | null) => {
+    if (tipTimer.current) clearTimeout(tipTimer.current);
+    setSelectedIdx(ev.idx);
+    const coords = getEventCoords(project, ev.idx, period, svgW);
+    setTooltip(coords ? { x: coords.x, y: coords.y, event: ev } : null);
+    tipTimer.current = setTimeout(dismiss, 3500);
+    setEventSheet({ mode: 'actual', event: ev, planBalanceMan: project.plan[ev.idx] });
   }, [dismiss, project, period, svgW]);
 
   if (!project) {
@@ -327,14 +329,13 @@ export default function ProjectDetailScreen() {
     );
   }
 
-  const tipLeft   = tooltip ? Math.max(0, Math.min(tooltip.x - TIP_W / 2, svgW - TIP_W)) : 0;
+  const tipLeft = tooltip ? Math.max(0, Math.min(tooltip.x - TIP_W / 2, svgW - TIP_W)) : 0;
   const showAbove = tooltip ? tooltip.y - TIP_H - 10 >= 0 : false;
-  const tipTop    = tooltip ? (showAbove ? tooltip.y - TIP_H - 10 : tooltip.y + 10) : 0;
+  const tipTop = tooltip ? (showAbove ? tooltip.y - TIP_H - 10 : tooltip.y + 10) : 0;
   const arrowLeft = tooltip ? Math.max(6, Math.min(tooltip.x - tipLeft - 5, TIP_W - 16)) : 0;
 
   return (
     <View style={{ flex: 1 }}>
-      {/* ── ヘッダー ── */}
       <View style={[s.header, { paddingTop: insets.top + 10 }]}>
         <Pressable onPress={() => router.back()} hitSlop={12}>
           <Text style={s.backTxt}>‹ {from === 'pool' ? 'プール金' : '使いみち'}</Text>
@@ -352,9 +353,7 @@ export default function ProjectDetailScreen() {
         </View>
       </View>
 
-      {/* ── コンテンツ ── */}
       <View style={{ flex: 1, backgroundColor: C.bg }}>
-        {/* AI insight */}
         <View style={s.aiCard}>
           <Text style={s.aiIcon}>✦</Text>
           <View style={{ flex: 1 }}>
@@ -363,7 +362,6 @@ export default function ProjectDetailScreen() {
           </View>
         </View>
 
-        {/* グラフカード */}
         <View style={s.graphCard}>
           <View style={s.legendPeriodRow}>
             <View style={s.legendRow}>
@@ -396,7 +394,7 @@ export default function ProjectDetailScreen() {
           </View>
 
           <View style={{ position: 'relative' }}>
-            <LineChart id={id ?? ''} svgW={svgW} selectedIdx={selectedIdx} onSelect={handleSelect} period={period} />
+            <LineChart id={id ?? ''} svgW={svgW} selectedIdx={selectedIdx} actualData={mergedActual} period={period} />
             {tooltip && (
               <View style={[s.tooltip, { left: tipLeft, top: tipTop }]}>
                 <Text style={s.tipTitle}>{tooltip.event.year}　{tooltip.event.name}</Text>
@@ -409,16 +407,14 @@ export default function ProjectDetailScreen() {
               </View>
             )}
           </View>
-          <Text style={s.graphHint}>● 点をタップ → 下の年表の該当項目へ</Text>
+          <Text style={s.graphHint}>年表の行をタップ → 実績入力 / 計画修正</Text>
         </View>
 
-        {/* 年表 */}
         <View style={{ flex: 1, paddingBottom: insets.bottom }}>
           <View style={s.secRow}>
             <Text style={s.secTitle}>{isAccount ? '入出金・取引の年表' : '積み立て・支出の年表'}</Text>
           </View>
 
-          {/* 列ヘッダー */}
           <View style={s.colHeaderRow}>
             <View style={s.colHeaderPlan}>
               <Text style={[s.colHeaderTxt, s.colHeaderPlanTxt]}>計画</Text>
@@ -444,14 +440,30 @@ export default function ProjectDetailScreen() {
                   planEv={ev}
                   actual={project.actuals?.[ev.idx]}
                   selected={selectedIdx === ev.idx}
-                  onPlanPress={handleRowPress}
-                  onEmptyPress={() => setSheetVisible(true)}
+                  onPlanPress={handlePlanTap}
+                  onActualPress={handleActualTap}
                 />
               </View>
             ))}
           </ScrollView>
         </View>
       </View>
+
+      <EventInputSheet
+        visible={eventSheet !== null}
+        mode={eventSheet?.mode ?? 'actual'}
+        projectId={id ?? ''}
+        event={eventSheet?.event ?? null}
+        planBalanceMan={eventSheet?.planBalanceMan ?? 0}
+        existingActual={eventSheet?.mode === 'actual' && eventSheet.event
+          ? (actualOverrides[id ?? '']?.[eventSheet.event.idx] ?? null)
+          : null}
+        existingPlan={eventSheet?.mode === 'plan' && eventSheet.event
+          ? (spendPlanOverrides[id ?? '']?.[eventSheet.event.idx] ?? null)
+          : null}
+        onClose={() => setEventSheet(null)}
+        onSaved={() => setEventSheet(null)}
+      />
 
       <BalanceSheet
         visible={sheetVisible}
@@ -530,7 +542,6 @@ const s = StyleSheet.create({
   },
   secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
 
-  // 列ヘッダー
   colHeaderRow: {
     flexDirection: 'row',
     marginHorizontal: 14,
@@ -554,7 +565,6 @@ const s = StyleSheet.create({
   colHeaderPlanTxt: { color: C.brand },
   colHeaderActualTxt: { color: C.green },
 
-  // 個別行カード
   eventCard: {
     backgroundColor: C.card,
     borderRadius: 10,
@@ -564,14 +574,12 @@ const s = StyleSheet.create({
     overflow: 'hidden',
   },
 
-  // 横並び行
   pairRow: { flexDirection: 'row', paddingVertical: 12, paddingHorizontal: 10 },
   pairRowSel: { backgroundColor: C.warn },
 
-  planCol:   { flex: 1, paddingRight: 6 },
+  planCol: { flex: 1, paddingRight: 6 },
   actualCol: { flex: 1, paddingLeft: 6 },
 
-  // 仕切り（縦線＋ドット）
   colDivWrap: { width: 20, alignItems: 'center', justifyContent: 'center' },
   colDivLine: {
     position: 'absolute',
@@ -588,7 +596,6 @@ const s = StyleSheet.create({
     borderWidth: 2,
   },
 
-  // 未入力スロット
   emptyCol: {
     flex: 1,
     borderWidth: 1, borderColor: 'rgba(0,0,0,0.14)', borderStyle: 'dashed', borderRadius: 8,
@@ -597,17 +604,15 @@ const s = StyleSheet.create({
   emptyTxt: { fontSize: 12, color: C.textTertiary, fontWeight: '500' },
   emptySub: { fontSize: 10, color: C.textTertiary, marginTop: 3 },
 
-  // イベント行コンテンツ
   evTopRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 3 },
-  evYr:     { fontSize: 11, color: C.textSecondary },
-  evDot:    { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  evName:   { fontSize: 13, fontWeight: '500', color: C.textPrimary, lineHeight: 18 },
+  evYr: { fontSize: 11, color: C.textSecondary },
+  evDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  evName: { fontSize: 13, fontWeight: '500', color: C.textPrimary, lineHeight: 18 },
   evDetail: { fontSize: 10, color: C.textSecondary, marginTop: 1 },
-  evAmt:    { fontSize: 12, fontWeight: '500', marginTop: 3 },
-  evPos:    { color: C.posText },
-  evNeg:    { color: C.negText },
+  evAmt: { fontSize: 12, fontWeight: '500', marginTop: 3 },
+  evPos: { color: C.posText },
+  evNeg: { color: C.negText },
 
-  // 車画像
   carCard: {
     marginVertical: 8, borderRadius: 10, overflow: 'hidden',
     backgroundColor: '#EDECEA', borderWidth: 0.5, borderColor: C.border,

@@ -13,10 +13,29 @@ export type UserEvent = {
   pos: boolean;
 };
 
+export type ActualOverride = {
+  balanceMan: number;
+  date: string;
+  memo: string;
+};
+
+export type SpendPlanOverride = {
+  amtMan: number;
+  date: string;
+  memo: string;
+};
+
+export type SavingsAllocation = {
+  monthlyAmounts: Record<string, number>;
+};
+
 type State = {
   balances: Record<string, number>;
   userEvents: Record<string, UserEvent[]>;
   dreamOrder: string[];
+  actualOverrides: Record<string, Record<number, ActualOverride>>;
+  spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
+  savingsAllocation: SavingsAllocation;
 };
 
 type Actions = {
@@ -35,6 +54,9 @@ type Actions = {
     note: string,
   ) => void;
   setDreamOrder: (order: string[]) => void;
+  saveActualOverride: (projectId: string, evIdx: number, data: ActualOverride) => void;
+  saveSpendPlanOverride: (projectId: string, evIdx: number, data: SpendPlanOverride) => void;
+  saveSavingsAllocation: (allocation: SavingsAllocation) => void;
 };
 
 function dateLabel(): string {
@@ -48,6 +70,9 @@ export const useStore = create<State & Actions>()(
       balances: {},
       userEvents: {},
       dreamOrder: ['edu', 'ret', 'car', 'trip'],
+      actualOverrides: {},
+      spendPlanOverrides: {},
+      savingsAllocation: { monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -108,6 +133,31 @@ export const useStore = create<State & Actions>()(
           },
         }));
       },
+
+      saveActualOverride: (projectId, evIdx, data) =>
+        set(s => ({
+          actualOverrides: {
+            ...s.actualOverrides,
+            [projectId]: {
+              ...(s.actualOverrides[projectId] ?? {}),
+              [evIdx]: data,
+            },
+          },
+        })),
+
+      saveSpendPlanOverride: (projectId, evIdx, data) =>
+        set(s => ({
+          spendPlanOverrides: {
+            ...s.spendPlanOverrides,
+            [projectId]: {
+              ...(s.spendPlanOverrides[projectId] ?? {}),
+              [evIdx]: data,
+            },
+          },
+        })),
+
+      saveSavingsAllocation: (allocation) =>
+        set({ savingsAllocation: allocation }),
     }),
     {
       name: 'tsukaidoki-store',
