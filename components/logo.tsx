@@ -15,7 +15,7 @@ export function Logo({ color = '#ffffff', iconSize = 26 }: Props) {
         {/* 左の葉 */}
         <Path
           d="M7 13 C7 13 2 9 2 4 C2 4 7 6 7 13Z"
-          fill={color}
+          fill="#1D9E75"
         />
         {/* 右の葉（やや透過）*/}
         <Path

@@ -12,7 +12,7 @@ import Svg, {
   Path,
 } from 'react-native-svg';
 import { useState, useRef, useCallback } from 'react';
-import { PROJECTS, type ProjectEvent, type ActualEvent } from '@/constants/projects';
+import { PROJECTS, type Project, type ProjectEvent, type ActualEvent } from '@/constants/projects';
 import { useStore } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
 
@@ -36,6 +36,32 @@ const C = {
 };
 
 // ─── Chart helpers ───────────────────────────────────────────────
+
+function getEventCoords(
+  project: Project,
+  evIdx: number,
+  period: Period,
+  svgW: number,
+): { x: number; y: number } | null {
+  const limitMap: Record<Period, number> = { '生涯': Infinity, '5年': 5, '1年': 1 };
+  const firstYear = parseYear(project.years[0]);
+  const limit = firstYear + limitMap[period];
+  const cutIdx = project.years.findIndex(yr => parseYear(yr) > limit);
+  const endN = cutIdx === -1 ? project.years.length : Math.max(2, cutIdx);
+  if (evIdx >= endN) return null;
+  const plan = project.plan.slice(0, endN);
+  const actual = project.actual.slice(0, endN);
+  const gW = svgW - PL - PR;
+  const gH = SVG_H - PT - PB;
+  const n = endN;
+  const allVals = [...plan, ...actual.filter((v): v is number => v !== null)];
+  const rawMax = Math.max(...allVals);
+  const step = niceTickStep(rawMax, 4);
+  const maxVal = Math.ceil(rawMax / step) * step;
+  const xi = (i: number) => PL + (n === 1 ? gW / 2 : i * (gW / (n - 1)));
+  const yv = (v: number) => PT + gH - (v / maxVal) * gH;
+  return { x: xi(evIdx), y: yv(plan[evIdx]) };
+}
 
 function parseYear(s: string): number {
   const n = parseInt(s.replace("'", ''), 10);
@@ -288,9 +314,10 @@ export default function ProjectDetailScreen() {
   const handleRowPress = useCallback((ev: ProjectEvent) => {
     if (tipTimer.current) clearTimeout(tipTimer.current);
     setSelectedIdx(ev.idx);
-    setTooltip(null);
+    const coords = getEventCoords(project, ev.idx, period, svgW);
+    setTooltip(coords ? { x: coords.x, y: coords.y, event: ev } : null);
     tipTimer.current = setTimeout(dismiss, 3500);
-  }, [dismiss]);
+  }, [dismiss, project, period, svgW]);
 
   if (!project) {
     return (

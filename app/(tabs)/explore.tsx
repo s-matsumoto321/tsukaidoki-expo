@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { Fragment, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
@@ -22,7 +22,7 @@ const C = {
 };
 
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
-const PF_CHART_COLORS = ['#5C4200', '#8B6410', '#C4981A', '#E5C040', '#F5DC7A'];
+const PF_CHART_COLORS = ['#3D2900', '#7A5200', '#C28700', '#FFC814', '#FFE74D'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
@@ -36,11 +36,11 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
       <Text style={s.allocLabel}>総資産</Text>
       <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
       <View style={s.allocBar}>
-        {items.map(item => (
-          <View
-            key={item.projectId ?? item.name}
-            style={{ flex: item.amount, backgroundColor: item.color }}
-          />
+        {items.map((item, i) => (
+          <Fragment key={item.projectId ?? item.name}>
+            {i > 0 && <View style={{ width: 2, backgroundColor: '#fff' }} />}
+            <View style={{ flex: item.amount, backgroundColor: item.color }} />
+          </Fragment>
         ))}
       </View>
       <View style={s.allocLegRow}>
