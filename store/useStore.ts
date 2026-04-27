@@ -25,8 +25,13 @@ export type SpendPlanOverride = {
   memo: string;
 };
 
-export type SavingsAllocation = {
+export type AllocationEntry = {
+  fromYear: number;
   monthlyAmounts: Record<string, number>;
+};
+
+export type SavingsAllocation = {
+  entries: AllocationEntry[];
 };
 
 type State = {
@@ -72,7 +77,11 @@ export const useStore = create<State & Actions>()(
       dreamOrder: ['edu', 'ret', 'car', 'trip'],
       actualOverrides: {},
       spendPlanOverrides: {},
-      savingsAllocation: { monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
+      savingsAllocation: {
+        entries: [
+          { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
+        ],
+      },
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;

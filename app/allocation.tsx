@@ -1,20 +1,16 @@
-import { useState } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import {
-  View,
-  Text,
-  ScrollView,
-  Pressable,
-  StyleSheet,
-  TextInput,
-  Switch,
-  useWindowDimensions,
+  View, Text, ScrollView, Pressable, StyleSheet,
+  TextInput, useWindowDimensions,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import Svg, { Polyline } from 'react-native-svg';
+import Svg, {
+  Path, Line as SvgLine, Text as SvgText, Rect, G,
+} from 'react-native-svg';
 import { PROJECTS } from '@/constants/projects';
 import { PF_ITEMS } from '@/constants/data';
-import { useStore } from '@/store/useStore';
+import { useStore, type AllocationEntry } from '@/store/useStore';
 
 const C = {
   brand: '#0C447C',
@@ -24,85 +20,385 @@ const C = {
   textPrimary: '#2c2c2a',
   textSecondary: '#73726c',
   border: 'rgba(0,0,0,0.08)',
+  borderMd: 'rgba(0,0,0,0.18)',
 };
 
 const PROJECT_ORDER = ['edu', 'ret', 'car', 'trip'] as const;
+const START_YEAR = 2025;
+const END_YEAR = 2065;
+const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i);
+const NOW_YEAR = new Date().getFullYear();
+
+const SVG_H = 200;
+const PL = 44;
+const PR = 8;
+const PT = 12;
+const PB = 28;
 
 function getProjectColor(projectId: string): string {
-  return PF_ITEMS.find(item => item.projectId === projectId)?.color ?? C.brand;
+  return PF_ITEMS.find(i => i.projectId === projectId)?.color ?? C.brand;
 }
 
-function Sparkline({ plan, color, width }: { plan: number[]; color: string; width: number }) {
-  const height = 44;
-  const pad = 4;
-  const w = width - pad * 2;
-  const h = height - pad * 2;
-  const n = plan.length;
-  if (n < 2) return null;
-  const maxV = Math.max(...plan);
-  const minV = Math.min(...plan);
-  const range = maxV - minV || 1;
-  const xi = (i: number) => pad + (i / (n - 1)) * w;
-  const yv = (v: number) => pad + h - ((v - minV) / range) * h;
-  const pts = plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
+function getAmountsForYear(
+  year: number,
+  entries: AllocationEntry[],
+): Record<string, number> {
+  const sorted = [...entries].sort((a, b) => b.fromYear - a.fromYear);
+  return sorted.find(e => e.fromYear <= year)?.monthlyAmounts ?? {};
+}
+
+function niceMax(v: number): number {
+  if (v <= 0) return 100000;
+  const step = Math.pow(10, Math.floor(Math.log10(v)));
+  return Math.ceil(v / step) * step;
+}
+
+function fmtMan(v: number): string {
+  if (v === 0) return '0';
+  if (v >= 100000000) return `${v / 100000000}億`;
+  if (v >= 10000) return `${v / 10000}万`;
+  return `${v}`;
+}
+
+// ─── Stacked Area Chart ───────────────────────────────────────────
+
+function StackedAreaChart({
+  entries,
+  selectedYearIdx,
+  svgW,
+  onYearSelect,
+}: {
+  entries: AllocationEntry[];
+  selectedYearIdx: number;
+  svgW: number;
+  onYearSelect: (idx: number) => void;
+}) {
+  const gW = svgW - PL - PR;
+  const gH = SVG_H - PT - PB;
+  const n = YEARS.length;
+
+  const yearStacks = useMemo(() => {
+    return YEARS.map(yr => {
+      const amounts = getAmountsForYear(yr, entries);
+      let cum = 0;
+      const stacks: Record<string, { bottom: number; top: number }> = {};
+      for (const id of PROJECT_ORDER) {
+        const amt = amounts[id] ?? 0;
+        stacks[id] = { bottom: cum, top: cum + amt };
+        cum += amt;
+      }
+      return { year: yr, stacks, total: cum };
+    });
+  }, [entries]);
+
+  const maxTotal = useMemo(() => {
+    const raw = Math.max(...yearStacks.map(d => d.total));
+    return niceMax(raw);
+  }, [yearStacks]);
+
+  const xi = (i: number) => PL + (i / (n - 1)) * gW;
+  const yv = (v: number) => PT + gH - (v / maxTotal) * gH;
+
+  const nowIdx = Math.min(Math.max(NOW_YEAR - START_YEAR, 0), n - 1);
+
+  const tickStep = maxTotal / 4;
+  const ticks = [0, tickStep, tickStep * 2, tickStep * 3, maxTotal];
+
+  const xLabelStep = Math.ceil(n / 8);
+  const changeYears = entries.map(e => e.fromYear - START_YEAR).filter(i => i >= 0 && i < n);
+
+  const buildPath = (id: string) => {
+    const tops = yearStacks.map((d, i) => `${xi(i).toFixed(1)},${yv(d.stacks[id].top).toFixed(1)}`);
+    const bots = [...yearStacks].reverse().map((d, i) =>
+      `${xi(n - 1 - i).toFixed(1)},${yv(d.stacks[id].bottom).toFixed(1)}`
+    );
+    return `M ${tops.join(' L ')} L ${bots.join(' L ')} Z`;
+  };
+
+  const handlePress = useCallback((e: { nativeEvent: { locationX: number } }) => {
+    const x = e.nativeEvent.locationX;
+    const ratio = Math.max(0, Math.min(1, (x - PL) / gW));
+    const idx = Math.round(ratio * (n - 1));
+    onYearSelect(idx);
+  }, [gW, n, onYearSelect]);
+
+  const selX = xi(selectedYearIdx);
+  const nowX = xi(nowIdx);
+
   return (
-    <Svg width={width} height={height}>
-      <Polyline points={pts} fill="none" stroke={color} strokeWidth={1.5} opacity={0.7} strokeLinecap="round" strokeLinejoin="round" />
+    <Svg
+      width={svgW}
+      height={SVG_H}
+      onPress={handlePress}
+    >
+      {/* Y軸グリッド＆ラベル */}
+      {ticks.map((v, ti) => (
+        <G key={`tick-${ti}`}>
+          <SvgLine
+            x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
+            stroke="rgba(0,0,0,0.08)" strokeWidth={0.5}
+          />
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={9} fill="#999">
+            {fmtMan(v)}
+          </SvgText>
+        </G>
+      ))}
+
+      {/* 積み上げ面 */}
+      {[...PROJECT_ORDER].reverse().map(id => (
+        <Path
+          key={id}
+          d={buildPath(id)}
+          fill={getProjectColor(id)}
+          opacity={0.72}
+        />
+      ))}
+
+      {/* 変更ポイントの縦線 */}
+      {changeYears.filter(i => i > 0).map(i => (
+        <SvgLine
+          key={`cp-${i}`}
+          x1={xi(i)} y1={PT} x2={xi(i)} y2={PT + gH}
+          stroke={C.brand} strokeWidth={1} strokeDasharray="3 2" opacity={0.4}
+        />
+      ))}
+
+      {/* 今ライン */}
+      {nowIdx > 0 && nowIdx < n - 1 && (
+        <G>
+          <SvgLine
+            x1={nowX} y1={PT} x2={nowX} y2={PT + gH}
+            stroke={C.green} strokeWidth={1.5} strokeDasharray="4 2"
+          />
+          <Rect
+            x={nowX - 10} y={PT - 10} width={20} height={13}
+            rx={3} fill={C.green}
+          />
+          <SvgText x={nowX} y={PT - 1} textAnchor="middle" fontSize={9} fill="#fff" fontWeight="600">
+            今
+          </SvgText>
+        </G>
+      )}
+
+      {/* 選択年の縦線 */}
+      <SvgLine
+        x1={selX} y1={PT} x2={selX} y2={PT + gH}
+        stroke={C.brand} strokeWidth={2}
+      />
+      <Rect
+        x={Math.min(Math.max(selX - 14, PL), svgW - PR - 28)}
+        y={PT + gH + 2}
+        width={28} height={14}
+        rx={3} fill={C.brand}
+      />
+      <SvgText
+        x={Math.min(Math.max(selX, PL + 14), svgW - PR - 14)}
+        y={PT + gH + 12}
+        textAnchor="middle" fontSize={9} fill="#fff" fontWeight="600"
+      >
+        {START_YEAR + selectedYearIdx}
+      </SvgText>
+
+      {/* X軸ラベル */}
+      {YEARS.map((yr, i) => {
+        if (i % xLabelStep !== 0 && i !== n - 1) return null;
+        const labelX = xi(i);
+        if (Math.abs(labelX - selX) < 16) return null;
+        return (
+          <SvgText key={`xl-${i}`} x={labelX} y={SVG_H - 4} textAnchor="middle" fontSize={9} fill="#999">
+            {`'${String(yr).slice(2)}`}
+          </SvgText>
+        );
+      })}
     </Svg>
   );
 }
 
-function AllocationBar({ amounts }: { amounts: Record<string, number> }) {
-  const total = PROJECT_ORDER.reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
-  if (total === 0) return null;
+// ─── 凡例 ──────────────────────────────────────────────────────────
+
+function Legend() {
   return (
-    <View style={bar.wrap}>
+    <View style={s.legendRow}>
+      {PROJECT_ORDER.map(id => (
+        <View key={id} style={s.legendItem}>
+          <View style={[s.legendDot, { backgroundColor: getProjectColor(id) }]} />
+          <Text style={s.legendTxt}>{PROJECTS[id]?.name ?? id}</Text>
+        </View>
+      ))}
+    </View>
+  );
+}
+
+// ─── 配分エディタ ─────────────────────────────────────────────────
+
+function AllocationEditor({
+  selectedYear,
+  editAmounts,
+  hasEntry,
+  onChange,
+  onAdd,
+  onDelete,
+}: {
+  selectedYear: number;
+  editAmounts: Record<string, number>;
+  hasEntry: boolean;
+  onChange: (id: string, val: number) => void;
+  onAdd: () => void;
+  onDelete: () => void;
+}) {
+  const total = PROJECT_ORDER.reduce((s, id) => s + (editAmounts[id] ?? 0), 0);
+
+  return (
+    <View style={s.editorCard}>
+      <View style={s.editorHeader}>
+        <Text style={s.editorTitle}>
+          {selectedYear}年から の配分
+        </Text>
+        {hasEntry && selectedYear !== START_YEAR && (
+          <Pressable onPress={onDelete} style={s.deleteBtn}>
+            <Text style={s.deleteTxt}>削除</Text>
+          </Pressable>
+        )}
+      </View>
+
       {PROJECT_ORDER.map(id => {
-        const ratio = (amounts[id] ?? 0) / total;
-        if (ratio <= 0) return null;
+        const color = getProjectColor(id);
+        const amt = editAmounts[id] ?? 0;
         return (
-          <View
-            key={id}
-            style={[bar.seg, { flex: ratio, backgroundColor: getProjectColor(id) }]}
-          />
+          <View key={id} style={s.editorRow}>
+            <View style={[s.editorDot, { backgroundColor: color }]} />
+            <Text style={s.editorName}>{PROJECTS[id]?.name ?? id}</Text>
+            <View style={s.editorInputWrap}>
+              <Text style={s.editorYen}>¥</Text>
+              <TextInput
+                style={s.editorInput}
+                value={amt > 0 ? String(amt) : ''}
+                onChangeText={v => onChange(id, parseInt(v.replace(/[^0-9]/g, ''), 10) || 0)}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor={C.textSecondary}
+                selectTextOnFocus
+              />
+              <Text style={s.editorSuffix}>円/月</Text>
+            </View>
+          </View>
+        );
+      })}
+
+      <View style={s.editorTotal}>
+        <Text style={s.editorTotalLabel}>合計</Text>
+        <Text style={s.editorTotalAmt}>¥{total.toLocaleString('ja-JP')}円/月</Text>
+      </View>
+
+      {!hasEntry && (
+        <Pressable style={s.addBtn} onPress={onAdd}>
+          <Text style={s.addTxt}>この年から変更を追加</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+// ─── 変更ポイント一覧 ─────────────────────────────────────────────
+
+function EntryList({
+  entries,
+  selectedYear,
+  onSelect,
+}: {
+  entries: AllocationEntry[];
+  selectedYear: number;
+  onSelect: (year: number) => void;
+}) {
+  const sorted = [...entries].sort((a, b) => a.fromYear - b.fromYear);
+  return (
+    <View style={s.entryList}>
+      <Text style={s.entryListTitle}>変更ポイント</Text>
+      {sorted.map((entry, i) => {
+        const total = PROJECT_ORDER.reduce((s, id) => s + (entry.monthlyAmounts[id] ?? 0), 0);
+        const isSel = entry.fromYear === selectedYear;
+        return (
+          <Pressable
+            key={entry.fromYear}
+            style={[s.entryRow, isSel && s.entryRowSel]}
+            onPress={() => onSelect(entry.fromYear - START_YEAR)}
+          >
+            <View style={[s.entryBar, { backgroundColor: isSel ? C.brand : C.textSecondary }]} />
+            <View style={{ flex: 1 }}>
+              <Text style={[s.entryYear, isSel && { color: C.brand }]}>
+                {entry.fromYear}年〜
+                {i === 0 ? '　初期設定' : ''}
+              </Text>
+              <Text style={s.entrySub}>¥{total.toLocaleString('ja-JP')}円/月</Text>
+            </View>
+            <Text style={s.entryArrow}>›</Text>
+          </Pressable>
         );
       })}
     </View>
   );
 }
 
-const bar = StyleSheet.create({
-  wrap: {
-    flexDirection: 'row',
-    height: 12,
-    borderRadius: 6,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.06)',
-  },
-  seg: { height: 12 },
-});
+// ─── メイン ───────────────────────────────────────────────────────
 
 export default function AllocationScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
   const { savingsAllocation, saveSavingsAllocation } = useStore();
 
-  const [amounts, setAmounts] = useState<Record<string, number>>(
-    savingsAllocation.monthlyAmounts,
+  const [entries, setEntries] = useState<AllocationEntry[]>(
+    savingsAllocation.entries.length > 0
+      ? savingsAllocation.entries
+      : [{ fromYear: START_YEAR, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } }],
   );
-  const [autoActual, setAutoActual] = useState(true);
+  const [selectedYearIdx, setSelectedYearIdx] = useState(0);
 
-  const total = PROJECT_ORDER.reduce((sum, id) => sum + (amounts[id] ?? 0), 0);
-  const cardInnerWidth = screenWidth - 14 * 2 - 16 * 2;
+  const svgW = screenWidth - 14 * 2;
+  const selectedYear = START_YEAR + selectedYearIdx;
+
+  const hasEntry = entries.some(e => e.fromYear === selectedYear);
+
+  const editAmounts: Record<string, number> = useMemo(
+    () => getAmountsForYear(selectedYear, entries),
+    [selectedYear, entries],
+  );
+
+  const handleYearSelect = useCallback((idx: number) => {
+    setSelectedYearIdx(idx);
+  }, []);
+
+  const handleChange = useCallback((id: string, val: number) => {
+    setEntries(prev => {
+      const existing = prev.find(e => e.fromYear === selectedYear);
+      if (existing) {
+        return prev.map(e =>
+          e.fromYear === selectedYear
+            ? { ...e, monthlyAmounts: { ...e.monthlyAmounts, [id]: val } }
+            : e
+        );
+      }
+      const base = getAmountsForYear(selectedYear, prev);
+      return [...prev, { fromYear: selectedYear, monthlyAmounts: { ...base, [id]: val } }]
+        .sort((a, b) => a.fromYear - b.fromYear);
+    });
+  }, [selectedYear]);
+
+  const handleAdd = useCallback(() => {
+    const base = getAmountsForYear(selectedYear, entries);
+    setEntries(prev =>
+      [...prev, { fromYear: selectedYear, monthlyAmounts: { ...base } }]
+        .sort((a, b) => a.fromYear - b.fromYear)
+    );
+  }, [selectedYear, entries]);
+
+  const handleDelete = useCallback(() => {
+    if (selectedYear === START_YEAR) return;
+    setEntries(prev => prev.filter(e => e.fromYear !== selectedYear));
+  }, [selectedYear]);
 
   const handleSave = () => {
-    saveSavingsAllocation({ monthlyAmounts: amounts });
+    saveSavingsAllocation({ entries });
     router.back();
-  };
-
-  const updateAmount = (id: string, text: string) => {
-    const val = parseInt(text.replace(/[^0-9]/g, ''), 10) || 0;
-    setAmounts(prev => ({ ...prev, [id]: val }));
   };
 
   return (
@@ -116,88 +412,37 @@ export default function AllocationScreen() {
 
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ padding: 14, paddingBottom: insets.bottom + 90 }}
+        contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={s.sectionCard}>
-          <Text style={s.sectionLabel}>月の積立合計</Text>
-          <Text style={s.totalAmt}>¥{total.toLocaleString('ja-JP')}円/月</Text>
-        </View>
-
-        <Text style={s.sectionHeader}>プロジェクト別 配分</Text>
-
-        {PROJECT_ORDER.map(id => {
-          const project = PROJECTS[id];
-          if (!project) return null;
-          const color = getProjectColor(id);
-          const amt = amounts[id] ?? 0;
-          const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
-
-          return (
-            <View key={id} style={s.projectCard}>
-              <View style={[s.colorBar, { backgroundColor: color }]} />
-              <View style={s.projectContent}>
-                <View style={s.projectTopRow}>
-                  <Text style={s.projectName}>{project.name}</Text>
-                  <View style={[s.pctBadge, { backgroundColor: color + '22' }]}>
-                    <Text style={[s.pctTxt, { color }]}>{pct}%</Text>
-                  </View>
-                </View>
-
-                <View style={s.amtInputRow}>
-                  <View style={s.amtInputWrap}>
-                    <Text style={s.amtPrefix}>¥</Text>
-                    <TextInput
-                      style={s.amtInput}
-                      value={amt > 0 ? String(amt) : ''}
-                      onChangeText={v => updateAmount(id, v)}
-                      keyboardType="number-pad"
-                      placeholder="0"
-                      placeholderTextColor={C.textSecondary}
-                      selectTextOnFocus
-                    />
-                    <Text style={s.amtSuffix}>円/月</Text>
-                  </View>
-                </View>
-
-                <View style={{ marginTop: 6 }}>
-                  <Sparkline plan={project.plan} color={color} width={cardInnerWidth} />
-                </View>
-              </View>
-            </View>
-          );
-        })}
-
-        <View style={s.allocBarCard}>
-          <Text style={s.allocBarLabel}>配分バー</Text>
-          <AllocationBar amounts={amounts} />
-          <View style={s.allocLegendRow}>
-            {PROJECT_ORDER.map(id => {
-              const project = PROJECTS[id];
-              const color = getProjectColor(id);
-              const amt = amounts[id] ?? 0;
-              const pct = total > 0 ? Math.round((amt / total) * 100) : 0;
-              return (
-                <View key={id} style={s.allocLegendItem}>
-                  <View style={[s.allocLegendDot, { backgroundColor: color }]} />
-                  <Text style={s.allocLegendTxt}>{project?.name ?? id} {pct}%</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
-
-        <View style={s.toggleCard}>
-          <View style={{ flex: 1 }}>
-            <Text style={s.toggleLabel}>毎月自動で実績に反映</Text>
-            <Text style={s.toggleSub}>スイッチONにすると、積立予定通りに実績が自動入力されます</Text>
-          </View>
-          <Switch
-            value={autoActual}
-            onValueChange={setAutoActual}
-            trackColor={{ false: 'rgba(0,0,0,0.1)', true: C.brand }}
-            thumbColor={C.card}
+        {/* グラフ */}
+        <View style={s.chartCard}>
+          <Text style={s.chartHint}>グラフをタップして年を選択</Text>
+          <StackedAreaChart
+            entries={entries}
+            selectedYearIdx={selectedYearIdx}
+            svgW={svgW}
+            onYearSelect={handleYearSelect}
           />
+          <Legend />
         </View>
+
+        {/* 配分エディタ */}
+        <AllocationEditor
+          selectedYear={selectedYear}
+          editAmounts={editAmounts}
+          hasEntry={hasEntry}
+          onChange={handleChange}
+          onAdd={handleAdd}
+          onDelete={handleDelete}
+        />
+
+        {/* 変更ポイント一覧 */}
+        <EntryList
+          entries={entries}
+          selectedYear={selectedYear}
+          onSelect={handleYearSelect}
+        />
       </ScrollView>
 
       <View style={[s.saveWrap, { paddingBottom: insets.bottom + 12 }]}>
@@ -215,96 +460,141 @@ const s = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
-  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 6, letterSpacing: 0.2 },
+  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 6 },
   headerTitle: { fontSize: 17, fontWeight: '600', color: '#fff' },
 
-  sectionCard: {
+  chartCard: {
     backgroundColor: C.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
-  },
-  sectionLabel: { fontSize: 12, color: C.textSecondary, marginBottom: 4 },
-  totalAmt: { fontSize: 26, fontWeight: '700', color: C.textPrimary },
-
-  sectionHeader: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: C.textSecondary,
-    marginBottom: 8,
-    marginLeft: 2,
-  },
-
-  projectCard: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
+    margin: 14,
     marginBottom: 10,
-    flexDirection: 'row',
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    paddingTop: 12,
+    paddingBottom: 10,
     overflow: 'hidden',
   },
-  colorBar: { width: 4 },
-  projectContent: { flex: 1, padding: 12 },
-  projectTopRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 },
-  projectName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  pctBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
+  chartHint: {
+    fontSize: 11,
+    color: C.textSecondary,
+    textAlign: 'center',
+    marginBottom: 6,
   },
-  pctTxt: { fontSize: 12, fontWeight: '600' },
 
-  amtInputRow: { flexDirection: 'row', alignItems: 'center' },
-  amtInputWrap: {
+  legendRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+  },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  legendDot: { width: 8, height: 8, borderRadius: 4 },
+  legendTxt: { fontSize: 11, color: C.textSecondary },
+
+  editorCard: {
+    backgroundColor: C.card,
+    marginHorizontal: 14,
+    marginBottom: 10,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    padding: 14,
+  },
+  editorHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  editorTitle: { fontSize: 14, fontWeight: '600', color: C.brand },
+  deleteBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#FCEBEB',
+  },
+  deleteTxt: { fontSize: 12, color: '#E24B4A', fontWeight: '500' },
+
+  editorRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+    gap: 8,
+  },
+  editorDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  editorName: { fontSize: 13, color: C.textPrimary, width: 60 },
+  editorInputWrap: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.12)',
-    borderRadius: 10,
-    paddingHorizontal: 10,
+    borderRadius: 8,
+    paddingHorizontal: 8,
     backgroundColor: C.bg,
-    flex: 1,
   },
-  amtPrefix: { fontSize: 16, color: C.textSecondary, marginRight: 2 },
-  amtInput: {
+  editorYen: { fontSize: 14, color: C.textSecondary, marginRight: 2 },
+  editorInput: {
     flex: 1,
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '500',
     color: C.textPrimary,
     paddingVertical: 8,
   },
-  amtSuffix: { fontSize: 13, color: C.textSecondary },
+  editorSuffix: { fontSize: 11, color: C.textSecondary },
 
-  allocBarCard: {
+  editorTotal: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 0.5,
+    borderTopColor: C.border,
+    marginTop: 4,
+  },
+  editorTotalLabel: { fontSize: 12, color: C.textSecondary },
+  editorTotalAmt: { fontSize: 16, fontWeight: '700', color: C.textPrimary },
+
+  addBtn: {
+    marginTop: 12,
+    backgroundColor: C.bg,
+    borderWidth: 1,
+    borderColor: C.brand,
+    borderRadius: 8,
+    paddingVertical: 10,
+    alignItems: 'center',
+  },
+  addTxt: { fontSize: 13, fontWeight: '600', color: C.brand },
+
+  entryList: {
+    marginHorizontal: 14,
+    marginBottom: 10,
     backgroundColor: C.card,
     borderRadius: 12,
     borderWidth: 0.5,
     borderColor: C.border,
     padding: 14,
+  },
+  entryListTitle: {
+    fontSize: 12,
+    color: C.textSecondary,
+    fontWeight: '500',
     marginBottom: 10,
   },
-  allocBarLabel: { fontSize: 12, color: C.textSecondary, marginBottom: 8 },
-  allocLegendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 },
-  allocLegendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  allocLegendDot: { width: 8, height: 8, borderRadius: 4 },
-  allocLegendTxt: { fontSize: 11, color: C.textSecondary },
-
-  toggleCard: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    padding: 14,
+  entryRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginBottom: 10,
+    paddingVertical: 10,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    gap: 10,
   },
-  toggleLabel: { fontSize: 14, fontWeight: '500', color: C.textPrimary, marginBottom: 3 },
-  toggleSub: { fontSize: 11, color: C.textSecondary, lineHeight: 16 },
+  entryRowSel: { backgroundColor: '#EBF2FB' },
+  entryBar: { width: 3, height: 32, borderRadius: 2 },
+  entryYear: { fontSize: 13, fontWeight: '500', color: C.textPrimary },
+  entrySub: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
+  entryArrow: { fontSize: 18, color: C.textSecondary },
 
   saveWrap: {
     position: 'absolute',
