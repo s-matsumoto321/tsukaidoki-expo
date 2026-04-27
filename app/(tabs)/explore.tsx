@@ -22,7 +22,7 @@ const C = {
 };
 
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
-const PF_CHART_COLORS = ['#3D2900', '#7A5200', '#C28700', '#FFC814', '#FFE74D'];
+const PF_CHART_COLORS = ['#2E1800', '#7A3F00', '#C46D00', '#F59B00', '#FFD080'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
