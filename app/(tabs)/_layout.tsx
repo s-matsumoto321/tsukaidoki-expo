@@ -24,6 +24,13 @@ export default function TabLayout() {
         }}
       />
       <Tabs.Screen
+        name="pool"
+        options={{
+          title: 'プール金',
+          tabBarIcon: ({ color }) => <IconSymbol size={26} name="building.columns.fill" color={color} />,
+        }}
+      />
+      <Tabs.Screen
         name="index"
         options={{
           title: 'ホーム',

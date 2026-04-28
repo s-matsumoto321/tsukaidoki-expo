@@ -33,6 +33,7 @@ const C = {
 
 function parseYear(s: string): number {
   const n = parseInt(s.replace("'", ''), 10);
+  if (n >= 1000) return n;
   return n < 50 ? 2000 + n : 1900 + n;
 }
 

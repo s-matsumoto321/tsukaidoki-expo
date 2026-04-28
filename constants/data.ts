@@ -21,6 +21,6 @@ export const PF_ITEMS: FinancialItem[] = [
   { color: '#2B7FC0', name: '教育資金', val: '¥300万', amount: 3_000_000, meta: '2044年 大学入学まで · 目標¥500万', progress: 0.60, status: 'ok', projectId: 'edu' },
   { color: '#1D9E75', name: '老後資金', val: '¥250万', amount: 2_500_000, meta: '2050年 定年まで · 目標¥3,000万', progress: 0.08, status: 'warn', projectId: 'ret' },
   { color: '#D46000', name: '車資金', val: '¥100万', amount: 1_000_000, meta: '2028年 買い替え · 目標¥200万', progress: 0.50, status: 'ok', projectId: 'car' },
-  { color: '#888780', name: 'その他', val: '¥115万', amount: 1_150_000, meta: '冠婚葬祭・家修繕などの予備枠', progress: 1.0, status: 'ok' },
-  { color: '#7B5EA7', name: '旅行資金', val: '¥10万', amount: 100_000, meta: '来年夏 旅行 · 目標¥30万', progress: 0.33, status: 'ok', projectId: 'trip' },
+  { color: '#7B5EA7', name: '旅行資金', val: '¥50万', amount: 500_000, meta: '年1回国内・2031年TDL・2037年豪州', progress: 0.25, status: 'ok', projectId: 'trip' },
+  { color: '#888780', name: '余剰資金', val: '¥115万', amount: 1_150_000, meta: '冠婚葬祭・家修繕などの予備枠', progress: 1.0, status: 'ok' },
 ];

@@ -80,7 +80,7 @@ const DEFAULT_SCENARIO_DATA: ScenarioData = {
   spendPlanOverrides: {},
   savingsAllocation: {
     entries: [
-      { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
+      { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 30000 } },
     ],
   },
   dreams: [],
@@ -171,7 +171,7 @@ export const useStore = create<State & Actions>()(
       spendPlanOverrides: {},
       savingsAllocation: {
         entries: [
-          { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
+          { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 30000 } },
         ],
       },
       dreams: DEFAULT_DREAMS,

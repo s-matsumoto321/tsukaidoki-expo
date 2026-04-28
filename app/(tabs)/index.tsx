@@ -242,7 +242,7 @@ export default function HomeScreen() {
             total={fmtMan(poolTotal)}
             sub={`${POOL_ITEMS.length}口座`}
             items={poolItems}
-            route="/pool"
+            route={'/(tabs)/pool' as any}
           />
           <ChartCard
             title="使いみち"

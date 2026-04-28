@@ -272,7 +272,7 @@ export default function ScenarioScreen() {
     switchScenario(id);
     setTimeout(() => {
       setSwitching(false);
-      router.replace('/(tabs)/index' as any);
+      router.navigate('/(tabs)/' as any);
     }, 1200);
   };
 

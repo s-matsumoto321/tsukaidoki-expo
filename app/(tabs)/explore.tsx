@@ -1,6 +1,6 @@
-import { Fragment, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StatusBar, TextInput } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -22,12 +22,27 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
 };
 
+// PJごとのゴール年・目標金額（動的進捗計算用）
+const GOAL_YEARS: Record<string, number> = { edu: 2044, ret: 2050, car: 2028, trip: 2037 };
+const PJ_TARGETS: Record<string, number> = { edu: 5_000_000, ret: 30_000_000, car: 2_000_000, trip: 2_660_000 };
 const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
 
-// ─── AIインサイトカード ──────────────────────────────────────────
+// ─── 月の積立量を取得 ─────────────────────────────────────────────
+
+function getMonthlyAmt(
+  entries: { fromYear: number; monthlyAmounts: Record<string, number> }[],
+  projectId: string,
+): number {
+  const now = new Date().getFullYear();
+  const sorted = [...entries].sort((a, b) => b.fromYear - a.fromYear);
+  const entry = sorted.find(e => e.fromYear <= now);
+  return entry?.monthlyAmounts[projectId] ?? 0;
+}
+
+// ─── AIインサイトカード ───────────────────────────────────────────
 
 function AiInsightCard({ text }: { text: string }) {
   if (!text) return null;
@@ -36,7 +51,7 @@ function AiInsightCard({ text }: { text: string }) {
       <View style={s.aiCard}>
         <Text style={s.aiIcon}>✦</Text>
         <View style={{ flex: 1 }}>
-          <Text style={s.aiLabel}>AI インサイト</Text>
+          <Text style={s.aiLabel}>AIインサイト</Text>
           <Text style={s.aiTxt}>{text}</Text>
         </View>
       </View>
@@ -44,10 +59,229 @@ function AiInsightCard({ text }: { text: string }) {
   );
 }
 
-// ─── 横積み比率バー + 夢年表リンク ──────────────────────────────
+// ─── 積立・残高金調整パネル（本体のみ） ──────────────────────────
 
-function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
+type AllocationPanelProps = {
+  pfItems: CardItem[];
+  balances: Record<string, number>;
+  localMonthly: Record<string, number>;
+  onChangeMonthly: (projectId: string, newAmt: number) => void;
+  onSave: () => void;
+};
+
+function AllocationPanel({ pfItems, balances, localMonthly, onChangeMonthly, onSave }: AllocationPanelProps) {
+  const totalMonthly = pfItems.reduce(
+    (sum, i) => sum + (i.projectId ? (localMonthly[i.projectId] ?? 0) : 0), 0,
+  );
+
+  return (
+    <View style={ap.wrap}>
+      <View style={ap.body}>
+        {/* 月の積立配分バー */}
+        <Text style={ap.sectionLabel}>
+          月の積立配分　合計 ¥{totalMonthly.toLocaleString('ja-JP')}/月
+        </Text>
+        {totalMonthly > 0 && (
+          <View style={ap.allocBar}>
+            {pfItems.filter(i => i.projectId).map(item => {
+              const amt = item.projectId ? (localMonthly[item.projectId] ?? 0) : 0;
+              if (amt <= 0) return null;
+              return (
+                <Fragment key={item.projectId}>
+                  <View style={{ flex: amt, backgroundColor: item.color }} />
+                </Fragment>
+              );
+            })}
+          </View>
+        )}
+        <View style={ap.allocLegRow}>
+          {pfItems.filter(i => i.projectId).map(item => {
+            const amt = item.projectId ? (localMonthly[item.projectId] ?? 0) : 0;
+            if (totalMonthly === 0) return null;
+            const pct = Math.round((amt / totalMonthly) * 100);
+            return (
+              <View key={item.projectId} style={ap.allocLegItem}>
+                <View style={[ap.allocDot, { backgroundColor: item.color }]} />
+                <Text style={ap.allocLegName} numberOfLines={1}>{item.name}</Text>
+                <Text style={ap.allocLegPct}>{pct}%</Text>
+              </View>
+            );
+          })}
+        </View>
+
+        {/* 各PJ調整行 */}
+        <Text style={[ap.sectionLabel, { marginTop: 14 }]}>各PJ 月積立・残高調整</Text>
+        {pfItems.filter(i => i.projectId).map(item => {
+          const balance = item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount;
+          const monthly = item.projectId ? (localMonthly[item.projectId] ?? 0) : 0;
+          return (
+            <View key={item.projectId} style={ap.row}>
+              <View style={[ap.pjDot, { backgroundColor: item.color }]} />
+              <View style={ap.pjInfo}>
+                <Text style={ap.pjName} numberOfLines={1}>{item.name}</Text>
+                <Text style={ap.pjBalance}>残高 ¥{balance.toLocaleString('ja-JP')}</Text>
+              </View>
+              <View style={ap.stepper}>
+                <Pressable
+                  style={ap.stepBtn}
+                  onPress={() => item.projectId && onChangeMonthly(item.projectId, Math.max(0, monthly - 1000))}
+                >
+                  <Text style={ap.stepBtnTxt}>−</Text>
+                </Pressable>
+                <TextInput
+                  style={ap.stepInput}
+                  value={String(monthly)}
+                  onChangeText={v => {
+                    const n = parseInt(v.replace(/[^0-9]/g, ''), 10);
+                    if (item.projectId) onChangeMonthly(item.projectId, isNaN(n) ? 0 : n);
+                  }}
+                  keyboardType="number-pad"
+                  selectTextOnFocus
+                />
+                <Pressable
+                  style={ap.stepBtn}
+                  onPress={() => item.projectId && onChangeMonthly(item.projectId, monthly + 1000)}
+                >
+                  <Text style={ap.stepBtnTxt}>＋</Text>
+                </Pressable>
+              </View>
+            </View>
+          );
+        })}
+
+        <Pressable style={ap.applyBtn} onPress={onSave}>
+          <Text style={ap.applyBtnTxt}>適用する</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const ap = StyleSheet.create({
+  wrap: { marginHorizontal: 14, marginBottom: 6 },
+  body: {
+    backgroundColor: C.card, borderRadius: 12,
+    borderWidth: 0.5, borderColor: C.border,
+    padding: 14,
+  },
+  sectionLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 8 },
+  allocBar: {
+    flexDirection: 'row', height: 14, borderRadius: 7,
+    overflow: 'hidden', marginBottom: 8,
+  },
+  allocLegRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 4 },
+  allocLegItem: {
+    width: '50%', flexDirection: 'row', alignItems: 'center',
+    gap: 4, paddingVertical: 2,
+  },
+  allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
+  allocLegName: { fontSize: 10, color: C.textSecondary, flex: 1 },
+  allocLegPct: { fontSize: 10, fontWeight: '600', color: C.textPrimary, minWidth: 24, textAlign: 'right' },
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingVertical: 8,
+    borderTopWidth: 0.5, borderTopColor: C.border,
+  },
+  pjDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  pjInfo: { flex: 1 },
+  pjName: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
+  pjBalance: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
+  stepper: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.bg, borderRadius: 8,
+    borderWidth: 0.5, borderColor: C.border,
+    overflow: 'hidden',
+  },
+  stepBtn: {
+    width: 32, height: 32,
+    justifyContent: 'center', alignItems: 'center',
+    backgroundColor: 'rgba(12,68,124,0.07)',
+  },
+  stepBtnTxt: { fontSize: 18, color: C.brand, fontWeight: '300' },
+  stepInput: {
+    width: 72, textAlign: 'center',
+    fontSize: 13, fontWeight: '600', color: C.textPrimary,
+    paddingVertical: 6,
+  },
+  applyBtn: {
+    marginTop: 12, backgroundColor: C.brand, borderRadius: 10,
+    paddingVertical: 12, alignItems: 'center',
+  },
+  applyBtnTxt: { fontSize: 14, fontWeight: '600', color: '#fff' },
+});
+
+// ─── AI自動配分調整カード ─────────────────────────────────────────
+
+type AiAllocCardProps = {
+  items: CardItem[];
+  localMonthly: Record<string, number>;
+  onApply: (newMonthly: Record<string, number>) => void;
+};
+
+function AiAllocationCard({ items, localMonthly, onApply }: AiAllocCardProps) {
+  const warnItems = items.filter(i => i.status === 'warn' && i.projectId);
+  const hasWarn = warnItems.length > 0;
+
+  const suggestion: Record<string, number> = { ...localMonthly };
+  for (const item of warnItems) {
+    if (item.projectId) {
+      suggestion[item.projectId] = (localMonthly[item.projectId] ?? 0) + 15_000;
+    }
+  }
+  const increase = 15_000 * warnItems.length;
+  const warnNames = warnItems.map(i => i.name).join('と');
+
+  return (
+    <View style={aa.card}>
+      <View style={aa.inner}>
+        <Text style={aa.mark}>✦</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={aa.title}>AI自動配分調整</Text>
+          {hasWarn ? (
+            <>
+              <Text style={aa.txt}>
+                {warnNames}の達成が遅れています。月+¥{increase.toLocaleString('ja-JP')}の増額を提案します。
+              </Text>
+              <Pressable style={aa.btn} onPress={() => onApply(suggestion)}>
+                <Text style={aa.btnTxt}>提案を適用</Text>
+              </Pressable>
+            </>
+          ) : (
+            <Text style={aa.txt}>現在の配分は最適です。このままのペースを維持しましょう。</Text>
+          )}
+        </View>
+      </View>
+    </View>
+  );
+}
+
+const aa = StyleSheet.create({
+  card: {
+    marginHorizontal: 14, marginBottom: 6,
+    backgroundColor: '#FEF3E2', borderRadius: 12,
+    borderWidth: 0.5, borderColor: '#EF9F27',
+  },
+  inner: { padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
+  mark: { fontSize: 14, color: '#D46000', lineHeight: 22 },
+  title: { fontSize: 12, color: '#D46000', fontWeight: '600', marginBottom: 3 },
+  txt: { fontSize: 13, color: C.textPrimary, lineHeight: 18 },
+  btn: {
+    marginTop: 8, backgroundColor: C.orange ?? '#EF9F27',
+    borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  btnTxt: { fontSize: 12, fontWeight: '600', color: '#fff' },
+});
+
+// ─── 横積み比率バー ───────────────────────────────────────────────
+
+function AllocationBar({ items, surplus, total }: {
+  items: CardItem[];
+  surplus: number;
+  total: number;
+}) {
   if (total === 0) return null;
+  const surplusColor = '#888780';
   return (
     <View style={s.allocWrap}>
       <View style={s.allocHeader}>
@@ -66,6 +300,12 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
             <View style={{ flex: item.amount, backgroundColor: item.color }} />
           </Fragment>
         ))}
+        {surplus > 0 && (
+          <>
+            <View style={{ width: 2, backgroundColor: '#fff' }} />
+            <View style={{ flex: surplus, backgroundColor: surplusColor }} />
+          </>
+        )}
       </View>
       <View style={s.allocLegRow}>
         {items.map(item => (
@@ -75,6 +315,13 @@ function AllocationBar({ items, total }: { items: CardItem[]; total: number }) {
             <Text style={s.allocLegPct}>{Math.round((item.amount / total) * 100)}%</Text>
           </View>
         ))}
+        {surplus > 0 && (
+          <View style={s.allocLegItem}>
+            <View style={[s.allocDot, { backgroundColor: surplusColor }]} />
+            <Text style={s.allocLegName}>余剰資金</Text>
+            <Text style={s.allocLegPct}>{Math.round((surplus / total) * 100)}%</Text>
+          </View>
+        )}
       </View>
     </View>
   );
@@ -90,7 +337,7 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
   );
 }
 
-// ─── PJカード ────────────────────────────────────────────────────
+// ─── PJカード ─────────────────────────────────────────────────────
 
 function PjCard({
   color, name, amount, progress = 0, status, projectId, drag, isActive,
@@ -151,7 +398,7 @@ function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) =
   );
 }
 
-// ─── メイン画面 ───────────────────────────────────────────────────
+// ─── AIインサイト生成 ──────────────────────────────────────────────
 
 function generateAiInsight(items: CardItem[], dreams: { year: number; title: string; projectId: string }[]): string {
   const warnItems = items.filter(i => i.status === 'warn');
@@ -163,26 +410,87 @@ function generateAiInsight(items: CardItem[], dreams: { year: number; title: str
   return `${totalDreams}つの夢に向けて順調に積み上がっています。現在のペースを維持しましょう。`;
 }
 
-export default function DreamsScreen() {
-  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights } = useStore();
-  const [sortMode, setSortMode] = useState<SortMode>('custom');
+// ─── メイン画面 ───────────────────────────────────────────────────
 
-  const enriched: CardItem[] = useMemo(() =>
-    PF_ITEMS
-      .map(item => ({
-        ...item,
-        amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
-      }))
-      .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId)),
-    [balances],
-  );
+const NOW_YEAR = new Date().getFullYear();
+
+export default function DreamsScreen() {
+  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation } = useStore();
+  const [sortMode, setSortMode] = useState<SortMode>('custom');
+  const [panelOpen, setPanelOpen] = useState(false);
+  const [aiCardOpen, setAiCardOpen] = useState(false);
+  const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
+
+  // パネルを開いたときストアの値で初期化
+  useEffect(() => {
+    if (panelOpen || aiCardOpen) {
+      const initial: Record<string, number> = {};
+      PF_ITEMS.forEach(item => {
+        if (item.projectId && SHOWN_IDS.includes(item.projectId)) {
+          initial[item.projectId] = getMonthlyAmt(savingsAllocation.entries, item.projectId);
+        }
+      });
+      setLocalMonthly(initial);
+    }
+  }, [panelOpen, aiCardOpen, savingsAllocation]);
+
+  // 動的プログレス計算（localMonthlyが変わるとリアルタイムに更新）
+  const enriched: CardItem[] = useMemo(() => {
+    return PF_ITEMS
+      .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId!))
+      .map(item => {
+        const balance = item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount;
+        const goalYear = GOAL_YEARS[item.projectId!] ?? NOW_YEAR + 10;
+        const yearsLeft = Math.max(0, goalYear - NOW_YEAR);
+        const isEditing = panelOpen || aiCardOpen;
+        const monthly = item.projectId
+          ? (isEditing ? (localMonthly[item.projectId] ?? getMonthlyAmt(savingsAllocation.entries, item.projectId)) : getMonthlyAmt(savingsAllocation.entries, item.projectId))
+          : 0;
+        const projected = balance + monthly * 12 * yearsLeft;
+        const target = PJ_TARGETS[item.projectId!] ?? 1;
+        const progress = Math.min(projected / target, 1);
+        const status: 'ok' | 'warn' = projected >= target ? 'ok' : 'warn';
+        return { ...item, amount: balance, progress, status };
+      });
+  }, [balances, localMonthly, panelOpen, aiCardOpen, savingsAllocation]);
+
+  // 余剰資金
+  const surplusItem = PF_ITEMS.find(i => i.name === '余剰資金');
+  const surplusAmt = surplusItem ? surplusItem.amount : 0;
 
   const totalAmount = useMemo(
-    () => enriched.reduce((sum, i) => sum + i.amount, 0),
-    [enriched],
+    () => enriched.reduce((sum, i) => sum + i.amount, 0) + surplusAmt,
+    [enriched, surplusAmt],
   );
 
   const aiText = aiInsights['explore'] ?? generateAiInsight(enriched, dreams);
+
+  const handleChangeMonthly = useCallback((projectId: string, newAmt: number) => {
+    setLocalMonthly(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
+  }, []);
+
+  const handleSaveAllocation = useCallback(() => {
+    const now = NOW_YEAR;
+    const sorted = [...savingsAllocation.entries].sort((a, b) => a.fromYear - b.fromYear);
+    const hasCurrentEntry = sorted.some(e => e.fromYear <= now);
+    let updatedEntries = sorted.map(entry => {
+      if (entry.fromYear <= now) {
+        return { ...entry, monthlyAmounts: { ...entry.monthlyAmounts, ...localMonthly } };
+      }
+      return entry;
+    });
+    if (!hasCurrentEntry) {
+      updatedEntries = [{ fromYear: now, monthlyAmounts: localMonthly }, ...updatedEntries];
+    }
+    saveSavingsAllocation({ entries: updatedEntries });
+    setPanelOpen(false);
+  }, [localMonthly, savingsAllocation, saveSavingsAllocation]);
+
+  const handleAiApply = useCallback((newMonthly: Record<string, number>) => {
+    setLocalMonthly(newMonthly);
+    setAiCardOpen(false);
+    setPanelOpen(true);
+  }, []);
 
   const sortedItems = useMemo(() => {
     if (sortMode === 'custom') {
@@ -217,6 +525,55 @@ export default function DreamsScreen() {
     </ScaleDecorator>
   );
 
+  const listHeader = (
+    <>
+      <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
+      <AiInsightCard text={aiText} />
+
+      {/* ─ ボタン行（AIインサイトと並び順の間） ─ */}
+      <View style={s.actionBtnRow}>
+        <Pressable
+          style={[s.actionBtn, panelOpen && s.actionBtnActive]}
+          onPress={() => { setPanelOpen(v => !v); setAiCardOpen(false); }}
+        >
+          <Text style={s.actionBtnIcon}>⚙</Text>
+          <Text style={[s.actionBtnTxt, panelOpen && s.actionBtnTxtActive]}>積立・残高金調整</Text>
+          <Text style={[s.actionBtnArrow, panelOpen && s.actionBtnTxtActive]}>{panelOpen ? '∧' : '∨'}</Text>
+        </Pressable>
+        <Pressable
+          style={[s.actionBtn, aiCardOpen && s.actionBtnActive]}
+          onPress={() => { setAiCardOpen(v => !v); setPanelOpen(false); }}
+        >
+          <Text style={s.actionBtnIcon}>✦</Text>
+          <Text style={[s.actionBtnTxt, aiCardOpen && s.actionBtnTxtActive]}>AI自動配分調整</Text>
+          <Text style={[s.actionBtnArrow, aiCardOpen && s.actionBtnTxtActive]}>{aiCardOpen ? '∧' : '∨'}</Text>
+        </Pressable>
+      </View>
+
+      {/* 積立・残高金調整パネル */}
+      {panelOpen && (
+        <AllocationPanel
+          pfItems={enriched}
+          balances={balances}
+          localMonthly={localMonthly}
+          onChangeMonthly={handleChangeMonthly}
+          onSave={handleSaveAllocation}
+        />
+      )}
+
+      {/* AI自動配分調整カード */}
+      {aiCardOpen && (
+        <AiAllocationCard
+          items={enriched}
+          localMonthly={localMonthly}
+          onApply={handleAiApply}
+        />
+      )}
+
+      <SortBar mode={sortMode} onSelect={setSortMode} />
+    </>
+  );
+
   return (
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
@@ -224,14 +581,12 @@ export default function DreamsScreen() {
         <Logo iconSize={26} />
         <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
-      <AllocationBar items={enriched} total={totalAmount} />
-      <AiInsightCard text={aiText} />
-      <SortBar mode={sortMode} onSelect={setSortMode} />
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
         contentContainerStyle={s.content}
         renderItem={renderItem}
+        ListHeaderComponent={listHeader}
         onDragEnd={({ data }) => {
           if (sortMode === 'custom') {
             setDreamOrder(data.map(i => i.projectId ?? i.name));
@@ -253,23 +608,35 @@ const s = StyleSheet.create({
   headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
 
   // AIインサイト
-  aiWrap: {
-    paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2,
-    backgroundColor: C.bg,
-  },
+  aiWrap: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2, backgroundColor: C.bg },
   aiCard: {
     backgroundColor: C.aiCard, borderRadius: 12, padding: 10,
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
   },
   aiIcon: { fontSize: 14, color: '#185FA5', lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
+  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '600', marginBottom: 1 },
   aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
 
+  // ボタン行
+  actionBtnRow: {
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 14, paddingTop: 6, paddingBottom: 2,
+  },
+  actionBtn: {
+    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
+    backgroundColor: C.card, borderRadius: 12,
+    borderWidth: 0.5, borderColor: C.border,
+    paddingHorizontal: 12, paddingVertical: 11,
+  },
+  actionBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
+  actionBtnIcon: { fontSize: 14 },
+  actionBtnTxt: { flex: 1, fontSize: 12, fontWeight: '600', color: C.textPrimary },
+  actionBtnTxtActive: { color: '#fff' },
+  actionBtnArrow: { fontSize: 11, color: C.textSecondary },
+
   sortBar: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    flexDirection: 'row', gap: 8,
+    paddingHorizontal: 14, paddingVertical: 10,
     backgroundColor: C.bg,
   },
   sortPill: {
