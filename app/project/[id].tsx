@@ -10,7 +10,7 @@ import Svg, {
   Text as SvgText, G, Rect, Path,
 } from 'react-native-svg';
 import { PROJECTS, type Project, type ProjectEvent } from '@/constants/projects';
-import { useStore, type AllocationEntry } from '@/store/useStore';
+import { useStore, type AllocationEntry, type Dream } from '@/store/useStore';
 import { PF_ITEMS } from '@/constants/data';
 import { BalanceSheet } from '@/components/balance-sheet';
 
@@ -70,16 +70,17 @@ type Period = '生涯' | '5年' | '1年';
 
 // ─── 折れ線グラフ（試算ライン + ★マーカー） ──────────────────────
 
-function LineChart({ id, svgW, period, dreamYears }: {
+function LineChart({ id, svgW, period, dreamYears, lifetimeYears }: {
   id: string;
   svgW: number;
   period: Period;
   dreamYears: number[];
+  lifetimeYears: number;
 }) {
   const project = PROJECTS[id];
   if (!project) return null;
 
-  const limitMap: Record<Period, number> = { '生涯': Infinity, '5年': 5, '1年': 1 };
+  const limitMap: Record<Period, number> = { '生涯': lifetimeYears, '5年': 5, '1年': 1 };
   const firstYear = parseYear(project.years[0]);
   const limit = firstYear + limitMap[period];
   const cutIdx = project.years.findIndex(yr => parseYear(yr) > limit);
@@ -388,41 +389,6 @@ const al = StyleSheet.create({
   applyBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });
 
-// ─── 夢年表ストリップ ──────────────────────────────────────────────
-
-function DreamStrip({ projectId }: { projectId: string }) {
-  const { dreams } = useStore();
-  const projectDreams = dreams.filter(d => d.projectId === projectId).sort((a, b) => a.year - b.year);
-  const color = getProjectColor(projectId);
-
-  if (projectDreams.length === 0) return null;
-
-  return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} style={ds.strip} contentContainerStyle={ds.stripContent}>
-      {projectDreams.map(dream => (
-        <View key={dream.id} style={[ds.item, { borderColor: color }]}>
-          <Text style={[ds.star, { color }]}>★</Text>
-          <Text style={ds.year}>{dream.year}</Text>
-          <Text style={ds.title} numberOfLines={2}>{dream.title}</Text>
-        </View>
-      ))}
-    </ScrollView>
-  );
-}
-
-const ds = StyleSheet.create({
-  strip: { marginHorizontal: 14, marginBottom: 6 },
-  stripContent: { gap: 8, paddingVertical: 4 },
-  item: {
-    width: 76, padding: 8, borderRadius: 10,
-    borderWidth: 1, backgroundColor: C.card,
-    alignItems: 'center',
-  },
-  star: { fontSize: 16, lineHeight: 20 },
-  year: { fontSize: 11, fontWeight: '600', color: C.textSecondary, marginTop: 2 },
-  title: { fontSize: 10, color: C.textPrimary, textAlign: 'center', marginTop: 2, lineHeight: 13 },
-});
-
 // ─── 出来事リスト ─────────────────────────────────────────────────
 
 function EventRow({ ev, onPress }: { ev: ProjectEvent; onPress: (ev: ProjectEvent) => void }) {
@@ -458,6 +424,40 @@ const ev2 = StyleSheet.create({
   neg: { color: '#791F1F' },
 });
 
+// ─── 夢行 ────────────────────────────────────────────────────────
+
+function DreamRow({ dream, color }: { dream: Dream; color: string }) {
+  return (
+    <View style={dr.row}>
+      <View style={[dr.badge, { backgroundColor: color + '22', borderColor: color + '66' }]}>
+        <Text style={[dr.star, { color }]}>★</Text>
+      </View>
+      <View style={dr.body}>
+        <Text style={dr.year}>{dream.year}年</Text>
+        <Text style={dr.title}>{dream.title}</Text>
+      </View>
+    </View>
+  );
+}
+
+const dr = StyleSheet.create({
+  row: {
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    backgroundColor: C.card, borderRadius: 10,
+    borderWidth: 0.5, borderColor: C.border,
+    paddingHorizontal: 12, paddingVertical: 10,
+    marginBottom: 6,
+  },
+  badge: {
+    width: 32, height: 32, borderRadius: 16,
+    borderWidth: 1, justifyContent: 'center', alignItems: 'center', flexShrink: 0,
+  },
+  star: { fontSize: 16, lineHeight: 20 },
+  body: { flex: 1 },
+  year: { fontSize: 11, color: C.textSecondary },
+  title: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+});
+
 // ─── PJ詳細 メイン ────────────────────────────────────────────────
 
 export default function ProjectDetailScreen() {
@@ -467,7 +467,7 @@ export default function ProjectDetailScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  const { balances, dreams, savingsAllocation, aiInsights } = useStore();
+  const { balances, dreams, savingsAllocation, aiInsights, familyMembers } = useStore();
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
 
   const [period, setPeriod] = useState<Period>('生涯');
@@ -476,10 +476,28 @@ export default function ProjectDetailScreen() {
 
   const svgW = screenWidth - 52;
 
+  const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1990;
+  const lifeYears = (selfBirthYear + 100) - NOW_YEAR;
+
   const projectDreamYears = useMemo(
     () => dreams.filter(d => d.projectId === id).map(d => d.year),
     [dreams, id],
   );
+
+  type TimelineItem =
+    | { kind: 'event'; ev: ProjectEvent; sortYear: number }
+    | { kind: 'dream'; d: Dream; sortYear: number };
+
+  const timeline = useMemo<TimelineItem[]>(() => {
+    if (!project) return [];
+    const evItems: TimelineItem[] = project.events.map(ev => ({
+      kind: 'event', ev, sortYear: parseYear(ev.year),
+    }));
+    const dreamItems: TimelineItem[] = dreams
+      .filter(d => d.projectId === id)
+      .map(d => ({ kind: 'dream', d, sortYear: d.year }));
+    return [...evItems, ...dreamItems].sort((a, b) => a.sortYear - b.sortYear);
+  }, [project, dreams, id]);
 
   const currentMonthly = useMemo(
     () => getMonthlyForProject(savingsAllocation.entries, id ?? '', NOW_YEAR),
@@ -487,12 +505,12 @@ export default function ProjectDetailScreen() {
   );
 
   const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
+  const projectColor = getProjectColor(id ?? '');
 
   const handleEventPress = useCallback((ev: ProjectEvent) => {
     if (ev.type === 'start') {
       setAllocationModalVisible(true);
     }
-    // 将来: 出来事編集モーダル
   }, []);
 
   if (!project) {
@@ -523,7 +541,8 @@ export default function ProjectDetailScreen() {
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: insets.bottom + 90 }}>
+      {/* AIインサイト + グラフ（スクロール可能） */}
+      <ScrollView style={{ backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: 6 }}>
 
         {/* AIインサイト */}
         {aiText ? (
@@ -565,26 +584,31 @@ export default function ProjectDetailScreen() {
               ))}
             </View>
           </View>
-          <LineChart id={id ?? ''} svgW={svgW} period={period} dreamYears={projectDreamYears} />
+          <LineChart id={id ?? ''} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} />
         </View>
 
-        {/* 夢年表ストリップ */}
-        {!isAccount && <DreamStrip projectId={id ?? ''} />}
+      </ScrollView>
 
-        {/* 出来事リスト */}
+      {/* 年表パネル（固定・内部スクロール） */}
+      <View style={s.timelinePanel}>
         <View style={s.secRow}>
           <Text style={s.secTitle}>{isAccount ? '入出金の年表' : '出来事の年表'}</Text>
           {!isAccount && (
             <Text style={s.secSub}>月 ¥{currentMonthly.toLocaleString('ja-JP')} 積立中</Text>
           )}
         </View>
-        <View style={{ paddingHorizontal: 14, paddingBottom: 8 }}>
-          {project.events.map(ev => (
-            <EventRow key={ev.idx} ev={ev} onPress={handleEventPress} />
-          ))}
-        </View>
-
-      </ScrollView>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: !isAccount ? (insets.bottom + 70) : 8 }}
+          showsVerticalScrollIndicator={false}
+        >
+          {timeline.map((item) =>
+            item.kind === 'event'
+              ? <EventRow key={`ev-${item.ev.idx}`} ev={item.ev} onPress={handleEventPress} />
+              : <DreamRow key={`dream-${item.d.id}`} dream={item.d} color={projectColor} />
+          )}
+        </ScrollView>
+      </View>
 
       {/* 積立調整ボタン（下部固定） */}
       {!isAccount && (
@@ -652,6 +676,11 @@ const s = StyleSheet.create({
   periodTxt: { fontSize: 12, color: C.textSecondary, fontWeight: '500' },
   periodTxtActive: { color: '#fff' },
 
+  timelinePanel: {
+    flex: 1,
+    backgroundColor: C.bg,
+    borderTopWidth: 0.5, borderTopColor: C.border,
+  },
   secRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: 16, paddingVertical: 6,
