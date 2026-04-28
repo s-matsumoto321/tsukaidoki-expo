@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useStore, type ScenarioMeta } from '@/store/useStore';
-import { POOL_ITEMS, PF_ITEMS } from '@/constants/data';
+import { POOL_ITEMS } from '@/constants/data';
 
 const C = {
   brand: '#0C447C',
@@ -21,6 +21,35 @@ const C = {
   border: 'rgba(0,0,0,0.08)',
   lockBg: '#f0f0f8',
 };
+
+// ─── シナリオ切替ローディングオーバーレイ ──────────────────────────
+
+function SwitchingOverlay() {
+  return (
+    <View style={ov.wrap}>
+      <View style={ov.inner}>
+        <Text style={ov.mark}>✦</Text>
+        <Text style={ov.title}>試算を読み込み中</Text>
+        <Text style={ov.sub}>シナリオを切り替えています...</Text>
+      </View>
+    </View>
+  );
+}
+
+const ov = StyleSheet.create({
+  wrap: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    backgroundColor: 'rgba(12,68,124,0.92)',
+    justifyContent: 'center', alignItems: 'center',
+    zIndex: 999,
+  },
+  inner: { alignItems: 'center', paddingHorizontal: 40 },
+  mark: { fontSize: 40, color: '#fff', marginBottom: 16 },
+  title: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 },
+  sub: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
+});
+
+// ─── シナリオ追加モーダル ──────────────────────────────────────────
 
 type AddModalProps = {
   visible: boolean;
@@ -208,12 +237,12 @@ const ma = StyleSheet.create({
   backBtnTxt: { fontSize: 14, color: C.textSecondary },
 });
 
-// -------------------------------------------------------
-// ScenarioScreen
-// -------------------------------------------------------
+// ─── ScenarioScreen ────────────────────────────────────────────────
+
 export default function ScenarioScreen() {
-  const { scenarios, activeScenarioId, scenariosData, balances, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
+  const { scenarios, activeScenarioId, scenariosData, balances, dreams, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
   const [addModalVisible, setAddModalVisible] = useState(false);
+  const [switching, setSwitching] = useState(false);
   const isPremium = useStore(s => s.isPremium);
 
   const poolTotal = POOL_ITEMS.reduce(
@@ -232,8 +261,19 @@ export default function ScenarioScreen() {
   };
 
   const getDreamCount = (id: string) => {
-    // 夢年表実装後に実際の数を返す。現在は仮の値
-    return 12;
+    if (id === activeScenarioId) return dreams.length;
+    const data = scenariosData[id];
+    return data?.dreams?.length ?? 0;
+  };
+
+  const handleScenarioPress = (id: string) => {
+    if (id === activeScenarioId) return;
+    setSwitching(true);
+    switchScenario(id);
+    setTimeout(() => {
+      setSwitching(false);
+      router.replace('/(tabs)/index' as any);
+    }, 1200);
   };
 
   const handleLongPress = (sc: ScenarioMeta) => {
@@ -280,85 +320,88 @@ export default function ScenarioScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
-      <View style={s.header}>
-        <Text style={s.headerTitle}>シナリオ</Text>
-      </View>
+    <View style={{ flex: 1 }}>
+      <SafeAreaView style={s.safe}>
+        <StatusBar barStyle="light-content" backgroundColor={C.brand} />
+        <View style={s.header}>
+          <Text style={s.headerTitle}>シナリオ</Text>
+        </View>
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+        <ScrollView style={s.scroll} contentContainerStyle={s.content}>
 
-        <Text style={s.sectionLabel}>現在のシナリオ</Text>
+          <Text style={s.sectionLabel}>現在のシナリオ</Text>
 
-        {scenarios.map(sc => {
-          const isActive = sc.id === activeScenarioId;
-          const total = getScenarioTotal(sc.id);
-          const dreams = getDreamCount(sc.id);
-          return (
-            <Pressable
-              key={sc.id}
-              style={[s.scenarioCard, isActive && s.scenarioCardActive]}
-              onPress={() => switchScenario(sc.id)}
-              onLongPress={() => handleLongPress(sc)}
-              delayLongPress={500}
-            >
-              <View style={s.cardHeader}>
-                <View style={[s.radioOuter, isActive && s.radioOuterActive]}>
-                  {isActive && <View style={s.radioInner} />}
-                </View>
-                <Text style={[s.cardTitle, isActive && s.cardTitleActive]}>
-                  プラン{sc.systemLabel}：{sc.userLabel}
-                </Text>
-                {isActive && (
-                  <View style={s.activeBadge}>
-                    <Text style={s.activeBadgeTxt}>選択中</Text>
+          {scenarios.map(sc => {
+            const isActive = sc.id === activeScenarioId;
+            const total = getScenarioTotal(sc.id);
+            const dreamCount = getDreamCount(sc.id);
+            return (
+              <Pressable
+                key={sc.id}
+                style={[s.scenarioCard, isActive && s.scenarioCardActive]}
+                onPress={() => handleScenarioPress(sc.id)}
+                onLongPress={() => handleLongPress(sc)}
+                delayLongPress={500}
+              >
+                <View style={s.cardHeader}>
+                  <View style={[s.radioOuter, isActive && s.radioOuterActive]}>
+                    {isActive && <View style={s.radioInner} />}
                   </View>
-                )}
-              </View>
-              <View style={s.cardStats}>
-                <View style={s.stat}>
-                  <Text style={s.statLabel}>総資産</Text>
-                  <Text style={[s.statVal, isActive && s.statValActive]}>
-                    ¥{Math.round(total / 10000).toLocaleString()}万
+                  <Text style={[s.cardTitle, isActive && s.cardTitleActive]}>
+                    プラン{sc.systemLabel}：{sc.userLabel}
                   </Text>
+                  {isActive && (
+                    <View style={s.activeBadge}>
+                      <Text style={s.activeBadgeTxt}>選択中</Text>
+                    </View>
+                  )}
                 </View>
-                <View style={[s.stat, s.statBorder]}>
-                  <Text style={s.statLabel}>夢</Text>
-                  <Text style={[s.statVal, isActive && s.statValActive]}>{dreams}個</Text>
+                <View style={s.cardStats}>
+                  <View style={s.stat}>
+                    <Text style={s.statLabel}>総資産</Text>
+                    <Text style={[s.statVal, isActive && s.statValActive]}>
+                      ¥{Math.round(total / 10000).toLocaleString()}万
+                    </Text>
+                  </View>
+                  <View style={[s.stat, s.statBorder]}>
+                    <Text style={s.statLabel}>夢</Text>
+                    <Text style={[s.statVal, isActive && s.statValActive]}>{dreamCount}個</Text>
+                  </View>
                 </View>
-              </View>
-            </Pressable>
-          );
-        })}
+              </Pressable>
+            );
+          })}
 
-        {/* 追加ボタン */}
-        <Text style={[s.sectionLabel, { marginTop: 24 }]}>もう一つ試してみる？</Text>
-        <Pressable style={s.addCard} onPress={handleAddPress}>
-          <View style={s.addIconWrap}>
-            <Text style={s.addIcon}>＋</Text>
-          </View>
-          <View style={s.addBody}>
-            <Text style={s.addTitle}>もしもプランを追加する</Text>
-            {!isPremium && (
-              <View style={s.lockRow}>
-                <Text style={s.lockIcon}>🔒</Text>
-                <Text style={s.lockTxt}>プレミアム機能</Text>
-              </View>
-            )}
-          </View>
-        </Pressable>
+          <Text style={[s.sectionLabel, { marginTop: 24 }]}>もう一つ試してみる？</Text>
+          <Pressable style={s.addCard} onPress={handleAddPress}>
+            <View style={s.addIconWrap}>
+              <Text style={s.addIcon}>＋</Text>
+            </View>
+            <View style={s.addBody}>
+              <Text style={s.addTitle}>もしもプランを追加する</Text>
+              {!isPremium && (
+                <View style={s.lockRow}>
+                  <Text style={s.lockIcon}>🔒</Text>
+                  <Text style={s.lockTxt}>プレミアム機能</Text>
+                </View>
+              )}
+            </View>
+          </Pressable>
 
-        <Text style={s.hint}>長押しで名前変更・削除ができます</Text>
+          <Text style={s.hint}>長押しで名前変更・削除ができます</Text>
 
-      </ScrollView>
+        </ScrollView>
 
-      <AddScenarioModal
-        visible={addModalVisible}
-        scenarios={scenarios}
-        onClose={() => setAddModalVisible(false)}
-        onAdd={addScenario}
-      />
-    </SafeAreaView>
+        <AddScenarioModal
+          visible={addModalVisible}
+          scenarios={scenarios}
+          onClose={() => setAddModalVisible(false)}
+          onAdd={addScenario}
+        />
+      </SafeAreaView>
+
+      {switching && <SwitchingOverlay />}
+    </View>
   );
 }
 

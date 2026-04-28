@@ -111,7 +111,7 @@ function PjCard({
           <Text style={s.cardName}>{name}</Text>
           {status && (
             <Text style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
-              {status === 'ok' ? '◎ 順調' : '△ 要注意'}
+              {status === 'ok' ? '✓ 順調' : '△ 要注意'}
             </Text>
           )}
         </View>

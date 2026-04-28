@@ -40,6 +40,13 @@ export type ScenarioMeta = {
   userLabel: string;
 };
 
+export type Dream = {
+  id: string;
+  year: number;
+  title: string;
+  projectId: string;
+};
+
 export type ScenarioData = {
   balances: Record<string, number>;
   userEvents: Record<string, UserEvent[]>;
@@ -47,13 +54,7 @@ export type ScenarioData = {
   actualOverrides: Record<string, Record<number, ActualOverride>>;
   spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
   savingsAllocation: SavingsAllocation;
-};
-
-export type Dream = {
-  id: string;
-  year: number;
-  title: string;
-  projectId: string;
+  dreams: Dream[];
 };
 
 export type FamilyMember = {
@@ -62,6 +63,13 @@ export type FamilyMember = {
   role: 'self' | 'partner' | 'child' | 'pet' | 'other';
   birthYear: number;
 };
+
+const DEFAULT_DREAMS: Dream[] = [
+  { id: 'd1', year: 2027, title: 'ハワイ旅行', projectId: 'trip' },
+  { id: 'd2', year: 2028, title: '車の買い替え', projectId: 'car' },
+  { id: 'd3', year: 2034, title: '子の大学入学', projectId: 'edu' },
+  { id: 'd4', year: 2050, title: '定年退職', projectId: 'ret' },
+];
 
 const DEFAULT_SCENARIO_DATA: ScenarioData = {
   balances: {},
@@ -74,14 +82,8 @@ const DEFAULT_SCENARIO_DATA: ScenarioData = {
       { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
     ],
   },
+  dreams: [],
 };
-
-const DEFAULT_DREAMS: Dream[] = [
-  { id: 'd1', year: 2027, title: 'ハワイ旅行', projectId: 'trip' },
-  { id: 'd2', year: 2028, title: '車の買い替え', projectId: 'car' },
-  { id: 'd3', year: 2034, title: '子の大学入学', projectId: 'edu' },
-  { id: 'd4', year: 2050, title: '定年退職', projectId: 'ret' },
-];
 
 const DEFAULT_FAMILY: FamilyMember[] = [
   { id: 'self', name: 'あなた', role: 'self', birthYear: 1988 },
@@ -100,12 +102,14 @@ type State = {
   actualOverrides: Record<string, Record<number, ActualOverride>>;
   spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
   savingsAllocation: SavingsAllocation;
-
   dreams: Dream[];
+
   familyMembers: FamilyMember[];
   onboardingDone: boolean;
   aiInsights: Record<string, string>;
   isPremium: boolean;
+  paydayDay: number;
+  paydayAmount: number;
 };
 
 type Actions = {
@@ -127,6 +131,7 @@ type Actions = {
   setOnboardingDone: (done: boolean) => void;
   setAiInsight: (key: string, text: string) => void;
   setPremium: (val: boolean) => void;
+  setPayday: (day: number, amount: number) => void;
 };
 
 function dateLabel(): string {
@@ -147,6 +152,7 @@ function snapshotActiveData(s: State): ScenarioData {
     actualOverrides: s.actualOverrides,
     spendPlanOverrides: s.spendPlanOverrides,
     savingsAllocation: s.savingsAllocation,
+    dreams: s.dreams,
   };
 }
 
@@ -167,12 +173,14 @@ export const useStore = create<State & Actions>()(
           { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } },
         ],
       },
-
       dreams: DEFAULT_DREAMS,
+
       familyMembers: DEFAULT_FAMILY,
       onboardingDone: true,
       aiInsights: {},
       isPremium: false,
+      paydayDay: 25,
+      paydayAmount: 0,
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -299,7 +307,7 @@ export const useStore = create<State & Actions>()(
       switchScenario: (id) => {
         const s = get();
         if (s.activeScenarioId === id) return;
-        const targetData = s.scenariosData[id] ?? DEFAULT_SCENARIO_DATA;
+        const targetData = s.scenariosData[id] ?? { ...DEFAULT_SCENARIO_DATA, dreams: DEFAULT_DREAMS };
         set({
           activeScenarioId: id,
           scenariosData: {
@@ -312,6 +320,7 @@ export const useStore = create<State & Actions>()(
           actualOverrides: targetData.actualOverrides,
           spendPlanOverrides: targetData.spendPlanOverrides,
           savingsAllocation: targetData.savingsAllocation,
+          dreams: targetData.dreams ?? DEFAULT_DREAMS,
         });
       },
 
@@ -321,8 +330,8 @@ export const useStore = create<State & Actions>()(
         const newIndex = s.scenarios.length;
         const newMeta: ScenarioMeta = { id, systemLabel: systemLabelFromIndex(newIndex), userLabel };
         const sourceData = copyFromId
-          ? (s.scenariosData[copyFromId] ?? (copyFromId === s.activeScenarioId ? snapshotActiveData(s) : DEFAULT_SCENARIO_DATA))
-          : DEFAULT_SCENARIO_DATA;
+          ? (s.scenariosData[copyFromId] ?? (copyFromId === s.activeScenarioId ? snapshotActiveData(s) : { ...DEFAULT_SCENARIO_DATA, dreams: DEFAULT_DREAMS }))
+          : { ...DEFAULT_SCENARIO_DATA, dreams: [] };
         set({
           scenarios: [...s.scenarios, newMeta],
           scenariosData: {
@@ -348,7 +357,7 @@ export const useStore = create<State & Actions>()(
         let patch: Partial<State> = {};
         if (newActiveId === id) {
           newActiveId = newScenarios[0].id;
-          const targetData = newScenariosData[newActiveId] ?? DEFAULT_SCENARIO_DATA;
+          const targetData = newScenariosData[newActiveId] ?? { ...DEFAULT_SCENARIO_DATA, dreams: DEFAULT_DREAMS };
           patch = {
             balances: targetData.balances,
             userEvents: targetData.userEvents,
@@ -356,6 +365,7 @@ export const useStore = create<State & Actions>()(
             actualOverrides: targetData.actualOverrides,
             spendPlanOverrides: targetData.spendPlanOverrides,
             savingsAllocation: targetData.savingsAllocation,
+            dreams: targetData.dreams ?? DEFAULT_DREAMS,
           };
         }
         set({
@@ -367,12 +377,28 @@ export const useStore = create<State & Actions>()(
       },
 
       addDream: (dream) =>
-        set(s => ({
-          dreams: [...s.dreams, { ...dream, id: `dream-${Date.now()}` }],
-        })),
+        set(s => {
+          const newDreams = [...s.dreams, { ...dream, id: `dream-${Date.now()}` }];
+          return {
+            dreams: newDreams,
+            scenariosData: {
+              ...s.scenariosData,
+              [s.activeScenarioId]: { ...snapshotActiveData(s), dreams: newDreams },
+            },
+          };
+        }),
 
       removeDream: (id) =>
-        set(s => ({ dreams: s.dreams.filter(d => d.id !== id) })),
+        set(s => {
+          const newDreams = s.dreams.filter(d => d.id !== id);
+          return {
+            dreams: newDreams,
+            scenariosData: {
+              ...s.scenariosData,
+              [s.activeScenarioId]: { ...snapshotActiveData(s), dreams: newDreams },
+            },
+          };
+        }),
 
       setFamilyMembers: (members) => set({ familyMembers: members }),
 
@@ -382,6 +408,8 @@ export const useStore = create<State & Actions>()(
         set(s => ({ aiInsights: { ...s.aiInsights, [key]: text } })),
 
       setPremium: (val) => set({ isPremium: val }),
+
+      setPayday: (day, amount) => set({ paydayDay: day, paydayAmount: amount }),
     }),
     {
       name: 'tsukaidoki-store',

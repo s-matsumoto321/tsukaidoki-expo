@@ -7,6 +7,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore, type FamilyMember, type Dream } from '@/store/useStore';
 
+
 const C = {
   brand: '#0C447C',
   green: '#1D9E75',
@@ -24,7 +25,7 @@ const { width: SW } = Dimensions.get('window');
 
 // ─── 進捗ステップ ─────────────────────────────────────────────────
 
-const STEPS = ['夢', '興味', '質問', '資産', '家族', '積立', '試算'] as const;
+const STEPS = ['夢', '興味', '質問', '資産', '家族', '積立', '給料日', '試算'] as const;
 type Step = typeof STEPS[number];
 
 function ProgressBar({ currentStep }: { currentStep: Step }) {
@@ -666,6 +667,90 @@ const sv = StyleSheet.create({
   nextBtnTxt: { fontSize: 16, fontWeight: '700', color: '#fff' },
 });
 
+// ─── 給料日の設定 ─────────────────────────────────────────────────
+
+const DAY_OPTIONS = [5, 10, 15, 20, 25, 28, 31];
+
+function PaydayStep({ onNext }: { onNext: (day: number, amount: number) => void }) {
+  const [day, setDay] = useState(25);
+  const [amount, setAmount] = useState('');
+
+  return (
+    <View style={{ flex: 1 }}>
+      <ScrollView contentContainerStyle={pd.content} keyboardShouldPersistTaps="handled">
+        <Text style={pd.heading}>給料日を教えてください</Text>
+        <Text style={pd.sub}>毎月の入金日を登録すると、✦ AIが自動で試算を更新します</Text>
+
+        <Text style={pd.fieldLabel}>給料日</Text>
+        <View style={pd.dayRow}>
+          {DAY_OPTIONS.map(d => (
+            <Pressable
+              key={d}
+              style={[pd.dayChip, day === d && pd.dayChipActive]}
+              onPress={() => setDay(d)}
+            >
+              <Text style={[pd.dayChipTxt, day === d && pd.dayChipTxtActive]}>{d}日</Text>
+            </Pressable>
+          ))}
+        </View>
+
+        <Text style={[pd.fieldLabel, { marginTop: 20 }]}>毎月の手取り収入（概算）</Text>
+        <View style={pd.inputRow}>
+          <Text style={pd.yen}>¥</Text>
+          <TextInput
+            style={pd.input}
+            value={amount}
+            onChangeText={setAmount}
+            keyboardType="number-pad"
+            placeholder="例：450000"
+            placeholderTextColor={C.textSecondary}
+          />
+        </View>
+        <Text style={pd.hint}>※ 後で変更できます</Text>
+      </ScrollView>
+      <View style={pd.footer}>
+        <Pressable style={pd.nextBtn} onPress={() => onNext(day, parseInt(amount.replace(/[^0-9]/g, ''), 10) || 0)}>
+          <Text style={pd.nextBtnTxt}>次へ</Text>
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+const pd = StyleSheet.create({
+  content: { padding: 20, paddingBottom: 16 },
+  heading: { fontSize: 20, fontWeight: '700', color: C.textPrimary, marginBottom: 6 },
+  sub: { fontSize: 13, color: C.textSecondary, lineHeight: 20, marginBottom: 24 },
+  fieldLabel: { fontSize: 13, color: C.textSecondary, marginBottom: 10 },
+  dayRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
+  dayChip: {
+    paddingVertical: 10, paddingHorizontal: 16,
+    backgroundColor: C.card, borderRadius: 10,
+    borderWidth: 0.5, borderColor: C.border,
+  },
+  dayChipActive: { backgroundColor: C.brand, borderColor: C.brand },
+  dayChipTxt: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
+  dayChipTxtActive: { color: '#fff' },
+  inputRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: C.card, borderRadius: 10,
+    borderWidth: 0.5, borderColor: C.border,
+    paddingHorizontal: 14,
+  },
+  yen: { fontSize: 18, color: C.textSecondary, marginRight: 4 },
+  input: {
+    flex: 1, fontSize: 20, fontWeight: '600', color: C.textPrimary,
+    paddingVertical: 12,
+  },
+  hint: { fontSize: 11, color: C.textSecondary, marginTop: 6 },
+  footer: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 10 },
+  nextBtn: {
+    backgroundColor: C.brand, borderRadius: 14,
+    paddingVertical: 16, alignItems: 'center',
+  },
+  nextBtnTxt: { fontSize: 16, fontWeight: '700', color: '#fff' },
+});
+
 // ─── AI試算ローディング ───────────────────────────────────────────
 
 const CALC_STEPS = [
@@ -738,16 +823,18 @@ const cs = StyleSheet.create({
 // ─── オンボーディング メイン ──────────────────────────────────────
 
 type OnboardingState = {
-  step: 'welcome' | 'interests' | 'questions' | 'pool' | 'family' | 'savings' | 'calculating';
+  step: 'welcome' | 'interests' | 'questions' | 'pool' | 'family' | 'savings' | 'payday' | 'calculating';
   interests: InterestItem[];
   answers: QuestionAnswer[];
   poolAmount: number;
   family: FamilyMember[];
   allocation: Record<string, number>;
+  paydayDay: number;
+  paydayAmount: number;
 };
 
 export default function OnboardingScreen() {
-  const { setOnboardingDone, setFamilyMembers, saveSavingsAllocation, addDream } = useStore();
+  const { setOnboardingDone, setFamilyMembers, saveSavingsAllocation, addDream, setPayday } = useStore();
 
   const [state, setState] = useState<OnboardingState>({
     step: 'welcome',
@@ -756,6 +843,8 @@ export default function OnboardingScreen() {
     poolAmount: 0,
     family: [],
     allocation: DEFAULT_ALLOCATION,
+    paydayDay: 25,
+    paydayAmount: 0,
   });
 
   const currentStepIndex: Record<OnboardingState['step'], Step> = {
@@ -765,21 +854,21 @@ export default function OnboardingScreen() {
     pool: '資産',
     family: '家族',
     savings: '積立',
+    payday: '給料日',
     calculating: '試算',
   };
 
   const handleFinish = () => {
-    // 家族情報をストアに保存
     setFamilyMembers(state.family.length > 0 ? state.family : [
       { id: 'self', name: 'あなた', role: 'self', birthYear: 1988 },
     ]);
 
-    // 積立配分をストアに保存
     saveSavingsAllocation({
       entries: [{ fromYear: new Date().getFullYear(), monthlyAmounts: state.allocation }],
     });
 
-    // 回答から夢を自動生成
+    setPayday(state.paydayDay, state.paydayAmount);
+
     for (const ans of state.answers) {
       if (!ans.skipped && ans.year) {
         const q = CATEGORY_QUESTIONS[ans.categoryId];
@@ -839,7 +928,12 @@ export default function OnboardingScreen() {
       )}
       {step === 'savings' && (
         <SavingsStep
-          onNext={(allocation) => setState(s => ({ ...s, allocation, step: 'calculating' }))}
+          onNext={(allocation) => setState(s => ({ ...s, allocation, step: 'payday' }))}
+        />
+      )}
+      {step === 'payday' && (
+        <PaydayStep
+          onNext={(paydayDay, paydayAmount) => setState(s => ({ ...s, paydayDay, paydayAmount, step: 'calculating' }))}
         />
       )}
       {step === 'calculating' && (
