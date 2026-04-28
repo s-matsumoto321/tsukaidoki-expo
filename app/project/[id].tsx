@@ -490,14 +490,19 @@ export default function ProjectDetailScreen() {
 
   const timeline = useMemo<TimelineItem[]>(() => {
     if (!project) return [];
+    const firstYear = parseYear(project.years[0]);
+    const limits: Record<Period, number> = { '生涯': lifeYears, '5年': 5, '1年': 1 };
+    const cutoffYear = firstYear + limits[period];
     const evItems: TimelineItem[] = project.events.map(ev => ({
       kind: 'event', ev, sortYear: parseYear(ev.year),
     }));
     const dreamItems: TimelineItem[] = dreams
       .filter(d => d.projectId === id)
       .map(d => ({ kind: 'dream', d, sortYear: d.year }));
-    return [...evItems, ...dreamItems].sort((a, b) => a.sortYear - b.sortYear);
-  }, [project, dreams, id]);
+    return [...evItems, ...dreamItems]
+      .filter(item => item.sortYear <= cutoffYear)
+      .sort((a, b) => a.sortYear - b.sortYear);
+  }, [project, dreams, id, period, lifeYears]);
 
   const currentMonthly = useMemo(
     () => getMonthlyForProject(savingsAllocation.entries, id ?? '', NOW_YEAR),
