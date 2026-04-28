@@ -1,7 +1,6 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { Activity, Building2, Home, Star, Settings } from 'lucide-react-native';
 import { colors, shadows } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -33,34 +32,32 @@ function CustomTabBar({ state, navigation }: TabBarProps) {
 
   return (
     <View style={[tb.container, { bottom: insets.bottom + 10 }]}>
-      <BlurView intensity={50} tint="light" style={tb.blurBox}>
-        <View style={tb.inner}>
-          {visibleRoutes.map((route: any) => {
-            const isFocused = state.routes[state.index]?.name === route.name;
-            const Icon = TAB_ICONS[route.name] ?? Home;
-            const iconColor = isFocused ? colors.sage : colors.textLight;
-            const label = TAB_LABELS[route.name] ?? route.name;
+      <View style={tb.inner}>
+        {visibleRoutes.map((route: any) => {
+          const isFocused = state.routes[state.index]?.name === route.name;
+          const Icon = TAB_ICONS[route.name] ?? Home;
+          const iconColor = isFocused ? colors.sage : colors.textLight;
+          const label = TAB_LABELS[route.name] ?? route.name;
 
-            const onPress = () => {
-              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
-              if (!isFocused && !event.defaultPrevented) {
-                navigation.navigate(route.name);
-              }
-            };
+          const onPress = () => {
+            const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
 
-            return (
-              <View
-                key={route.key}
-                style={[tb.tab, isFocused && tb.tabActive]}
-                onTouchEnd={onPress}
-              >
-                <Icon size={20} color={iconColor} strokeWidth={1.8} />
-                <Text style={[tb.label, isFocused && tb.labelActive]}>{label}</Text>
-              </View>
-            );
-          })}
-        </View>
-      </BlurView>
+          return (
+            <View
+              key={route.key}
+              style={[tb.tab, isFocused && tb.tabActive]}
+              onTouchEnd={onPress}
+            >
+              <Icon size={20} color={iconColor} strokeWidth={1.8} />
+              <Text style={[tb.label, isFocused && tb.labelActive]}>{label}</Text>
+            </View>
+          );
+        })}
+      </View>
     </View>
   );
 }
@@ -90,15 +87,12 @@ const tb = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.floating,
   },
-  blurBox: {
-    borderRadius: 28,
-    overflow: 'hidden',
-  },
   inner: {
     flexDirection: 'row',
     paddingHorizontal: 8,
     paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+    backgroundColor: 'rgba(255,255,255,0.97)',
+    borderRadius: 28,
   },
   tab: {
     flex: 1,
