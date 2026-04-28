@@ -8,8 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, {
   Path, Line as SvgLine, Text as SvgText, Rect, G,
 } from 'react-native-svg';
-import { PROJECTS } from '@/constants/projects';
-import { PF_ITEMS } from '@/constants/data';
+import { type FinancialItem } from '@/constants/data';
 import { useStore, type AllocationEntry } from '@/store/useStore';
 
 const C = {
@@ -23,7 +22,6 @@ const C = {
   borderMd: 'rgba(0,0,0,0.18)',
 };
 
-const PROJECT_ORDER = ['edu', 'ret', 'car', 'trip'] as const;
 const START_YEAR = 2025;
 const END_YEAR = 2065;
 const YEARS = Array.from({ length: END_YEAR - START_YEAR + 1 }, (_, i) => START_YEAR + i);
@@ -35,8 +33,8 @@ const PR = 8;
 const PT = 12;
 const PB = 28;
 
-function getProjectColor(projectId: string): string {
-  return PF_ITEMS.find(i => i.projectId === projectId)?.color ?? C.brand;
+function getProjectColor(pfItems: FinancialItem[], projectId: string): string {
+  return pfItems.find(i => i.projectId === projectId)?.color ?? C.brand;
 }
 
 function getAmountsForYear(
@@ -67,11 +65,15 @@ function StackedAreaChart({
   selectedYearIdx,
   svgW,
   onYearSelect,
+  pfItems,
+  projectOrder,
 }: {
   entries: AllocationEntry[];
   selectedYearIdx: number;
   svgW: number;
   onYearSelect: (idx: number) => void;
+  pfItems: FinancialItem[];
+  projectOrder: string[];
 }) {
   const gW = svgW - PL - PR;
   const gH = SVG_H - PT - PB;
@@ -82,14 +84,14 @@ function StackedAreaChart({
       const amounts = getAmountsForYear(yr, entries);
       let cum = 0;
       const stacks: Record<string, { bottom: number; top: number }> = {};
-      for (const id of PROJECT_ORDER) {
+      for (const id of projectOrder) {
         const amt = amounts[id] ?? 0;
         stacks[id] = { bottom: cum, top: cum + amt };
         cum += amt;
       }
       return { year: yr, stacks, total: cum };
     });
-  }, [entries]);
+  }, [entries, projectOrder]);
 
   const maxTotal = useMemo(() => {
     const raw = Math.max(...yearStacks.map(d => d.total));
@@ -108,10 +110,14 @@ function StackedAreaChart({
   const changeYears = entries.map(e => e.fromYear - START_YEAR).filter(i => i >= 0 && i < n);
 
   const buildPath = (id: string) => {
-    const tops = yearStacks.map((d, i) => `${xi(i).toFixed(1)},${yv(d.stacks[id].top).toFixed(1)}`);
-    const bots = [...yearStacks].reverse().map((d, i) =>
-      `${xi(n - 1 - i).toFixed(1)},${yv(d.stacks[id].bottom).toFixed(1)}`
-    );
+    const tops = yearStacks.map((d, i) => {
+      const s = d.stacks[id] ?? { top: 0, bottom: 0 };
+      return `${xi(i).toFixed(1)},${yv(s.top).toFixed(1)}`;
+    });
+    const bots = [...yearStacks].reverse().map((d, i) => {
+      const s = d.stacks[id] ?? { top: 0, bottom: 0 };
+      return `${xi(n - 1 - i).toFixed(1)},${yv(s.bottom).toFixed(1)}`;
+    });
     return `M ${tops.join(' L ')} L ${bots.join(' L ')} Z`;
   };
 
@@ -145,11 +151,11 @@ function StackedAreaChart({
       ))}
 
       {/* 積み上げ面 */}
-      {[...PROJECT_ORDER].reverse().map(id => (
+      {[...projectOrder].reverse().map(id => (
         <Path
           key={id}
           d={buildPath(id)}
-          fill={getProjectColor(id)}
+          fill={getProjectColor(pfItems, id)}
           opacity={0.72}
         />
       ))}
@@ -216,13 +222,17 @@ function StackedAreaChart({
 
 // ─── 凡例 ──────────────────────────────────────────────────────────
 
-function Legend() {
+function Legend({ pfItems, projects, projectOrder }: {
+  pfItems: FinancialItem[];
+  projects: Record<string, { name: string }>;
+  projectOrder: string[];
+}) {
   return (
     <View style={s.legendRow}>
-      {PROJECT_ORDER.map(id => (
+      {projectOrder.map(id => (
         <View key={id} style={s.legendItem}>
-          <View style={[s.legendDot, { backgroundColor: getProjectColor(id) }]} />
-          <Text style={s.legendTxt}>{PROJECTS[id]?.name ?? id}</Text>
+          <View style={[s.legendDot, { backgroundColor: getProjectColor(pfItems, id) }]} />
+          <Text style={s.legendTxt}>{projects[id]?.name ?? id}</Text>
         </View>
       ))}
     </View>
@@ -238,6 +248,9 @@ function AllocationEditor({
   onChange,
   onAdd,
   onDelete,
+  pfItems,
+  projects,
+  projectOrder,
 }: {
   selectedYear: number;
   editAmounts: Record<string, number>;
@@ -245,8 +258,11 @@ function AllocationEditor({
   onChange: (id: string, val: number) => void;
   onAdd: () => void;
   onDelete: () => void;
+  pfItems: FinancialItem[];
+  projects: Record<string, { name: string }>;
+  projectOrder: string[];
 }) {
-  const total = PROJECT_ORDER.reduce((s, id) => s + (editAmounts[id] ?? 0), 0);
+  const total = projectOrder.reduce((s, id) => s + (editAmounts[id] ?? 0), 0);
 
   return (
     <View style={s.editorCard}>
@@ -261,13 +277,13 @@ function AllocationEditor({
         )}
       </View>
 
-      {PROJECT_ORDER.map(id => {
-        const color = getProjectColor(id);
+      {projectOrder.map(id => {
+        const color = getProjectColor(pfItems, id);
         const amt = editAmounts[id] ?? 0;
         return (
           <View key={id} style={s.editorRow}>
             <View style={[s.editorDot, { backgroundColor: color }]} />
-            <Text style={s.editorName}>{PROJECTS[id]?.name ?? id}</Text>
+            <Text style={s.editorName}>{projects[id]?.name ?? id}</Text>
             <View style={s.editorInputWrap}>
               <Text style={s.editorYen}>¥</Text>
               <TextInput
@@ -305,17 +321,19 @@ function EntryList({
   entries,
   selectedYear,
   onSelect,
+  projectOrder,
 }: {
   entries: AllocationEntry[];
   selectedYear: number;
   onSelect: (year: number) => void;
+  projectOrder: string[];
 }) {
   const sorted = [...entries].sort((a, b) => a.fromYear - b.fromYear);
   return (
     <View style={s.entryList}>
       <Text style={s.entryListTitle}>変更ポイント</Text>
       {sorted.map((entry, i) => {
-        const total = PROJECT_ORDER.reduce((s, id) => s + (entry.monthlyAmounts[id] ?? 0), 0);
+        const total = projectOrder.reduce((s, id) => s + (entry.monthlyAmounts[id] ?? 0), 0);
         const isSel = entry.fromYear === selectedYear;
         return (
           <Pressable
@@ -344,12 +362,14 @@ function EntryList({
 export default function AllocationScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { savingsAllocation, saveSavingsAllocation } = useStore();
+  const { savingsAllocation, saveSavingsAllocation, pfItems, projects, dreamOrder } = useStore();
+  const projectOrder = dreamOrder;
 
+  const defaultMonthly = Object.fromEntries(projectOrder.map(id => [id, 30000]));
   const [entries, setEntries] = useState<AllocationEntry[]>(
     savingsAllocation.entries.length > 0
       ? savingsAllocation.entries
-      : [{ fromYear: START_YEAR, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 10000 } }],
+      : [{ fromYear: START_YEAR, monthlyAmounts: defaultMonthly }],
   );
   const [selectedYearIdx, setSelectedYearIdx] = useState(0);
 
@@ -423,8 +443,10 @@ export default function AllocationScreen() {
             selectedYearIdx={selectedYearIdx}
             svgW={svgW}
             onYearSelect={handleYearSelect}
+            pfItems={pfItems}
+            projectOrder={projectOrder}
           />
-          <Legend />
+          <Legend pfItems={pfItems} projects={projects} projectOrder={projectOrder} />
         </View>
 
         {/* 配分エディタ */}
@@ -435,6 +457,9 @@ export default function AllocationScreen() {
           onChange={handleChange}
           onAdd={handleAdd}
           onDelete={handleDelete}
+          pfItems={pfItems}
+          projects={projects}
+          projectOrder={projectOrder}
         />
 
         {/* 変更ポイント一覧 */}
@@ -442,6 +467,7 @@ export default function AllocationScreen() {
           entries={entries}
           selectedYear={selectedYear}
           onSelect={handleYearSelect}
+          projectOrder={projectOrder}
         />
       </ScrollView>
 

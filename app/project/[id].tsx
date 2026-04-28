@@ -9,9 +9,8 @@ import Svg, {
   Line as SvgLine, Polyline, Circle,
   Text as SvgText, G, Rect, Path,
 } from 'react-native-svg';
-import { PROJECTS, type Project, type ProjectEvent } from '@/constants/projects';
+import { type Project, type ProjectEvent } from '@/constants/projects';
 import { useStore, type AllocationEntry, type Dream } from '@/store/useStore';
-import { PF_ITEMS } from '@/constants/data';
 import { BalanceSheet } from '@/components/balance-sheet';
 
 const C = {
@@ -51,9 +50,6 @@ function fmtY(v: number): string {
   return `${v}万`;
 }
 
-function getProjectColor(projectId: string): string {
-  return PF_ITEMS.find(i => i.projectId === projectId)?.color ?? C.brand;
-}
 
 function getMonthlyForProject(entries: AllocationEntry[], projectId: string, year: number): number {
   const sorted = [...entries].sort((a, b) => b.fromYear - a.fromYear);
@@ -71,14 +67,13 @@ type Period = '生涯' | '5年' | '1年';
 
 // ─── 折れ線グラフ（試算ライン + ★マーカー） ──────────────────────
 
-function LineChart({ id, svgW, period, dreamYears, lifetimeYears }: {
-  id: string;
+function LineChart({ project, svgW, period, dreamYears, lifetimeYears }: {
+  project: Project | undefined;
   svgW: number;
   period: Period;
   dreamYears: number[];
   lifetimeYears: number;
 }) {
-  const project = PROJECTS[id];
   if (!project) return null;
 
   const limitMap: Record<Period, number> = { '生涯': lifetimeYears, '5年': 5, '1年': 1 };
@@ -463,12 +458,12 @@ const dr = StyleSheet.create({
 
 export default function ProjectDetailScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
-  const project = PROJECTS[id ?? ''];
+  const { balances, dreams, savingsAllocation, aiInsights, familyMembers, projects, pfItems } = useStore();
+  const project = projects[id ?? ''];
   const isAccount = project?.kind === 'account';
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
 
-  const { balances, dreams, savingsAllocation, aiInsights, familyMembers } = useStore();
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
 
   const [period, setPeriod] = useState<Period>('生涯');
@@ -511,7 +506,7 @@ export default function ProjectDetailScreen() {
   );
 
   const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
-  const projectColor = getProjectColor(id ?? '');
+  const projectColor = pfItems.find(i => i.projectId === (id ?? ''))?.color ?? C.brand;
 
   const handleEventPress = useCallback((ev: ProjectEvent) => {
     if (ev.type === 'start') {
@@ -590,7 +585,7 @@ export default function ProjectDetailScreen() {
               ))}
             </View>
           </View>
-          <LineChart id={id ?? ''} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} />
+          <LineChart project={project} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} />
         </View>
 
       </ScrollView>

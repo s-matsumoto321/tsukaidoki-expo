@@ -1,7 +1,6 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-native';
 import { router } from 'expo-router';
-import { POOL_ITEMS, PF_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { Logo } from '@/components/logo';
 
@@ -38,13 +37,13 @@ function MenuItem({ label, sub, onPress, accent = C.brand }: MenuItemProps) {
 }
 
 export default function ManageScreen() {
-  const { balances } = useStore();
+  const { balances, poolItems, pfItems } = useStore();
 
-  const poolTotal = POOL_ITEMS.reduce(
+  const poolTotal = poolItems.reduce(
     (sum, item) => sum + (balances[item.projectId!] ?? item.amount),
     0
   );
-  const pfTotal = PF_ITEMS.reduce(
+  const pfTotal = pfItems.reduce(
     (sum, item) => sum + (item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount),
     0
   );
@@ -76,14 +75,14 @@ export default function ManageScreen() {
           <View style={s.menuCard}>
             <MenuItem
               label="プール金"
-              sub={`${POOL_ITEMS.length}口座 · ¥${poolTotal.toLocaleString('ja-JP')}`}
+              sub={`${poolItems.length}口座 · ¥${poolTotal.toLocaleString('ja-JP')}`}
               accent={C.brand}
               onPress={() => router.push('/pool')}
             />
             <View style={s.divider} />
             <MenuItem
               label="ポートフォリオ"
-              sub={`${PF_ITEMS.length}件 · ¥${pfTotal.toLocaleString('ja-JP')}`}
+              sub={`${pfItems.length}件 · ¥${pfTotal.toLocaleString('ja-JP')}`}
               accent={C.green}
               onPress={() => {}}
             />

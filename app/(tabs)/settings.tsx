@@ -26,7 +26,24 @@ function MenuItem({ label, sub, onPress, accent = colors.sage, showArrow = true 
 }
 
 export default function SettingsScreen() {
-  const { setOnboardingDone, isPremium } = useStore();
+  const { setOnboardingDone, isPremium, resetToDefaults } = useStore();
+
+  const handleResetAllData = () => {
+    Alert.alert(
+      'テストデータをリセット',
+      '口座・プロジェクト・残高・夢・シナリオをすべてデフォルト値に戻します。この操作は取り消せません。',
+      [
+        { text: 'キャンセル', style: 'cancel' },
+        {
+          text: 'リセットする',
+          style: 'destructive',
+          onPress: () => {
+            resetToDefaults();
+          },
+        },
+      ],
+    );
+  };
 
   const handleResetOnboarding = () => {
     Alert.alert(
@@ -133,6 +150,18 @@ export default function SettingsScreen() {
               sub="最初の設定フローをもう一度実行"
               accent={colors.honey}
               onPress={handleResetOnboarding}
+            />
+          </View>
+        </View>
+
+        <View style={s.section}>
+          <Text style={s.sectionTitle}>テスト・開発</Text>
+          <View style={s.menuCard}>
+            <MenuItem
+              label="テストデータをリセット"
+              sub="口座・残高・プロジェクト・シナリオをデフォルトに戻す"
+              accent="#E24B4A"
+              onPress={handleResetAllData}
             />
           </View>
         </View>

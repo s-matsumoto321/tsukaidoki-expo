@@ -6,7 +6,6 @@ import {
 } from 'react-native';
 import { router } from 'expo-router';
 import { useStore, type ScenarioMeta } from '@/store/useStore';
-import { POOL_ITEMS } from '@/constants/data';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { Plus } from 'lucide-react-native';
 
@@ -215,12 +214,12 @@ const ma = StyleSheet.create({
 // ─── ScenarioScreen ─────────────────────────────────────────────────
 
 export default function ScenarioScreen() {
-  const { scenarios, activeScenarioId, scenariosData, balances, dreams, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
+  const { scenarios, activeScenarioId, scenariosData, balances, dreams, poolItems, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [switching, setSwitching] = useState(false);
   const isPremium = useStore(s => s.isPremium);
 
-  const poolTotal = POOL_ITEMS.reduce(
+  const poolTotal = poolItems.reduce(
     (sum, item) => sum + (balances[item.projectId!] ?? item.amount),
     0,
   );
@@ -229,7 +228,7 @@ export default function ScenarioScreen() {
     if (id === activeScenarioId) return poolTotal;
     const data = scenariosData[id];
     if (!data) return poolTotal;
-    return POOL_ITEMS.reduce(
+    return poolItems.reduce(
       (sum, item) => sum + (data.balances[item.projectId!] ?? item.amount),
       0,
     );

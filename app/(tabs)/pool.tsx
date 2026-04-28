@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg';
-import { POOL_ITEMS } from '@/constants/data';
+import { type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 
@@ -41,6 +41,7 @@ function projectYearly(initial: number, monthly: number, rate: number, yearCount
 }
 
 function buildCumulativeStacks(
+  items: FinancialItem[],
   balMap: Record<string, number>,
   monthlyMap: Record<string, number>,
   rateMap: Record<string, number>,
@@ -48,7 +49,7 @@ function buildCumulativeStacks(
 ): number[][] {
   const stacks: number[][] = [];
   let prev = new Array(yearCount).fill(0) as number[];
-  for (const item of POOL_ITEMS) {
+  for (const item of items) {
     const id = item.projectId!;
     const proj = projectYearly(balMap[id] ?? item.amount, monthlyMap[id] ?? 0, rateMap[id] ?? 0, yearCount);
     const cum = proj.map((v, i) => v + prev[i]);
@@ -176,7 +177,7 @@ function MultiLineChart({
 
 // ── 残高行 ────────────────────────────────────────────────────────────
 
-type PoolItem = typeof POOL_ITEMS[0] & { balance: number; rate: number; monthly: number };
+type PoolItem = FinancialItem & { balance: number; rate: number; monthly: number };
 
 function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, newVal: number) => void }) {
   const [editing, setEditing] = useState(false);
@@ -269,7 +270,7 @@ const AMT_STEP = 1000;
 const RATE_STEP = 0.001;
 
 function AllocationSheet({
-  open, draft, onChangeDraft, draftStacks, svgW, yearCount, onApply, onClose, bottomPad,
+  open, draft, onChangeDraft, draftStacks, svgW, yearCount, onApply, onClose, bottomPad, poolItems,
 }: {
   open: boolean;
   draft: DraftState;
@@ -280,6 +281,7 @@ function AllocationSheet({
   onApply: () => void;
   onClose: () => void;
   bottomPad: number;
+  poolItems: FinancialItem[];
 }) {
   const insets = useSafeAreaInsets();
   const [rangeMode, setRangeMode] = useState<RangeMode>('生涯');
@@ -325,7 +327,7 @@ function AllocationSheet({
 
       <View style={sh.chartCard}>
         <View style={sh.legendRow}>
-          {POOL_ITEMS.map(item => (
+          {poolItems.map(item => (
             <View key={item.projectId} style={sh.legendItem}>
               <View style={[sh.legendDot, { backgroundColor: item.color }]} />
               <Text style={sh.legendTxt}>{item.name}</Text>
@@ -337,7 +339,7 @@ function AllocationSheet({
           chartH={130}
           yearCount={displayYearCount}
           stacks={draftStacks}
-          colors={POOL_ITEMS.map(i => i.color)}
+          colors={poolItems.map(i => i.color)}
         />
       </View>
 
@@ -389,7 +391,7 @@ function AllocationSheet({
         </View>
 
         <Text style={[sh.sectionLabel, { marginTop: 12 }]}>各口座の設定</Text>
-        {POOL_ITEMS.map(item => {
+        {poolItems.map(item => {
           const id = item.projectId!;
           const monthly = draft.monthlyAmounts[id] ?? 0;
           const rate = draft.interestRates[id] ?? 0;
@@ -563,7 +565,7 @@ const sh = StyleSheet.create({
 export default function PoolScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers, updateBalance } = useStore();
+  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers, updateBalance, poolItems } = useStore();
 
   const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1990;
   const yearCount = Math.max(10, (selfBirthYear + 100) - NOW_YEAR);
@@ -576,10 +578,10 @@ export default function PoolScreen() {
   const svgW = screenWidth - 32;
   const savedRates = savingsAllocation.interestRates ?? {};
 
-  const poolItems = useMemo<PoolItem[]>(() => {
+  const enrichedPoolItems = useMemo<PoolItem[]>(() => {
     const sortedEntries = [...savingsAllocation.entries].sort((a, b) => b.fromYear - a.fromYear);
     const currentEntry = sortedEntries.find(e => e.fromYear <= NOW_YEAR);
-    return POOL_ITEMS.map(item => {
+    return poolItems.map(item => {
       const id = item.projectId!;
       return {
         ...item,
@@ -588,34 +590,36 @@ export default function PoolScreen() {
         rate: savedRates[id] ?? DEFAULT_RATES[id] ?? 0,
       };
     });
-  }, [balances, savingsAllocation]);
+  }, [balances, savingsAllocation, poolItems]);
 
-  const totalBalance = poolItems.reduce((sum, i) => sum + i.balance, 0);
+  const totalBalance = enrichedPoolItems.reduce((sum, i) => sum + i.balance, 0);
 
   const savedStacks = useMemo(() => buildCumulativeStacks(
-    Object.fromEntries(poolItems.map(i => [i.projectId!, i.balance])),
-    Object.fromEntries(poolItems.map(i => [i.projectId!, i.monthly])),
-    Object.fromEntries(poolItems.map(i => [i.projectId!, i.rate])),
+    poolItems,
+    Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.balance])),
+    Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.monthly])),
+    Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.rate])),
     yearCount
-  ), [poolItems, yearCount]);
+  ), [poolItems, enrichedPoolItems, yearCount]);
 
   const draftStacks = useMemo(() => {
     if (!overlayOpen) return savedStacks;
     return buildCumulativeStacks(
-      Object.fromEntries(poolItems.map(i => [i.projectId!, i.balance])),
+      poolItems,
+      Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.balance])),
       draft.monthlyAmounts,
       draft.interestRates,
       yearCount
     );
-  }, [overlayOpen, draft, poolItems, yearCount, savedStacks]);
+  }, [overlayOpen, draft, poolItems, enrichedPoolItems, yearCount, savedStacks]);
 
   const openOverlay = () => {
     setDraft({
       fromYear: NOW_YEAR,
       toYear: NOW_YEAR + 10,
-      monthlyAmounts: Object.fromEntries(poolItems.map(i => [i.projectId!, i.monthly])),
+      monthlyAmounts: Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.monthly])),
       interestRates: Object.fromEntries(
-        poolItems.map(i => [i.projectId!, savedRates[i.projectId!] ?? DEFAULT_RATES[i.projectId!] ?? 0])
+        enrichedPoolItems.map(i => [i.projectId!, savedRates[i.projectId!] ?? DEFAULT_RATES[i.projectId!] ?? 0])
       ),
     });
     setOverlayOpen(true);
@@ -649,7 +653,7 @@ export default function PoolScreen() {
   };
 
   const handleBalanceSave = (id: string, newVal: number) => {
-    const item = poolItems.find(i => i.projectId === id);
+    const item = enrichedPoolItems.find(i => i.projectId === id);
     if (!item) return;
     updateBalance(id, item.balance, newVal, '残高修正');
   };
@@ -670,7 +674,7 @@ export default function PoolScreen() {
       {/* 積み上げ面積グラフ */}
       <View style={ps.chartCard}>
         <View style={ps.legendRow}>
-          {POOL_ITEMS.map(item => (
+          {poolItems.map(item => (
             <View key={item.projectId} style={ps.legendItem}>
               <View style={[ps.legendDot, { backgroundColor: item.color }]} />
               <Text style={ps.legendTxt}>{item.name}</Text>
@@ -681,7 +685,7 @@ export default function PoolScreen() {
           svgW={svgW}
           yearCount={yearCount}
           stacks={savedStacks}
-          colors={POOL_ITEMS.map(i => i.color)}
+          colors={poolItems.map(i => i.color)}
         />
       </View>
 
@@ -696,7 +700,7 @@ export default function PoolScreen() {
           contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: insets.bottom + 80 }}
           showsVerticalScrollIndicator={false}
         >
-          {poolItems.map(item => (
+          {enrichedPoolItems.map(item => (
             <BalanceRow key={item.projectId} item={item} onSave={handleBalanceSave} />
           ))}
         </ScrollView>
@@ -719,6 +723,7 @@ export default function PoolScreen() {
         onApply={applyDraft}
         onClose={() => setOverlayOpen(false)}
         bottomPad={insets.bottom + 4}
+        poolItems={poolItems}
       />
     </SafeAreaView>
   );

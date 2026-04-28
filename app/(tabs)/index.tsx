@@ -6,7 +6,7 @@ import {
 } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
-import { POOL_ITEMS, PF_ITEMS, type FinancialItem } from '@/constants/data';
+import { type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { X, Menu, ChevronDown } from 'lucide-react-native';
@@ -103,7 +103,7 @@ function fmtMan(yen: number): string {
 // ─── ホーム画面 ──────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { balances, scenarios, activeScenarioId, dreams } = useStore();
+  const { balances, scenarios, activeScenarioId, dreams, poolItems, pfItems } = useStore();
   const activeScenario = scenarios.find(sc => sc.id === activeScenarioId) ?? scenarios[0];
 
   const [menuVisible, setMenuVisible] = useState(false);
@@ -134,22 +134,22 @@ export default function HomeScreen() {
     openMenu();
   };
 
-  const poolItems = POOL_ITEMS.map(item => ({
+  const livePoolItems = poolItems.map(item => ({
     ...item,
     amount: balances[item.projectId!] ?? item.amount,
   }));
-  const pfItems = PF_ITEMS.map(item => ({
+  const livePfItems = pfItems.map(item => ({
     ...item,
     amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
   }));
 
-  const poolTotal = poolItems.reduce((sum, item) => sum + item.amount, 0);
-  const pfTotal   = pfItems.reduce((sum, item) => sum + item.amount, 0);
+  const poolTotal = livePoolItems.reduce((sum, item) => sum + item.amount, 0);
+  const pfTotal   = livePfItems.reduce((sum, item) => sum + item.amount, 0);
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
-  const pjCount   = PF_ITEMS.filter(i => i.projectId).length;
-  const acctCount = POOL_ITEMS.length;
+  const pjCount   = pfItems.filter(i => i.projectId).length;
+  const acctCount = poolItems.length;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -228,22 +228,22 @@ export default function HomeScreen() {
               title="プール金"
               badge="口座別"
               total={fmtMan(poolTotal)}
-              sub={`${POOL_ITEMS.length}口座`}
-              items={poolItems}
+              sub={`${poolItems.length}口座`}
+              items={livePoolItems}
               route={'/(tabs)/pool' as any}
             />
             <ChartCard
               title="使いみち"
               badge="用途別"
               total={fmtMan(pfTotal)}
-              sub={`${PF_ITEMS.length}件`}
-              items={pfItems}
+              sub={`${pfItems.length}件`}
+              items={livePfItems}
               route="/(tabs)/explore"
             />
           </View>
 
           {/* ⑥ AIインサイト */}
-          <AiInsightCard pfItems={pfItems} dreamCount={dreams.length} />
+          <AiInsightCard pfItems={livePfItems} dreamCount={dreams.length} />
 
         </ScrollView>
       </SafeAreaView>

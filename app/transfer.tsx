@@ -3,7 +3,6 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { POOL_ITEMS } from '@/constants/data';
 
 const C = {
   brand: '#5B8E7D',
@@ -20,7 +19,7 @@ const C = {
 
 export default function TransferScreen() {
   const insets = useSafeAreaInsets();
-  const { balances, addTransfer } = useStore();
+  const { balances, addTransfer, poolItems } = useStore();
 
   const [fromId, setFromId] = useState<string | null>(null);
   const [toId, setToId] = useState<string | null>(null);
@@ -32,8 +31,8 @@ export default function TransferScreen() {
   }
 
   const amount = parseInt(amtText, 10) || 0;
-  const fromItem = POOL_ITEMS.find(i => i.projectId === fromId);
-  const toItem = POOL_ITEMS.find(i => i.projectId === toId);
+  const fromItem = poolItems.find(i => i.projectId === fromId);
+  const toItem = poolItems.find(i => i.projectId === toId);
   const fromBalance = fromItem ? getBalance(fromItem.projectId!, fromItem.amount) : 0;
   const toBalance = toItem ? getBalance(toItem.projectId!, toItem.amount) : 0;
 
@@ -64,10 +63,10 @@ export default function TransferScreen() {
         {/* From */}
         <Text style={s.sectionLabel}>振替元</Text>
         <View style={s.card}>
-          {POOL_ITEMS.map((item, i) => {
+          {poolItems.map((item, i) => {
             const isSelected = fromId === item.projectId;
             const bal = getBalance(item.projectId!, item.amount);
-            const isLast = i === POOL_ITEMS.length - 1;
+            const isLast = i === poolItems.length - 1;
             return (
               <Pressable
                 key={item.name}
@@ -90,11 +89,11 @@ export default function TransferScreen() {
         {/* To */}
         <Text style={s.sectionLabel}>振替先</Text>
         <View style={s.card}>
-          {POOL_ITEMS.map((item, i) => {
+          {poolItems.map((item, i) => {
             const isSelected = toId === item.projectId;
             const isFrom = fromId === item.projectId;
             const bal = getBalance(item.projectId!, item.amount);
-            const isLast = i === POOL_ITEMS.length - 1;
+            const isLast = i === poolItems.length - 1;
             return (
               <Pressable
                 key={item.name}

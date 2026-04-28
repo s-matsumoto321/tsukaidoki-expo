@@ -1,6 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { POOL_ITEMS as DEFAULT_POOL_ITEMS, PF_ITEMS as DEFAULT_PF_ITEMS, type FinancialItem } from '@/constants/data';
+import { PROJECTS as DEFAULT_PROJECTS, type Project } from '@/constants/projects';
 
 export type UserEvent = {
   id: string;
@@ -111,6 +113,10 @@ type State = {
   isPremium: boolean;
   paydayDay: number;
   paydayAmount: number;
+
+  poolItems: FinancialItem[];
+  pfItems: FinancialItem[];
+  projects: Record<string, Project>;
 };
 
 type Actions = {
@@ -133,6 +139,7 @@ type Actions = {
   setAiInsight: (key: string, text: string) => void;
   setPremium: (val: boolean) => void;
   setPayday: (day: number, amount: number) => void;
+  resetToDefaults: () => void;
 };
 
 function dateLabel(): string {
@@ -182,6 +189,10 @@ export const useStore = create<State & Actions>()(
       isPremium: false,
       paydayDay: 25,
       paydayAmount: 0,
+
+      poolItems: DEFAULT_POOL_ITEMS,
+      pfItems: DEFAULT_PF_ITEMS,
+      projects: DEFAULT_PROJECTS,
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -411,6 +422,28 @@ export const useStore = create<State & Actions>()(
       setPremium: (val) => set({ isPremium: val }),
 
       setPayday: (day, amount) => set({ paydayDay: day, paydayAmount: amount }),
+
+      resetToDefaults: () => set({
+        poolItems: DEFAULT_POOL_ITEMS,
+        pfItems: DEFAULT_PF_ITEMS,
+        projects: DEFAULT_PROJECTS,
+        balances: {},
+        userEvents: {},
+        dreamOrder: ['edu', 'ret', 'car', 'trip'],
+        actualOverrides: {},
+        spendPlanOverrides: {},
+        savingsAllocation: {
+          entries: [
+            { fromYear: 2025, monthlyAmounts: { edu: 30000, ret: 50000, car: 40000, trip: 30000 } },
+          ],
+        },
+        dreams: DEFAULT_DREAMS,
+        familyMembers: DEFAULT_FAMILY,
+        scenarios: [{ id: 'plan-a', systemLabel: 'A', userLabel: 'メイン' }],
+        activeScenarioId: 'plan-a',
+        scenariosData: {},
+        aiInsights: {},
+      }),
     }),
     {
       name: 'tsukaidoki-store',
