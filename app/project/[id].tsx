@@ -541,8 +541,8 @@ export default function ProjectDetailScreen() {
         </View>
       </View>
 
-      {/* AIインサイト + グラフ（スクロール可能） */}
-      <ScrollView style={{ backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: 6 }}>
+      {/* AIインサイト + グラフ（上半分・スクロール可能） */}
+      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: 6 }}>
 
         {/* AIインサイト */}
         {aiText ? (
