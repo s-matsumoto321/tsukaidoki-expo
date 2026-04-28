@@ -5,32 +5,15 @@ import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-nativ
 import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
-import { Logo } from '@/components/logo';
-
-const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  greenBg: '#EAF3DE',
-  greenText: '#27500A',
-  orange: '#EF9F27',
-  orangeBg: '#FEF3E2',
-  aiCard: '#E6F1FB',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-};
-
-// PJごとのゴール年・目標金額（動的進捗計算用）
-const GOAL_YEARS: Record<string, number> = { edu: 2044, ret: 2050, car: 2028, trip: 2037 };
-const PJ_TARGETS: Record<string, number> = { edu: 5_000_000, ret: 30_000_000, car: 2_000_000, trip: 2_660_000 };
-const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
+import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
 
-// ─── 月の積立量を取得 ─────────────────────────────────────────────
+const GOAL_YEARS: Record<string, number> = { edu: 2044, ret: 2050, car: 2028, trip: 2037 };
+const PJ_TARGETS: Record<string, number> = { edu: 5_000_000, ret: 30_000_000, car: 2_000_000, trip: 2_660_000 };
+const SHOWN_IDS = ['edu', 'ret', 'car', 'trip'];
+const NOW_YEAR = new Date().getFullYear();
 
 function getMonthlyAmt(
   entries: { fromYear: number; monthlyAmounts: Record<string, number> }[],
@@ -42,7 +25,7 @@ function getMonthlyAmt(
   return entry?.monthlyAmounts[projectId] ?? 0;
 }
 
-// ─── AIインサイトカード ───────────────────────────────────────────
+// ─── AIインサイトカード ──────────────────────────────────────────────
 
 function AiInsightCard({ text }: { text: string }) {
   if (!text) return null;
@@ -59,7 +42,7 @@ function AiInsightCard({ text }: { text: string }) {
   );
 }
 
-// ─── 積立金調整パネル ─────────────────────────────────────────────
+// ─── 積立金調整パネル ─────────────────────────────────────────────────
 
 type AllocationPanelProps = {
   pfItems: CardItem[];
@@ -85,7 +68,6 @@ function AllocationPanel({
   return (
     <View style={ap.wrap}>
       <View style={ap.body}>
-        {/* 月の積立配分バー */}
         <Text style={ap.sectionLabel}>
           月の積立配分　合計 ¥{totalMonthly.toLocaleString('ja-JP')}/月
         </Text>
@@ -117,7 +99,6 @@ function AllocationPanel({
           })}
         </View>
 
-        {/* 各PJ調整行 */}
         <Text style={[ap.sectionLabel, { marginTop: 14 }]}>各PJ調整（月積立 / 残高）</Text>
         {pfItems.filter(i => i.projectId).map(item => {
           const id = item.projectId!;
@@ -129,7 +110,6 @@ function AllocationPanel({
               <View style={[ap.pjDot, { backgroundColor: item.color }]} />
               <View style={ap.pjInfo}>
                 <Text style={ap.pjName} numberOfLines={1}>{item.name}</Text>
-                {/* 残高：鉛筆アイコンでインライン編集 */}
                 {isEditingBal ? (
                   <View style={ap.balanceEditRow}>
                     <Text style={ap.balancePrefix}>¥</Text>
@@ -153,12 +133,8 @@ function AllocationPanel({
                   </Pressable>
                 )}
               </View>
-              {/* 月積立ステッパー */}
               <View style={ap.stepper}>
-                <Pressable
-                  style={ap.stepBtn}
-                  onPress={() => onChangeMonthly(id, Math.max(0, monthly - 1000))}
-                >
+                <Pressable style={ap.stepBtn} onPress={() => onChangeMonthly(id, Math.max(0, monthly - 1000))}>
                   <Text style={ap.stepBtnTxt}>−</Text>
                 </Pressable>
                 <TextInput
@@ -171,10 +147,7 @@ function AllocationPanel({
                   keyboardType="number-pad"
                   selectTextOnFocus
                 />
-                <Pressable
-                  style={ap.stepBtn}
-                  onPress={() => onChangeMonthly(id, monthly + 1000)}
-                >
+                <Pressable style={ap.stepBtn} onPress={() => onChangeMonthly(id, monthly + 1000)}>
                   <Text style={ap.stepBtnTxt}>＋</Text>
                 </Pressable>
               </View>
@@ -182,7 +155,6 @@ function AllocationPanel({
           );
         })}
 
-        {/* AI自動配分調整（パネル内） */}
         <AiAllocationCard items={pfItems} localMonthly={localMonthly} onApply={onAiApply} />
 
         <Pressable style={ap.applyBtn} onPress={onSave}>
@@ -194,13 +166,13 @@ function AllocationPanel({
 }
 
 const ap = StyleSheet.create({
-  wrap: { marginHorizontal: 14, marginBottom: 6 },
+  wrap: { marginHorizontal: spacing.lg, marginBottom: spacing.sm },
   body: {
-    backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.card, borderRadius: radius.lg,
+    ...shadows.card,
     padding: 14,
   },
-  sectionLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 8 },
+  sectionLabel: { fontSize: 11, color: colors.textMid, fontWeight: '500', marginBottom: 8 },
   allocBar: {
     flexDirection: 'row', height: 14, borderRadius: 7,
     overflow: 'hidden', marginBottom: 8,
@@ -211,56 +183,54 @@ const ap = StyleSheet.create({
     gap: 4, paddingVertical: 2,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  allocLegName: { fontSize: 10, color: C.textSecondary, flex: 1 },
-  allocLegPct: { fontSize: 10, fontWeight: '600', color: C.textPrimary, minWidth: 24, textAlign: 'right' },
+  allocLegName: { fontSize: 10, color: colors.textMid, flex: 1 },
+  allocLegPct: { fontSize: 10, fontWeight: '600', color: colors.text, minWidth: 24, textAlign: 'right' },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 8,
-    borderTopWidth: 0.5, borderTopColor: C.border,
+    borderTopWidth: 1, borderTopColor: colors.divider,
   },
   pjDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   pjInfo: { flex: 1 },
-  pjName: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
-  // 残高表示（タップで編集）
+  pjName: { fontSize: 13, fontWeight: '600', color: colors.text },
   balancePressable: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  pjBalance: { fontSize: 11, color: C.textSecondary },
-  editIcon: { fontSize: 11, color: C.brand },
-  // 残高インライン編集
+  pjBalance: { fontSize: 11, color: colors.textMid },
+  editIcon: { fontSize: 11, color: colors.sage },
   balanceEditRow: {
     flexDirection: 'row', alignItems: 'center',
-    marginTop: 2, borderBottomWidth: 1, borderBottomColor: C.brand,
+    marginTop: 2, borderBottomWidth: 1, borderBottomColor: colors.sage,
     paddingBottom: 1,
   },
-  balancePrefix: { fontSize: 12, color: C.brand, fontWeight: '600', marginRight: 2 },
+  balancePrefix: { fontSize: 12, color: colors.sage, fontWeight: '600', marginRight: 2 },
   balanceInput: {
-    fontSize: 13, fontWeight: '600', color: C.brand,
+    fontSize: 13, fontWeight: '600', color: colors.sage,
     paddingVertical: 0, minWidth: 80,
   },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.bg, borderRadius: 8,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.bg, borderRadius: 8,
+    borderWidth: 1, borderColor: colors.divider,
     overflow: 'hidden',
   },
   stepBtn: {
     width: 32, height: 32,
     justifyContent: 'center', alignItems: 'center',
-    backgroundColor: 'rgba(12,68,124,0.07)',
+    backgroundColor: colors.sageBg,
   },
-  stepBtnTxt: { fontSize: 18, color: C.brand, fontWeight: '300' },
+  stepBtnTxt: { fontSize: 18, color: colors.sage, fontWeight: '300' },
   stepInput: {
     width: 72, textAlign: 'center',
-    fontSize: 13, fontWeight: '600', color: C.textPrimary,
+    fontSize: 13, fontWeight: '600', color: colors.text,
     paddingVertical: 6,
   },
   applyBtn: {
-    marginTop: 12, backgroundColor: C.brand, borderRadius: 10,
+    marginTop: 12, backgroundColor: colors.sage, borderRadius: radius.sm,
     paddingVertical: 12, alignItems: 'center',
   },
   applyBtnTxt: { fontSize: 14, fontWeight: '600', color: '#fff' },
 });
 
-// ─── AI自動配分調整カード ─────────────────────────────────────────
+// ─── AI自動配分調整カード ──────────────────────────────────────────────
 
 type AiAllocCardProps = {
   items: CardItem[];
@@ -307,23 +277,23 @@ function AiAllocationCard({ items, localMonthly, onApply }: AiAllocCardProps) {
 
 const aa = StyleSheet.create({
   card: {
-    marginHorizontal: 14, marginBottom: 6,
-    backgroundColor: '#FEF3E2', borderRadius: 12,
-    borderWidth: 0.5, borderColor: '#EF9F27',
+    marginTop: 12,
+    backgroundColor: colors.honeyBg, borderRadius: radius.sm,
+    borderWidth: 1, borderColor: colors.honey,
   },
   inner: { padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  mark: { fontSize: 14, color: '#D46000', lineHeight: 22 },
-  title: { fontSize: 12, color: '#D46000', fontWeight: '600', marginBottom: 3 },
-  txt: { fontSize: 13, color: C.textPrimary, lineHeight: 18 },
+  mark: { fontSize: 14, color: colors.honey, lineHeight: 22 },
+  title: { fontSize: 12, color: colors.honey, fontWeight: '600', marginBottom: 3 },
+  txt: { fontSize: 13, color: colors.text, lineHeight: 18 },
   btn: {
-    marginTop: 8, backgroundColor: C.orange ?? '#EF9F27',
+    marginTop: 8, backgroundColor: colors.honey,
     borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14,
     alignSelf: 'flex-start',
   },
   btnTxt: { fontSize: 12, fontWeight: '600', color: '#fff' },
 });
 
-// ─── 横積み比率バー ───────────────────────────────────────────────
+// ─── 横積み比率バー ────────────────────────────────────────────────────
 
 function AllocationBar({ items, surplus, total }: {
   items: CardItem[];
@@ -331,7 +301,7 @@ function AllocationBar({ items, surplus, total }: {
   total: number;
 }) {
   if (total === 0) return null;
-  const surplusColor = '#888780';
+  const surplusColor = colors.chart6;
   return (
     <View style={s.allocWrap}>
       <View style={s.allocBar}>
@@ -368,7 +338,7 @@ function AllocationBar({ items, surplus, total }: {
   );
 }
 
-// ─── プログレスバー ───────────────────────────────────────────────
+// ─── プログレスバー ────────────────────────────────────────────────────
 
 function ProgressBar({ progress, color }: { progress: number; color: string }) {
   return (
@@ -378,7 +348,7 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
   );
 }
 
-// ─── PJカード ─────────────────────────────────────────────────────
+// ─── PJカード ──────────────────────────────────────────────────────────
 
 function PjCard({
   color, name, amount, progress = 0, status, projectId, drag, isActive,
@@ -398,9 +368,11 @@ function PjCard({
         <View style={s.cardTop}>
           <Text style={s.cardName}>{name}</Text>
           {status && (
-            <Text style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
-              {status === 'ok' ? '✓ 順調' : '△ 要注意'}
-            </Text>
+            <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
+              <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
+                {status === 'ok' ? '順調' : '要注意'}
+              </Text>
+            </View>
           )}
         </View>
         <View style={s.cardBottom}>
@@ -416,7 +388,7 @@ function PjCard({
   );
 }
 
-// ─── ソートバー ───────────────────────────────────────────────────
+// ─── ソートバー ────────────────────────────────────────────────────────
 
 function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) => void }) {
   const options: { key: SortMode; label: string }[] = [
@@ -439,21 +411,19 @@ function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) =
   );
 }
 
-// ─── AIインサイト生成 ──────────────────────────────────────────────
+// ─── AIインサイト生成 ──────────────────────────────────────────────────
 
 function generateAiInsight(items: CardItem[], dreams: { year: number; title: string; projectId: string }[]): string {
   const warnItems = items.filter(i => i.status === 'warn');
   const totalDreams = dreams.length;
   if (warnItems.length > 0) {
     const warnNames = warnItems.map(i => i.name).join('と');
-    return `${totalDreams}つの夢のうち、現状ペースで届く夢が多いです。${warnNames}の達成が遅れ気味です。積立額を見直すと改善できます。`;
+    return `${totalDreams}つの夢のうち、${warnNames}の達成が遅れ気味です。積立額を見直すと改善できます。`;
   }
   return `${totalDreams}つの夢に向けて順調に積み上がっています。現在のペースを維持しましょう。`;
 }
 
-// ─── メイン画面 ───────────────────────────────────────────────────
-
-const NOW_YEAR = new Date().getFullYear();
+// ─── メイン画面 ────────────────────────────────────────────────────────
 
 export default function DreamsScreen() {
   const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance } = useStore();
@@ -462,7 +432,6 @@ export default function DreamsScreen() {
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
 
-  // パネルを開いたときストアの値で初期化
   useEffect(() => {
     if (panelOpen) {
       const monthly: Record<string, number> = {};
@@ -478,7 +447,6 @@ export default function DreamsScreen() {
     }
   }, [panelOpen, savingsAllocation, balances]);
 
-  // 動的プログレス計算（localMonthly/localBalancesが変わるとリアルタイムに更新）
   const enriched: CardItem[] = useMemo(() => {
     return PF_ITEMS
       .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId!))
@@ -500,7 +468,6 @@ export default function DreamsScreen() {
       });
   }, [balances, localBalances, localMonthly, panelOpen, savingsAllocation]);
 
-  // 余剰資金
   const surplusItem = PF_ITEMS.find(i => i.name === '余剰資金');
   const surplusAmt = surplusItem ? surplusItem.amount : 0;
 
@@ -521,7 +488,6 @@ export default function DreamsScreen() {
 
   const handleSaveAllocation = useCallback(() => {
     const now = NOW_YEAR;
-    // 月積立を保存
     const sorted = [...savingsAllocation.entries].sort((a, b) => a.fromYear - b.fromYear);
     const hasCurrentEntry = sorted.some(e => e.fromYear <= now);
     let updatedEntries = sorted.map(entry => {
@@ -534,7 +500,6 @@ export default function DreamsScreen() {
       updatedEntries = [{ fromYear: now, monthlyAmounts: localMonthly }, ...updatedEntries];
     }
     saveSavingsAllocation({ entries: updatedEntries });
-    // 残高変更を保存（差分があるものだけ updateBalance で履歴記録）
     SHOWN_IDS.forEach(id => {
       const newBal = localBalances[id];
       if (newBal === undefined) return;
@@ -588,19 +553,16 @@ export default function DreamsScreen() {
       <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
       <AiInsightCard text={aiText} />
 
-      {/* ─ 積立金調整ボタン ─ */}
       <View style={s.actionBtnRow}>
         <Pressable
           style={[s.actionBtn, panelOpen && s.actionBtnActive]}
           onPress={() => setPanelOpen(v => !v)}
         >
-          <Text style={s.actionBtnIcon}>⚙</Text>
           <Text style={[s.actionBtnTxt, panelOpen && s.actionBtnTxtActive]}>積立金調整</Text>
           <Text style={[s.actionBtnArrow, panelOpen && s.actionBtnTxtActive]}>{panelOpen ? '∧' : '∨'}</Text>
         </Pressable>
       </View>
 
-      {/* 積立金調整パネル（残高編集・AI提案を内包） */}
       {panelOpen && (
         <AllocationPanel
           pfItems={enriched}
@@ -619,18 +581,18 @@ export default function DreamsScreen() {
   );
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
-      <View style={s.header}>
-        <View style={s.headerRow}>
-          <Logo iconSize={22} />
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={s.totalLbl}>総資産</Text>
-            <Text style={s.totalAmt}>¥{totalAmount.toLocaleString('ja-JP')}</Text>
-          </View>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
+
+      {/* ページタイトル */}
+      <View style={s.titleRow}>
+        <Text style={s.pageTitle}>使いみち</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={s.totalLbl}>総資産</Text>
+          <Text style={s.totalAmt}>¥{totalAmount.toLocaleString('ja-JP')}</Text>
         </View>
-        <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
+
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
@@ -648,64 +610,68 @@ export default function DreamsScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  header: {
-    backgroundColor: C.brand,
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 10,
+  safe: { flex: 1, backgroundColor: colors.bg },
+
+  titleRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
+    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
-  totalLbl: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
-  totalAmt: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  pageTitle: {
+    fontSize: fontSizes.pageTitle,
+    fontFamily: typography.display,
+    color: colors.text,
+  },
+  totalLbl: { fontSize: 11, color: colors.textMid },
+  totalAmt: {
+    fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
+    fontFamily: typography.display,
+  },
 
   // AIインサイト
-  aiWrap: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2, backgroundColor: C.bg },
+  aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
   aiCard: {
-    backgroundColor: C.aiCard, borderRadius: 12, padding: 10,
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+    backgroundColor: colors.sageBg, borderRadius: radius.lg, padding: 16,
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  aiIcon: { fontSize: 14, color: '#185FA5', lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '600', marginBottom: 1 },
-  aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
+  aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22 },
+  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4 },
+  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 20 },
 
-  // ボタン行
+  // アクションボタン
   actionBtnRow: {
     flexDirection: 'row', gap: 8,
-    paddingHorizontal: 14, paddingTop: 6, paddingBottom: 2,
+    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2,
   },
   actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 6,
-    backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 0.5, borderColor: C.border,
+    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    backgroundColor: colors.card, borderRadius: radius.md,
+    borderWidth: 1, borderColor: colors.divider,
     paddingHorizontal: 12, paddingVertical: 11,
+    ...shadows.card,
   },
-  actionBtnActive: { backgroundColor: C.brand, borderColor: C.brand },
-  actionBtnIcon: { fontSize: 14 },
-  actionBtnTxt: { flex: 1, fontSize: 12, fontWeight: '600', color: C.textPrimary },
+  actionBtnActive: { backgroundColor: colors.sage, borderColor: colors.sage },
+  actionBtnTxt: { fontSize: 12, fontWeight: '600', color: colors.text },
   actionBtnTxtActive: { color: '#fff' },
-  actionBtnArrow: { fontSize: 11, color: C.textSecondary },
+  actionBtnArrow: { fontSize: 11, color: colors.textMid },
 
   sortBar: {
     flexDirection: 'row', gap: 8,
-    paddingHorizontal: 14, paddingVertical: 10,
-    backgroundColor: C.bg,
+    paddingHorizontal: spacing.lg, paddingVertical: 10,
   },
   sortPill: {
     paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, backgroundColor: C.card,
-    borderWidth: 0.5, borderColor: C.border,
+    borderRadius: radius.pill, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.divider,
   },
-  sortPillActive: { backgroundColor: C.brand, borderColor: C.brand },
-  sortPillText: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  sortPillActive: { backgroundColor: colors.sage, borderColor: colors.sage },
+  sortPillText: { fontSize: 13, fontWeight: '500', color: colors.textMid },
   sortPillTextActive: { color: '#fff' },
 
   // 横積み比率バー
   allocWrap: {
-    backgroundColor: C.card,
-    paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10,
-    borderBottomWidth: 0.5, borderBottomColor: C.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 10,
+    borderBottomWidth: 1, borderBottomColor: colors.divider,
   },
   allocBar: {
     flexDirection: 'row', height: 14, borderRadius: 7,
@@ -717,32 +683,37 @@ const s = StyleSheet.create({
     gap: 4, paddingVertical: 3,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  allocLegName: { fontSize: 11, color: C.textSecondary, flex: 1 },
-  allocLegPct: { fontSize: 11, fontWeight: '600', color: C.textPrimary, minWidth: 26, textAlign: 'right' },
+  allocLegName: { fontSize: 11, color: colors.textMid, flex: 1 },
+  allocLegPct: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right' },
 
-  content: { paddingHorizontal: 14, paddingTop: 4, paddingBottom: 32 },
+  content: { paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: 100 },
 
   card: {
-    backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.card, borderRadius: radius.lg,
     flexDirection: 'row', marginBottom: 10, overflow: 'hidden',
+    ...shadows.card,
   },
   cardActive: {
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15, shadowRadius: 8, elevation: 8,
+    shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
   },
   cardAccent: { width: 4 },
-  cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 10 },
+  cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardName: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
-  badge: { fontSize: 12, fontWeight: '600', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 },
-  badgeOk: { backgroundColor: C.greenBg, color: C.green },
-  badgeWarn: { backgroundColor: '#FAEEDA', color: '#E24B4A' },
-  cardBottom: { marginTop: 6 },
-  barBg: { height: 5, backgroundColor: C.border, borderRadius: 3, overflow: 'hidden' },
+  cardName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  badge: {
+    paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill,
+  },
+  badgeOk: { backgroundColor: colors.sageBg },
+  badgeWarn: { backgroundColor: colors.honeyBg },
+  badgeTxt: { fontSize: 11, fontWeight: '600' },
+  badgeOkTxt: { color: colors.sage },
+  badgeWarnTxt: { color: colors.honey },
+  cardBottom: { marginTop: 8 },
+  barBg: { height: 5, backgroundColor: colors.divider, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
-  cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 5 },
-  cardAmt: { fontSize: 15, fontWeight: '600', color: C.textPrimary },
-  cardPct: { fontSize: 13, color: C.textSecondary },
-  dragHandle: { fontSize: 20, color: C.border, paddingHorizontal: 10, alignSelf: 'center' },
+  cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
+  cardAmt: { fontSize: 15, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  cardPct: { fontSize: 13, color: colors.textMid },
+  dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center' },
 });

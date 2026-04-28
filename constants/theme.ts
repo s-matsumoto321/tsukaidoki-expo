@@ -1,53 +1,97 @@
-/**
- * Below are the colors that are used in the app. The colors are defined in the light and dark mode.
- * There are many other ways to style your app. For example, [Nativewind](https://www.nativewind.dev/), [Tamagui](https://tamagui.dev/), [unistyles](https://reactnativeunistyles.vercel.app), etc.
- */
+export const colors = {
+  bg: '#FAF7F2',
+  card: '#FFFFFF',
+  cardAlt: '#FFFEFB',
 
-import { Platform } from 'react-native';
+  sage: '#5B8E7D',
+  sageLight: '#8BB0A2',
+  sageBg: '#E8EFEB',
 
-const tintColorLight = '#0a7ea4';
-const tintColorDark = '#fff';
+  honey: '#E8B86D',
+  honeyBg: '#FBF1DD',
+
+  text: '#2C3539',
+  textMid: '#6B7378',
+  textLight: '#A0A6A9',
+
+  divider: '#EDE8DF',
+
+  chart1: '#5B8E7D',
+  chart2: '#4A7FA8',
+  chart3: '#E8B86D',
+  chart4: '#C8826B',
+  chart5: '#B8AFD9',
+  chart6: '#BDC4C7',
+};
+
+export const typography = {
+  display: 'Fraunces_400Regular',
+  displayBold: 'Fraunces_700Bold',
+  body: undefined,
+};
+
+export const fontSizes = {
+  pageTitle: 32,
+  amountHero: 40,
+  amountMedium: 18,
+  heading: 16,
+  body: 14,
+  caption: 12,
+  micro: 10,
+};
+
+export const spacing = {
+  xs: 4, sm: 8, md: 12, lg: 16, xl: 20, xxl: 24, xxxl: 32,
+};
+
+export const radius = {
+  sm: 12,
+  md: 16,
+  lg: 24,
+  xl: 28,
+  pill: 100,
+  full: 9999,
+};
+
+export const shadows = {
+  card: {
+    shadowColor: '#2C3539',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  floating: {
+    shadowColor: '#2C3539',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.08,
+    shadowRadius: 32,
+    elevation: 8,
+  },
+  fab: {
+    shadowColor: '#2C3539',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+};
 
 export const Colors = {
   light: {
-    text: '#11181C',
-    background: '#fff',
-    tint: tintColorLight,
-    icon: '#687076',
-    tabIconDefault: '#687076',
-    tabIconSelected: tintColorLight,
+    text: colors.text,
+    background: colors.bg,
+    tint: colors.sage,
+    icon: colors.textLight,
+    tabIconDefault: colors.textLight,
+    tabIconSelected: colors.sage,
   },
   dark: {
     text: '#ECEDEE',
     background: '#151718',
-    tint: tintColorDark,
+    tint: colors.sage,
     icon: '#9BA1A6',
     tabIconDefault: '#9BA1A6',
-    tabIconSelected: tintColorDark,
+    tabIconSelected: colors.sage,
   },
 };
-
-export const Fonts = Platform.select({
-  ios: {
-    /** iOS `UIFontDescriptorSystemDesignDefault` */
-    sans: 'system-ui',
-    /** iOS `UIFontDescriptorSystemDesignSerif` */
-    serif: 'ui-serif',
-    /** iOS `UIFontDescriptorSystemDesignRounded` */
-    rounded: 'ui-rounded',
-    /** iOS `UIFontDescriptorSystemDesignMonospaced` */
-    mono: 'ui-monospace',
-  },
-  default: {
-    sans: 'normal',
-    serif: 'serif',
-    rounded: 'normal',
-    mono: 'monospace',
-  },
-  web: {
-    sans: "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
-    serif: "Georgia, 'Times New Roman', serif",
-    rounded: "'SF Pro Rounded', 'Hiragino Maru Gothic ProN', Meiryo, 'MS PGothic', sans-serif",
-    mono: "SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
-  },
-});

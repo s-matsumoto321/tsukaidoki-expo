@@ -1,61 +1,123 @@
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { View, StyleSheet, Text } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { Activity, Building2, Home, Star, Settings } from 'lucide-react-native';
+import { colors, shadows } from '@/constants/theme';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { HapticTab } from '@/components/haptic-tab';
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
+type TabBarProps = {
+  state: any;
+  navigation: any;
+};
 
-export default function TabLayout() {
-  const colorScheme = useColorScheme();
+const TAB_ICONS: Record<string, React.ComponentType<any>> = {
+  scenario: Activity,
+  pool: Building2,
+  index: Home,
+  explore: Star,
+  settings: Settings,
+};
+
+const TAB_LABELS: Record<string, string> = {
+  scenario: 'シナリオ',
+  pool: 'プール金',
+  index: 'ホーム',
+  explore: '使いみち',
+  settings: '設定',
+};
+
+function CustomTabBar({ state, navigation }: TabBarProps) {
+  const insets = useSafeAreaInsets();
+  const visibleRoutes = state.routes.filter((r: any) => r.name !== 'manage');
 
   return (
+    <View style={[tb.container, { bottom: insets.bottom + 10 }]}>
+      <BlurView intensity={50} tint="light" style={tb.blurBox}>
+        <View style={tb.inner}>
+          {visibleRoutes.map((route: any) => {
+            const isFocused = state.routes[state.index]?.name === route.name;
+            const Icon = TAB_ICONS[route.name] ?? Home;
+            const iconColor = isFocused ? colors.sage : colors.textLight;
+            const label = TAB_LABELS[route.name] ?? route.name;
+
+            const onPress = () => {
+              const event = navigation.emit({ type: 'tabPress', target: route.key, canPreventDefault: true });
+              if (!isFocused && !event.defaultPrevented) {
+                navigation.navigate(route.name);
+              }
+            };
+
+            return (
+              <View
+                key={route.key}
+                style={[tb.tab, isFocused && tb.tabActive]}
+                onTouchEnd={onPress}
+              >
+                <Icon size={20} color={iconColor} strokeWidth={1.8} />
+                <Text style={[tb.label, isFocused && tb.labelActive]}>{label}</Text>
+              </View>
+            );
+          })}
+        </View>
+      </BlurView>
+    </View>
+  );
+}
+
+export default function TabLayout() {
+  return (
     <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? 'light'].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}>
-      <Tabs.Screen
-        name="scenario"
-        options={{
-          title: 'シナリオ',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="chart.bar.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="pool"
-        options={{
-          title: 'プール金',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="building.columns.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: 'ホーム',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="house.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: '使いみち',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="star.fill" color={color} />,
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: '設定',
-          tabBarIcon: ({ color }) => <IconSymbol size={26} name="gearshape.fill" color={color} />,
-        }}
-      />
-      {/* 管理タブは非表示（設定に統合） */}
-      <Tabs.Screen
-        name="manage"
-        options={{ href: null }}
-      />
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <CustomTabBar state={props.state} navigation={props.navigation} />}
+    >
+      <Tabs.Screen name="scenario" options={{ title: 'シナリオ' }} />
+      <Tabs.Screen name="pool" options={{ title: 'プール金' }} />
+      <Tabs.Screen name="index" options={{ title: 'ホーム' }} />
+      <Tabs.Screen name="explore" options={{ title: '使いみち' }} />
+      <Tabs.Screen name="settings" options={{ title: '設定' }} />
+      <Tabs.Screen name="manage" options={{ href: null }} />
     </Tabs>
   );
 }
+
+const tb = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    left: 16,
+    right: 16,
+    borderRadius: 28,
+    overflow: 'hidden',
+    ...shadows.floating,
+  },
+  blurBox: {
+    borderRadius: 28,
+    overflow: 'hidden',
+  },
+  inner: {
+    flexDirection: 'row',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  tab: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 18,
+    gap: 3,
+  },
+  tabActive: {
+    backgroundColor: colors.sageBg,
+  },
+  label: {
+    fontSize: 10,
+    color: colors.textLight,
+    fontWeight: '500',
+  },
+  labelActive: {
+    color: colors.sage,
+  },
+});

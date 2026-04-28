@@ -1,19 +1,8 @@
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, Alert } from 'react-native';
 import { router } from 'expo-router';
-import { Logo } from '@/components/logo';
 import { useStore } from '@/store/useStore';
-
-const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  amber: '#EF9F27',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-};
+import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 
 type MenuItemProps = {
   label: string;
@@ -23,7 +12,7 @@ type MenuItemProps = {
   showArrow?: boolean;
 };
 
-function MenuItem({ label, sub, onPress, accent = C.brand, showArrow = true }: MenuItemProps) {
+function MenuItem({ label, sub, onPress, accent = colors.sage, showArrow = true }: MenuItemProps) {
   return (
     <Pressable style={s.menuItem} onPress={onPress}>
       <View style={[s.menuAccent, { backgroundColor: accent }]} />
@@ -57,14 +46,13 @@ export default function SettingsScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
-      <View style={s.header}>
-        <Logo iconSize={26} />
-        <Text style={s.headerSub}>ライフマネープラン</Text>
-      </View>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+
+        {/* ページタイトル */}
+        <Text style={s.pageTitle}>設定</Text>
 
         <View style={s.section}>
           <Text style={s.sectionTitle}>資産管理</Text>
@@ -72,14 +60,14 @@ export default function SettingsScreen() {
             <MenuItem
               label="プール金"
               sub="口座残高の確認・編集"
-              accent={C.brand}
+              accent={colors.sage}
               onPress={() => router.push('/pool')}
             />
             <View style={s.divider} />
             <MenuItem
               label="口座振替"
               sub="口座間の資金を移動する"
-              accent="#888780"
+              accent={colors.chart6}
               onPress={() => router.push('/transfer')}
             />
           </View>
@@ -91,13 +79,13 @@ export default function SettingsScreen() {
             <MenuItem
               label="プロフィール編集"
               sub="名前・家族構成"
-              accent={C.green}
+              accent={colors.chart2}
               onPress={() => {}}
             />
             <View style={s.divider} />
             <MenuItem
               label="通知設定"
-              accent={C.green}
+              accent={colors.chart2}
               onPress={() => {}}
             />
           </View>
@@ -109,7 +97,7 @@ export default function SettingsScreen() {
             <MenuItem
               label="銀行・証券口座連携"
               sub="自動残高取得"
-              accent={C.amber}
+              accent={colors.honey}
               onPress={() => {}}
             />
           </View>
@@ -122,7 +110,7 @@ export default function SettingsScreen() {
               <MenuItem
                 label="プレミアム会員"
                 sub="✓ シナリオ無制限 · ありがとうございます"
-                accent="#534AB7"
+                accent={colors.chart5}
                 showArrow={false}
                 onPress={() => {}}
               />
@@ -130,7 +118,7 @@ export default function SettingsScreen() {
               <MenuItem
                 label="プレミアムにアップグレード"
                 sub="シナリオを無制限に作れるようになります"
-                accent="#534AB7"
+                accent={colors.chart5}
                 onPress={() => router.push('/premium' as any)}
               />
             )}
@@ -143,7 +131,7 @@ export default function SettingsScreen() {
             <MenuItem
               label="オンボーディングをやり直す"
               sub="最初の設定フローをもう一度実行"
-              accent={C.amber}
+              accent={colors.honey}
               onPress={handleResetOnboarding}
             />
           </View>
@@ -154,19 +142,19 @@ export default function SettingsScreen() {
           <View style={s.menuCard}>
             <MenuItem
               label="ヘルプ・お問い合わせ"
-              accent="#888780"
+              accent={colors.chart6}
               onPress={() => {}}
             />
             <View style={s.divider} />
             <MenuItem
               label="利用規約"
-              accent="#888780"
+              accent={colors.chart6}
               onPress={() => {}}
             />
             <View style={s.divider} />
             <MenuItem
               label="プライバシーポリシー"
-              accent="#888780"
+              accent={colors.chart6}
               onPress={() => {}}
             />
           </View>
@@ -180,27 +168,28 @@ export default function SettingsScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  header: {
-    backgroundColor: C.brand,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
-
+  safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 40 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 100 },
 
-  section: { marginBottom: 20 },
-  sectionTitle: { fontSize: 13, color: C.textSecondary, marginBottom: 8, paddingHorizontal: 4 },
+  pageTitle: {
+    fontSize: fontSizes.pageTitle,
+    fontFamily: typography.display,
+    color: colors.text,
+    marginBottom: spacing.xxl,
+  },
+
+  section: { marginBottom: spacing.xl },
+  sectionTitle: {
+    fontSize: 12, color: colors.textMid, marginBottom: spacing.sm,
+    paddingHorizontal: 4, letterSpacing: 0.5, textTransform: 'uppercase',
+  },
 
   menuCard: {
-    backgroundColor: C.card,
-    borderRadius: 12,
-    borderWidth: 0.5,
-    borderColor: C.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
     overflow: 'hidden',
+    ...shadows.card,
   },
   menuItem: {
     flexDirection: 'row',
@@ -210,11 +199,11 @@ const s = StyleSheet.create({
   },
   menuAccent: { width: 4, height: 36, borderRadius: 2, marginRight: 12 },
   menuBody: { flex: 1 },
-  menuLabel: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
-  menuSub: { fontSize: 13, color: C.textSecondary, marginTop: 2 },
-  menuArrow: { fontSize: 20, color: C.textSecondary },
+  menuLabel: { fontSize: 16, fontWeight: '600', color: colors.text },
+  menuSub: { fontSize: 13, color: colors.textMid, marginTop: 2 },
+  menuArrow: { fontSize: 20, color: colors.textLight },
 
-  divider: { height: 0.5, backgroundColor: C.border, marginLeft: 30 },
+  divider: { height: 1, backgroundColor: colors.divider, marginLeft: 30 },
 
-  version: { textAlign: 'center', fontSize: 12, color: C.textSecondary, marginTop: 8 },
+  version: { textAlign: 'center', fontSize: 12, color: colors.textLight, marginTop: 8 },
 });

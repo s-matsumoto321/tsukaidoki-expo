@@ -6,16 +6,16 @@ import { useStore } from '@/store/useStore';
 import { POOL_ITEMS } from '@/constants/data';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  bg: '#f5f4ee',
+  brand: '#5B8E7D',
+  green: '#5B8E7D',
+  bg: '#FAF7F2',
   card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-  borderFocus: '#0C447C',
-  selected: '#E6F1FB',
-  selectedBorder: '#0C447C',
+  textPrimary: '#2C3539',
+  textSecondary: '#6B7378',
+  border: '#EDE8DF',
+  borderFocus: '#5B8E7D',
+  selected: '#E8EFEB',
+  selectedBorder: '#5B8E7D',
 };
 
 export default function TransferScreen() {
@@ -172,15 +172,15 @@ export default function TransferScreen() {
 
 const s = StyleSheet.create({
   header: {
-    backgroundColor: C.brand,
+    backgroundColor: C.bg,
     paddingHorizontal: 20,
     paddingBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 16,
   },
-  backTxt: { fontSize: 11, color: 'rgba(255,255,255,0.7)' },
-  title: { fontSize: 16, fontWeight: '500', color: '#fff' },
+  backTxt: { fontSize: 11, color: C.textSecondary },
+  title: { fontSize: 16, fontWeight: '500', color: C.textPrimary },
 
   content: { padding: 14 },
   sectionLabel: {

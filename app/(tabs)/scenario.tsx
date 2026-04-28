@@ -7,22 +7,10 @@ import {
 import { router } from 'expo-router';
 import { useStore, type ScenarioMeta } from '@/store/useStore';
 import { POOL_ITEMS } from '@/constants/data';
+import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
+import { Plus } from 'lucide-react-native';
 
-const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  amber: '#EF9F27',
-  red: '#E24B4A',
-  purple: '#534AB7',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-  lockBg: '#f0f0f8',
-};
-
-// ─── シナリオ切替ローディングオーバーレイ ──────────────────────────
+// ─── シナリオ切替ローディングオーバーレイ ───────────────────────────
 
 function SwitchingOverlay() {
   return (
@@ -39,17 +27,17 @@ function SwitchingOverlay() {
 const ov = StyleSheet.create({
   wrap: {
     position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(12,68,124,0.92)',
+    backgroundColor: 'rgba(44,53,57,0.88)',
     justifyContent: 'center', alignItems: 'center',
     zIndex: 999,
   },
   inner: { alignItems: 'center', paddingHorizontal: 40 },
-  mark: { fontSize: 40, color: '#fff', marginBottom: 16 },
+  mark: { fontSize: 40, color: colors.honey, marginBottom: 16 },
   title: { fontSize: 20, fontWeight: '700', color: '#fff', marginBottom: 8 },
   sub: { fontSize: 14, color: 'rgba(255,255,255,0.7)' },
 });
 
-// ─── シナリオ追加モーダル ──────────────────────────────────────────
+// ─── シナリオ追加モーダル ───────────────────────────────────────────
 
 type AddModalProps = {
   visible: boolean;
@@ -63,22 +51,14 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
   const [label, setLabel] = useState('');
   const [copyFromId, setCopyFromId] = useState<string | undefined>(undefined);
 
-  const reset = () => {
-    setMode(null);
-    setLabel('');
-    setCopyFromId(undefined);
-  };
+  const reset = () => { setMode(null); setLabel(''); setCopyFromId(undefined); };
 
-  const handleClose = () => {
-    reset();
-    onClose();
-  };
+  const handleClose = () => { reset(); onClose(); };
 
   const handleAdd = () => {
     if (!label.trim()) return;
     onAdd(label.trim(), copyFromId);
-    reset();
-    onClose();
+    reset(); onClose();
   };
 
   return (
@@ -127,16 +107,14 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
                   <Text style={ma.scLabel}>プラン{sc.systemLabel}：{sc.userLabel}</Text>
                 </Pressable>
               ))}
-
               <Text style={[ma.stepLabel, { marginTop: 20 }]}>新しいシナリオ名</Text>
               <TextInput
                 style={ma.input}
                 placeholder="例：FIREプラン"
-                placeholderTextColor={C.textSecondary}
+                placeholderTextColor={colors.textLight}
                 value={label}
                 onChangeText={setLabel}
               />
-
               <Pressable
                 style={[ma.addBtn, (!label.trim() || !copyFromId) && ma.addBtnDisabled]}
                 onPress={handleAdd}
@@ -144,7 +122,6 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
               >
                 <Text style={ma.addBtnTxt}>作成する</Text>
               </Pressable>
-
               <Pressable style={ma.backBtn} onPress={() => { setMode(null); setCopyFromId(undefined); }}>
                 <Text style={ma.backBtnTxt}>← 戻る</Text>
               </Pressable>
@@ -157,11 +134,10 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
               <TextInput
                 style={ma.input}
                 placeholder="例：ハワイ移住プラン"
-                placeholderTextColor={C.textSecondary}
+                placeholderTextColor={colors.textLight}
                 value={label}
                 onChangeText={setLabel}
               />
-
               <Pressable
                 style={[ma.addBtn, !label.trim() && ma.addBtnDisabled]}
                 onPress={handleAdd}
@@ -169,7 +145,6 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
               >
                 <Text style={ma.addBtnTxt}>作成する</Text>
               </Pressable>
-
               <Pressable style={ma.backBtn} onPress={() => setMode(null)}>
                 <Text style={ma.backBtnTxt}>← 戻る</Text>
               </Pressable>
@@ -182,62 +157,62 @@ function AddScenarioModal({ visible, scenarios, onClose, onAdd }: AddModalProps)
 }
 
 const ma = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
+  safe: { flex: 1, backgroundColor: colors.bg },
   header: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 20, paddingVertical: 16,
-    borderBottomWidth: 0.5, borderBottomColor: C.border,
-    backgroundColor: C.card,
+    paddingHorizontal: spacing.xl, paddingVertical: spacing.lg,
+    borderBottomWidth: 1, borderBottomColor: colors.divider,
+    backgroundColor: colors.card,
   },
-  title: { fontSize: 18, fontWeight: '700', color: C.textPrimary },
+  title: { fontSize: 18, fontWeight: '700', color: colors.text },
   closeBtn: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center',
   },
-  closeTxt: { fontSize: 13, color: C.textSecondary },
+  closeTxt: { fontSize: 13, color: colors.textMid },
   scroll: { flex: 1 },
-  content: { padding: 20, paddingBottom: 40 },
+  content: { padding: spacing.xl, paddingBottom: 40 },
   optionCard: {
-    backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 0.5, borderColor: C.border,
-    padding: 16, flexDirection: 'row', alignItems: 'center', gap: 14,
+    backgroundColor: colors.card, borderRadius: radius.md,
+    ...shadows.card,
+    padding: spacing.lg, flexDirection: 'row', alignItems: 'center', gap: 14,
   },
   optionIcon: { fontSize: 28 },
   optionBody: { flex: 1 },
-  optionTitle: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
-  optionDesc: { fontSize: 13, color: C.textSecondary, marginTop: 3 },
-  optionArrow: { fontSize: 20, color: C.textSecondary },
-  stepLabel: { fontSize: 13, color: C.textSecondary, marginBottom: 10 },
+  optionTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  optionDesc: { fontSize: 13, color: colors.textMid, marginTop: 3 },
+  optionArrow: { fontSize: 20, color: colors.textMid },
+  stepLabel: { fontSize: 13, color: colors.textMid, marginBottom: 10 },
   scItem: {
     flexDirection: 'row', alignItems: 'center', gap: 12,
     paddingVertical: 12, paddingHorizontal: 14,
-    backgroundColor: C.card, borderRadius: 10,
-    borderWidth: 0.5, borderColor: C.border, marginBottom: 8,
+    backgroundColor: colors.card, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.divider, marginBottom: 8,
   },
-  scItemSelected: { borderColor: C.brand, backgroundColor: '#EEF4FB' },
+  scItemSelected: { borderColor: colors.sage, backgroundColor: colors.sageBg },
   scDot: {
     width: 14, height: 14, borderRadius: 7,
-    borderWidth: 2, borderColor: C.textSecondary,
+    borderWidth: 2, borderColor: colors.textLight,
   },
-  scDotSelected: { borderColor: C.brand, backgroundColor: C.brand },
-  scLabel: { fontSize: 15, color: C.textPrimary },
+  scDotSelected: { borderColor: colors.sage, backgroundColor: colors.sage },
+  scLabel: { fontSize: 15, color: colors.text },
   input: {
-    backgroundColor: C.card, borderRadius: 10,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.card, borderRadius: 10,
+    borderWidth: 1, borderColor: colors.divider,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 16, color: C.textPrimary, marginBottom: 20,
+    fontSize: 16, color: colors.text, marginBottom: 20,
   },
   addBtn: {
-    backgroundColor: C.brand, borderRadius: 12,
+    backgroundColor: colors.sage, borderRadius: radius.md,
     paddingVertical: 14, alignItems: 'center',
   },
   addBtnDisabled: { opacity: 0.4 },
   addBtnTxt: { fontSize: 16, fontWeight: '600', color: '#fff' },
   backBtn: { marginTop: 12, alignItems: 'center', padding: 10 },
-  backBtnTxt: { fontSize: 14, color: C.textSecondary },
+  backBtnTxt: { fontSize: 14, color: colors.textMid },
 });
 
-// ─── ScenarioScreen ────────────────────────────────────────────────
+// ─── ScenarioScreen ─────────────────────────────────────────────────
 
 export default function ScenarioScreen() {
   const { scenarios, activeScenarioId, scenariosData, balances, dreams, switchScenario, addScenario, renameScenario, deleteScenario } = useStore();
@@ -321,13 +296,13 @@ export default function ScenarioScreen() {
 
   return (
     <View style={{ flex: 1 }}>
-      <SafeAreaView style={s.safe}>
-        <StatusBar barStyle="light-content" backgroundColor={C.brand} />
-        <View style={s.header}>
-          <Text style={s.headerTitle}>シナリオ</Text>
-        </View>
+      <SafeAreaView style={s.safe} edges={['top']}>
+        <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
         <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+
+          {/* ページタイトル */}
+          <Text style={s.pageTitle}>シナリオ</Text>
 
           <Text style={s.sectionLabel}>現在のシナリオ</Text>
 
@@ -343,29 +318,32 @@ export default function ScenarioScreen() {
                 onLongPress={() => handleLongPress(sc)}
                 delayLongPress={500}
               >
-                <View style={s.cardHeader}>
-                  <View style={[s.radioOuter, isActive && s.radioOuterActive]}>
-                    {isActive && <View style={s.radioInner} />}
-                  </View>
-                  <Text style={[s.cardTitle, isActive && s.cardTitleActive]}>
-                    プラン{sc.systemLabel}：{sc.userLabel}
-                  </Text>
-                  {isActive && (
-                    <View style={s.activeBadge}>
-                      <Text style={s.activeBadgeTxt}>選択中</Text>
+                {isActive && <View style={s.activeBar} />}
+                <View style={s.cardInner}>
+                  <View style={s.cardHeader}>
+                    <View style={[s.radioOuter, isActive && s.radioOuterActive]}>
+                      {isActive && <View style={s.radioInner} />}
                     </View>
-                  )}
-                </View>
-                <View style={s.cardStats}>
-                  <View style={s.stat}>
-                    <Text style={s.statLabel}>総資産</Text>
-                    <Text style={[s.statVal, isActive && s.statValActive]}>
-                      ¥{Math.round(total / 10000).toLocaleString()}万
+                    <Text style={[s.cardTitle, isActive && s.cardTitleActive]}>
+                      プラン{sc.systemLabel}：{sc.userLabel}
                     </Text>
+                    {isActive && (
+                      <View style={s.activeBadge}>
+                        <Text style={s.activeBadgeTxt}>選択中</Text>
+                      </View>
+                    )}
                   </View>
-                  <View style={[s.stat, s.statBorder]}>
-                    <Text style={s.statLabel}>夢</Text>
-                    <Text style={[s.statVal, isActive && s.statValActive]}>{dreamCount}個</Text>
+                  <View style={s.cardStats}>
+                    <View style={s.stat}>
+                      <Text style={s.statLabel}>総資産</Text>
+                      <Text style={[s.statVal, isActive && s.statValActive]}>
+                        ¥{Math.round(total / 10000).toLocaleString()}万
+                      </Text>
+                    </View>
+                    <View style={[s.stat, s.statBorder]}>
+                      <Text style={s.statLabel}>夢</Text>
+                      <Text style={[s.statVal, isActive && s.statValActive]}>{dreamCount}個</Text>
+                    </View>
                   </View>
                 </View>
               </Pressable>
@@ -375,7 +353,7 @@ export default function ScenarioScreen() {
           <Text style={[s.sectionLabel, { marginTop: 24 }]}>もう一つ試してみる？</Text>
           <Pressable style={s.addCard} onPress={handleAddPress}>
             <View style={s.addIconWrap}>
-              <Text style={s.addIcon}>＋</Text>
+              <Plus size={20} color={colors.sage} strokeWidth={1.5} />
             </View>
             <View style={s.addBody}>
               <Text style={s.addTitle}>もしもプランを追加する</Text>
@@ -406,89 +384,97 @@ export default function ScenarioScreen() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: C.bg },
-  header: {
-    backgroundColor: C.brand,
-    paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  headerTitle: { fontSize: 20, fontWeight: '700', color: '#fff' },
-
+  safe: { flex: 1, backgroundColor: colors.bg },
   scroll: { flex: 1 },
-  content: { paddingHorizontal: 14, paddingTop: 16, paddingBottom: 40 },
+  content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 100 },
 
-  sectionLabel: { fontSize: 13, color: C.textSecondary, marginBottom: 10, paddingHorizontal: 4 },
+  pageTitle: {
+    fontSize: fontSizes.pageTitle,
+    fontFamily: typography.display,
+    color: colors.text,
+    marginBottom: spacing.xxl,
+  },
+
+  sectionLabel: {
+    fontSize: 12, color: colors.textMid, marginBottom: 10,
+    paddingHorizontal: 4, letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
 
   scenarioCard: {
-    backgroundColor: C.card,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    borderColor: C.border,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
     marginBottom: 12,
     overflow: 'hidden',
+    ...shadows.card,
   },
   scenarioCardActive: {
-    borderColor: C.brand,
     borderWidth: 1.5,
+    borderColor: colors.sage,
   },
+  activeBar: {
+    height: 4, backgroundColor: colors.sage,
+  },
+  cardInner: {},
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    paddingHorizontal: 16,
+    paddingHorizontal: spacing.lg,
     paddingTop: 14,
     paddingBottom: 10,
   },
   radioOuter: {
     width: 18, height: 18, borderRadius: 9,
-    borderWidth: 2, borderColor: C.textSecondary,
+    borderWidth: 2, borderColor: colors.textLight,
     justifyContent: 'center', alignItems: 'center',
   },
-  radioOuterActive: { borderColor: C.brand },
+  radioOuterActive: { borderColor: colors.sage },
   radioInner: {
-    width: 8, height: 8, borderRadius: 4, backgroundColor: C.brand,
+    width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sage,
   },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: C.textSecondary },
-  cardTitleActive: { color: C.textPrimary },
+  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.textMid },
+  cardTitleActive: { color: colors.text },
   activeBadge: {
-    backgroundColor: '#EEF4FB',
+    backgroundColor: colors.sageBg,
     paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 6,
+    borderRadius: radius.pill,
   },
-  activeBadgeTxt: { fontSize: 11, color: C.brand, fontWeight: '600' },
+  activeBadgeTxt: { fontSize: 11, color: colors.sage, fontWeight: '600' },
   cardStats: {
     flexDirection: 'row',
-    borderTopWidth: 0.5,
-    borderTopColor: C.border,
+    borderTopWidth: 1,
+    borderTopColor: colors.divider,
   },
-  stat: { flex: 1, paddingVertical: 12, paddingHorizontal: 16 },
-  statBorder: { borderLeftWidth: 0.5, borderLeftColor: C.border },
-  statLabel: { fontSize: 12, color: C.textSecondary },
-  statVal: { fontSize: 18, fontWeight: '600', color: C.textSecondary, marginTop: 2 },
-  statValActive: { color: C.brand },
+  stat: { flex: 1, paddingVertical: 12, paddingHorizontal: spacing.lg },
+  statBorder: { borderLeftWidth: 1, borderLeftColor: colors.divider },
+  statLabel: { fontSize: 12, color: colors.textMid },
+  statVal: {
+    fontSize: fontSizes.amountMedium, fontWeight: '600',
+    color: colors.textMid, marginTop: 2,
+    fontFamily: typography.display,
+  },
+  statValActive: { color: colors.sage },
 
   addCard: {
-    backgroundColor: C.card,
-    borderRadius: 14,
-    borderWidth: 0.5,
-    borderColor: C.border,
-    padding: 16,
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
+    ...shadows.card,
   },
   addIconWrap: {
     width: 44, height: 44, borderRadius: 22,
-    backgroundColor: C.lockBg,
+    backgroundColor: colors.sageBg,
     justifyContent: 'center', alignItems: 'center',
   },
-  addIcon: { fontSize: 22, color: C.brand },
   addBody: { flex: 1 },
-  addTitle: { fontSize: 16, fontWeight: '600', color: C.textPrimary },
+  addTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
   lockRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   lockIcon: { fontSize: 12 },
-  lockTxt: { fontSize: 12, color: C.textSecondary },
+  lockTxt: { fontSize: 12, color: colors.textMid },
 
-  hint: { fontSize: 11, color: C.textSecondary, textAlign: 'center', marginTop: 16 },
+  hint: { fontSize: 11, color: colors.textLight, textAlign: 'center', marginTop: 16 },
 });

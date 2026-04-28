@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ツカイドキ ホーム画面モック</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF7F2;
+    --card: #FFFFFF;
+    --sage: #5B8E7D;
+    --sage-light: #8BB0A2;
+    --sage-bg: #E8EFEB;
+    --honey: #E8B86D;
+    --honey-bg: #FBF1DD;
+    --coral: #E07856;
+    --text: #2C3539;
+    --text-mid: #6B7378;
+    --text-light: #A0A6A9;
+    --divider: #EDE8DF;
+    --chart-1: #5B8E7D;
+    --chart-2: #4A7FA8;
+    --chart-3: #E8B86D;
+    --chart-4: #C8826B;
+    --chart-5: #B8AFD9;
+    --chart-6: #BDC4C7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #d4cec1;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 48px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(44, 53, 57, 0.25), 0 10px 30px rgba(44, 53, 57, 0.15);
+    border: 8px solid #1a1a1a;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .screen::-webkit-scrollbar { display: none; }
+
+  /* Status bar */
+  .status-bar {
+    height: 50px;
+    padding: 18px 30px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .status-icons {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    font-size: 13px;
+  }
+
+  /* Content */
+  .content {
+    padding: 8px 20px 100px;
+  }
+
+  /* Greeting + title block (no header bar) */
+  .header-block {
+    padding: 12px 4px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+
+  .greeting {
+    font-size: 13px;
+    color: var(--text-mid);
+    letter-spacing: 0.02em;
+    margin-bottom: 4px;
+  }
+
+  .page-title {
+    font-family: 'Fraunces', 'Noto Sans JP', serif;
+    font-size: 32px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    color: var(--text);
+    line-height: 1.1;
+  }
+
+  .menu-icon {
+    width: 40px;
+    height: 40px;
+    background: var(--card);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 1px 3px rgba(44, 53, 57, 0.04);
+  }
+
+  .menu-icon svg { width: 18px; height: 18px; stroke: var(--text); }
+
+  /* Plan selector pill */
+  .plan-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sage-bg);
+    color: var(--sage);
+    padding: 8px 14px 8px 12px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 16px;
+  }
+
+  .plan-pill .dot {
+    width: 6px;
+    height: 6px;
+    background: var(--sage);
+    border-radius: 50%;
+  }
+
+  .plan-pill .arrow {
+    margin-left: 2px;
+    opacity: 0.6;
+  }
+
+  /* Hero asset card */
+  .asset-card {
+    background: var(--card);
+    border-radius: 28px;
+    padding: 28px 24px 24px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .asset-card::before {
+    content: '';
+    position: absolute;
+    top: -60px;
+    right: -60px;
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, rgba(91, 142, 125, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .asset-label {
+    font-size: 12px;
+    color: var(--text-mid);
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 500;
+    margin-bottom: 6px;
+  }
+
+  .asset-amount {
+    font-family: 'Fraunces', 'Noto Sans JP', serif;
+    font-size: 40px;
+    font-weight: 500;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+    margin-bottom: 16px;
+  }
+
+  .asset-amount .yen {
+    font-size: 28px;
+    color: var(--text-mid);
+    margin-right: 2px;
+  }
+
+  .asset-meta {
+    display: flex;
+    gap: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--divider);
+  }
+
+  .meta-item {
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  .meta-num {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 14px;
+  }
+
+  .meta-label {
+    font-size: 11px;
+    color: var(--text-light);
+  }
+
+  /* Alert */
+  .alert {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: var(--honey-bg);
+    border-radius: 16px;
+    margin-bottom: 20px;
+  }
+
+  .alert-icon {
+    width: 28px;
+    height: 28px;
+    background: var(--honey);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 700;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .alert-text {
+    flex: 1;
+    font-size: 12px;
+    color: var(--text);
+    line-height: 1.4;
+  }
+
+  .alert-text strong { font-weight: 600; }
+
+  /* Chart cards row */
+  .chart-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 20px;
+  }
+
+  .chart-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 18px 16px 20px;
+    position: relative;
+  }
+
+  .chart-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+
+  .chart-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .chart-sub {
+    font-size: 10px;
+    color: var(--text-light);
+  }
+
+  .donut {
+    width: 110px;
+    height: 110px;
+    margin: 0 auto 12px;
+    position: relative;
+  }
+
+  .donut svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .donut-amount {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .donut-meta {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-top: 2px;
+  }
+
+  .legend {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .legend-row {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 10px;
+    color: var(--text-mid);
+  }
+
+  .legend-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .legend-name {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .legend-val {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 10px;
+  }
+
+  /* AI insight */
+  .insight {
+    background: linear-gradient(135deg, var(--sage-bg) 0%, #F0F5F2 100%);
+    border-radius: 24px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .insight::before {
+    content: '';
+    position: absolute;
+    bottom: -40px;
+    right: -40px;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(91, 142, 125, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .insight-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .sparkle {
+    color: var(--sage);
+    font-size: 14px;
+  }
+
+  .insight-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--sage);
+    letter-spacing: 0.02em;
+  }
+
+  .insight-text {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text);
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Floating tab bar */
+  .tab-bar {
+    position: absolute;
+    bottom: 18px;
+    left: 16px;
+    right: 16px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 28px;
+    padding: 10px 8px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 8px 32px rgba(44, 53, 57, 0.08), 0 1px 2px rgba(44, 53, 57, 0.04);
+    border: 0.5px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    padding: 6px 10px;
+    border-radius: 18px;
+    color: var(--text-light);
+    transition: all 0.2s;
+    min-width: 60px;
+  }
+
+  .tab.active {
+    background: var(--sage-bg);
+    color: var(--sage);
+  }
+
+  .tab svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.8;
+  }
+
+  .tab-label {
+    font-size: 10px;
+    font-weight: 600;
+  }
+
+  /* FAB */
+  .fab {
+    position: absolute;
+    bottom: 90px;
+    right: 20px;
+    width: 52px;
+    height: 52px;
+    background: var(--text);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(44, 53, 57, 0.25), 0 2px 4px rgba(44, 53, 57, 0.1);
+    font-size: 24px;
+    font-weight: 300;
+  }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <div class="status-bar">
+        <span>17:07</span>
+        <div class="status-icons">
+          <span>●●●</span>
+          <span>📶</span>
+          <span>🔋</span>
+        </div>
+      </div>
+
+      <div class="content">
+        <!-- Header block: greeting + page title (no blue bar) -->
+        <div class="header-block">
+          <div>
+            <div class="greeting">こんにちは</div>
+            <div class="page-title">あなたの<br>ライフプラン</div>
+          </div>
+          <div class="menu-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="4" y1="6" x2="20" y2="6"/>
+              <line x1="4" y1="12" x2="20" y2="12"/>
+              <line x1="4" y1="18" x2="14" y2="18"/>
+            </svg>
+          </div>
+        </div>
+
+        <!-- Plan selector -->
+        <div class="plan-pill">
+          <span class="dot"></span>
+          <span>プランA・メイン</span>
+          <span class="arrow">⌄</span>
+        </div>
+
+        <!-- Hero asset card -->
+        <div class="asset-card">
+          <div class="asset-label">総資産</div>
+          <div class="asset-amount"><span class="yen">¥</span>8,750,000</div>
+          <div class="asset-meta">
+            <div class="meta-item"><span class="meta-num">4</span><span class="meta-label">プロジェクト</span></div>
+            <div class="meta-item"><span class="meta-num">37</span><span class="meta-label">の夢</span></div>
+            <div class="meta-item"><span class="meta-num">5</span><span class="meta-label">口座</span></div>
+          </div>
+        </div>
+
+        <!-- Alert -->
+        <div class="alert">
+          <div class="alert-icon">!</div>
+          <div class="alert-text"><strong>残高修正が必要です</strong>　差額 ¥100,000</div>
+        </div>
+
+        <!-- Donuts -->
+        <div class="chart-row">
+          <div class="chart-card">
+            <div class="chart-card-head">
+              <span class="chart-title">プール金</span>
+              <span class="chart-sub">口座別</span>
+            </div>
+            <div class="donut">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--divider)" stroke-width="14"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-1)" stroke-width="14" stroke-dasharray="103 301.6" stroke-dashoffset="0"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-2)" stroke-width="14" stroke-dasharray="86 301.6" stroke-dashoffset="-103"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--sage-light)" stroke-width="14" stroke-dasharray="34 301.6" stroke-dashoffset="-189"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-3)" stroke-width="14" stroke-dasharray="27 301.6" stroke-dashoffset="-223"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-6)" stroke-width="14" stroke-dasharray="15 301.6" stroke-dashoffset="-250"/>
+              </svg>
+              <div class="donut-center">
+                <div class="donut-amount">¥875万</div>
+                <div class="donut-meta">5口座</div>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-row"><span class="legend-dot" style="background:var(--chart-1)"></span><span class="legend-name">証券口座</span><span class="legend-val">300</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--chart-2)"></span><span class="legend-name">定期預金</span><span class="legend-val">250</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--sage-light)"></span><span class="legend-name">積立NISA</span><span class="legend-val">100</span></div>
+            </div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-card-head">
+              <span class="chart-title">使いみち</span>
+              <span class="chart-sub">用途別</span>
+            </div>
+            <div class="donut">
+              <svg viewBox="0 0 120 120">
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--divider)" stroke-width="14"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-2)" stroke-width="14" stroke-dasharray="121 301.6" stroke-dashoffset="0"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-1)" stroke-width="14" stroke-dasharray="87 301.6" stroke-dashoffset="-121"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-4)" stroke-width="14" stroke-dasharray="36 301.6" stroke-dashoffset="-208"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-5)" stroke-width="14" stroke-dasharray="18 301.6" stroke-dashoffset="-244"/>
+                <circle cx="60" cy="60" r="48" fill="none" stroke="var(--chart-6)" stroke-width="14" stroke-dasharray="40 301.6" stroke-dashoffset="-262"/>
+              </svg>
+              <div class="donut-center">
+                <div class="donut-amount">¥865万</div>
+                <div class="donut-meta">5件</div>
+              </div>
+            </div>
+            <div class="legend">
+              <div class="legend-row"><span class="legend-dot" style="background:var(--chart-2)"></span><span class="legend-name">教育資金</span><span class="legend-val">300</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--chart-1)"></span><span class="legend-name">老後資金</span><span class="legend-val">250</span></div>
+              <div class="legend-row"><span class="legend-dot" style="background:var(--chart-4)"></span><span class="legend-name">車資金</span><span class="legend-val">100</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI insight -->
+        <div class="insight">
+          <div class="insight-head">
+            <span class="sparkle">✦</span>
+            <span class="insight-label">AIインサイト</span>
+          </div>
+          <div class="insight-text">
+            老後資金の達成が遅れ気味です。月の積立額を見直すと改善できます。教育資金・車資金・旅行資金は順調に積み上がっています。
+          </div>
+        </div>
+      </div>
+
+      <!-- FAB -->
+      <div class="fab">+</div>
+
+      <!-- Floating tab bar -->
+      <div class="tab-bar">
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+          <span class="tab-label">シナリオ</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>
+          <span class="tab-label">プール金</span>
+        </div>
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v11h14V10"/></svg>
+          <span class="tab-label">ホーム</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <span class="tab-label">使いみち</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span class="tab-label">設定</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

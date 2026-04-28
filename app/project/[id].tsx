@@ -15,20 +15,20 @@ import { PF_ITEMS } from '@/constants/data';
 import { BalanceSheet } from '@/components/balance-sheet';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  red: '#E24B4A',
-  orange: '#EF9F27',
-  bg: '#f5f4ee',
+  brand: '#5B8E7D',
+  green: '#5B8E7D',
+  red: '#E8B86D',
+  orange: '#C8826B',
+  bg: '#FAF7F2',
   card: '#ffffff',
-  aiCard: '#E6F1FB',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  textTertiary: '#9c9a92',
-  border: 'rgba(0,0,0,0.08)',
-  borderMd: 'rgba(0,0,0,0.18)',
-  warn: '#FAEEDA',
-  starGold: '#D4A017',
+  aiCard: '#E8EFEB',
+  textPrimary: '#2C3539',
+  textSecondary: '#6B7378',
+  textTertiary: '#A0A6A9',
+  border: '#EDE8DF',
+  borderMd: 'rgba(44,53,57,0.2)',
+  warn: '#FBF1DD',
+  starGold: '#E8B86D',
 };
 
 function parseYear(s: string): number {
@@ -643,14 +643,14 @@ export default function ProjectDetailScreen() {
 }
 
 const s = StyleSheet.create({
-  header: { backgroundColor: C.brand, paddingHorizontal: 20, paddingBottom: 12 },
-  backTxt: { fontSize: 18, color: '#fff', fontWeight: '500', marginBottom: 8 },
+  header: { backgroundColor: C.bg, paddingHorizontal: 20, paddingBottom: 12 },
+  backTxt: { fontSize: 18, color: C.brand, fontWeight: '500', marginBottom: 8 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', gap: 12 },
-  projName: { fontSize: 16, fontWeight: '500', color: '#fff', lineHeight: 22 },
-  timing: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 1 },
-  amtLabel: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
-  amt: { fontSize: 20, fontWeight: '500', color: '#fff', lineHeight: 26 },
-  amtSub: { fontSize: 11, color: 'rgba(255,255,255,0.55)', marginTop: 1 },
+  projName: { fontSize: 16, fontWeight: '500', color: C.textPrimary, lineHeight: 22 },
+  timing: { fontSize: 12, color: C.textSecondary, marginTop: 1 },
+  amtLabel: { fontSize: 11, color: C.textSecondary },
+  amt: { fontSize: 20, fontWeight: '500', color: C.textPrimary, lineHeight: 26 },
+  amtSub: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
 
   aiCard: {
     margin: 10, marginBottom: 6,

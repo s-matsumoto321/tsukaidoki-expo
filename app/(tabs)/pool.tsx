@@ -8,17 +8,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg';
 import { POOL_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
-import { Logo } from '@/components/logo';
-
-const C = {
-  brand: '#0C447C',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
-  borderMd: 'rgba(0,0,0,0.18)',
-};
+import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 
 const NOW_YEAR = new Date().getFullYear();
 
@@ -38,7 +28,7 @@ const DEFAULT_POOL_MONTHLY: Record<string, number> = {
   'pool-sub': 0,
 };
 
-// ── 残高予測計算 ──────────────────────────────────────────────────
+// ── 残高予測計算 ─────────────────────────────────────────────────────
 
 function projectYearly(initial: number, monthly: number, rate: number, yearCount: number): number[] {
   const arr = [initial];
@@ -83,12 +73,12 @@ function fmtAxis(v: number): string {
   return `${Math.round(v / 1e4)}万`;
 }
 
-// ── 積み上げ面積グラフ（メイン画面用） ──────────────────────────
+// ── 積み上げ面積グラフ ────────────────────────────────────────────────
 
 const PL = 48, PR = 10, PT = 10, PB = 24;
 
 function StackedAreaChart({
-  svgW, chartH = 160, yearCount, stacks, colors,
+  svgW, chartH = 160, yearCount, stacks, colors: chartColors,
 }: {
   svgW: number; chartH?: number; yearCount: number;
   stacks: number[][]; colors: string[];
@@ -115,12 +105,12 @@ function StackedAreaChart({
       {ticks.map(v => (
         <G key={v}>
           <SvgLine x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
-            stroke="rgba(0,0,0,0.07)" strokeWidth={0.5} />
-          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill="#999">{fmtAxis(v)}</SvgText>
+            stroke={colors.divider} strokeWidth={0.5} />
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
         </G>
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
-        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill="#999">
+        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill={colors.textLight}>
           {NOW_YEAR + i}
         </SvgText>
       ))}
@@ -129,16 +119,16 @@ function StackedAreaChart({
         const topPts = stack.map((v, i) => `${xi(i).toFixed(1)},${yv(v).toFixed(1)}`);
         const botPts = prev.map((v, i) => `${xi(i).toFixed(1)},${yv(v).toFixed(1)}`).reverse();
         const d = `M ${topPts[0]} L ${topPts.slice(1).join(' L ')} L ${botPts.join(' L ')} Z`;
-        return <Path key={si} d={d} fill={colors[si]} opacity={0.85} />;
+        return <Path key={si} d={d} fill={chartColors[si]} opacity={0.85} />;
       })}
     </Svg>
   );
 }
 
-// ── 積み上げ折れ線グラフ（モーダル用） ──────────────────────────
+// ── 積み上げ折れ線グラフ ─────────────────────────────────────────────
 
 function MultiLineChart({
-  svgW, chartH = 140, yearCount, stacks, colors,
+  svgW, chartH = 140, yearCount, stacks, colors: chartColors,
 }: {
   svgW: number; chartH?: number; yearCount: number;
   stacks: number[][]; colors: string[];
@@ -165,26 +155,26 @@ function MultiLineChart({
       {ticks.map(v => (
         <G key={v}>
           <SvgLine x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
-            stroke="rgba(0,0,0,0.07)" strokeWidth={0.5} />
-          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill="#999">{fmtAxis(v)}</SvgText>
+            stroke={colors.divider} strokeWidth={0.5} />
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
         </G>
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
-        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill="#999">
+        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill={colors.textLight}>
           {NOW_YEAR + i}
         </SvgText>
       ))}
       {stacks.map((stack, si) => {
         const pts = stack.slice(0, n).map((v, i) => `${xi(i).toFixed(1)},${yv(v).toFixed(1)}`).join(' L ');
         return (
-          <Path key={si} d={`M ${pts}`} fill="none" stroke={colors[si]} strokeWidth={2} />
+          <Path key={si} d={`M ${pts}`} fill="none" stroke={chartColors[si]} strokeWidth={2} />
         );
       })}
     </Svg>
   );
 }
 
-// ── 残高行（インライン編集） ──────────────────────────────────────
+// ── 残高行 ────────────────────────────────────────────────────────────
 
 type PoolItem = typeof POOL_ITEMS[0] & { balance: number; rate: number; monthly: number };
 
@@ -192,10 +182,7 @@ function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, new
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState('');
 
-  const startEdit = () => {
-    setEditVal(String(item.balance));
-    setEditing(true);
-  };
+  const startEdit = () => { setEditVal(String(item.balance)); setEditing(true); };
 
   const commit = () => {
     const n = parseInt(editVal.replace(/[^0-9]/g, ''), 10);
@@ -245,29 +232,29 @@ function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, new
 const bl = StyleSheet.create({
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: C.card, borderRadius: 10,
-    borderWidth: 0.5, borderColor: C.border,
-    paddingHorizontal: 12, paddingVertical: 11, marginBottom: 6,
+    backgroundColor: colors.card, borderRadius: radius.sm,
+    paddingHorizontal: 12, paddingVertical: 12, marginBottom: 6,
+    ...shadows.card,
   },
   bar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
-  name: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  meta: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
+  name: { fontSize: 14, fontWeight: '600', color: colors.text },
+  meta: { fontSize: 11, color: colors.textMid, marginTop: 1 },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  amt: { fontSize: 15, fontWeight: '700', color: C.brand },
-  editIcon: { fontSize: 11, color: C.brand },
+  amt: { fontSize: 15, fontWeight: '700', color: colors.sage },
+  editIcon: { fontSize: 11, color: colors.sage },
   editRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderBottomWidth: 1.5, borderBottomColor: C.brand, paddingBottom: 1,
+    borderBottomWidth: 1.5, borderBottomColor: colors.sage, paddingBottom: 1,
   },
-  editPrefix: { fontSize: 14, color: C.brand, fontWeight: '600', marginRight: 2 },
+  editPrefix: { fontSize: 14, color: colors.sage, fontWeight: '600', marginRight: 2 },
   editInput: {
-    fontSize: 15, fontWeight: '700', color: C.brand,
+    fontSize: 15, fontWeight: '700', color: colors.sage,
     paddingVertical: 0, minWidth: 80,
   },
-  rate: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
+  rate: { fontSize: 11, color: colors.textMid, marginTop: 2 },
 });
 
-// ── 積立・複利オーバーレイ ────────────────────────────────────────
+// ── 積立・複利オーバーレイ ────────────────────────────────────────────
 
 type DraftState = {
   fromYear: number;
@@ -317,7 +304,6 @@ function AllocationSheet({
 
   return (
     <View style={[sh.sheet, { paddingTop: insets.top, paddingBottom: bottomPad }]}>
-      {/* ヘッダー */}
       <View style={sh.sheetHeader}>
         <Text style={sh.sheetTitle}>積立・複利を調整する</Text>
         <Pressable style={sh.closeBtn} onPress={onClose}>
@@ -325,7 +311,6 @@ function AllocationSheet({
         </Pressable>
       </View>
 
-      {/* 時系列範囲セレクター */}
       <View style={sh.rangeRow}>
         {(['生涯', '5年', '1年'] as RangeMode[]).map(r => (
           <Pressable
@@ -338,7 +323,6 @@ function AllocationSheet({
         ))}
       </View>
 
-      {/* 積み上げ折れ線グラフ */}
       <View style={sh.chartCard}>
         <View style={sh.legendRow}>
           {POOL_ITEMS.map(item => (
@@ -363,7 +347,6 @@ function AllocationSheet({
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 適用期間 */}
         <Text style={sh.sectionLabel}>適用期間</Text>
         <View style={sh.periodContainer}>
           <View style={sh.periodBlock}>
@@ -405,7 +388,6 @@ function AllocationSheet({
           </View>
         </View>
 
-        {/* 各口座の設定 */}
         <Text style={[sh.sectionLabel, { marginTop: 12 }]}>各口座の設定</Text>
         {POOL_ITEMS.map(item => {
           const id = item.projectId!;
@@ -418,7 +400,6 @@ function AllocationSheet({
                 <Text style={sh.accountName}>{item.name}</Text>
               </View>
               <View style={sh.fieldsRow}>
-                {/* 月次積立額 */}
                 <View style={sh.fieldCol}>
                   <Text style={sh.fieldLabel}>月次積立額</Text>
                   <View style={sh.stepper}>
@@ -441,7 +422,6 @@ function AllocationSheet({
 
                 <View style={{ width: 8 }} />
 
-                {/* 複利 */}
                 <View style={sh.fieldCol}>
                   <Text style={sh.fieldLabel}>複利（年利）</Text>
                   <View style={sh.stepper}>
@@ -479,106 +459,106 @@ function AllocationSheet({
 const sh = StyleSheet.create({
   sheet: {
     position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
-    backgroundColor: C.bg,
-    shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
-    shadowOpacity: 0.14, shadowRadius: 10, elevation: 12,
+    backgroundColor: colors.bg,
+    ...shadows.floating,
   },
   sheetHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 12,
-    borderBottomWidth: 0.5, borderBottomColor: C.border,
-    backgroundColor: C.card,
+    paddingHorizontal: spacing.lg, paddingVertical: 12,
+    borderBottomWidth: 1, borderBottomColor: colors.divider,
+    backgroundColor: colors.card,
   },
-  sheetTitle: { fontSize: 15, fontWeight: '700', color: C.textPrimary },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
-    backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center',
+    backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center',
   },
-  closeTxt: { fontSize: 13, color: C.textSecondary },
+  closeTxt: { fontSize: 13, color: colors.textMid },
 
   rangeRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingVertical: 8,
-    backgroundColor: C.bg,
+    backgroundColor: colors.bg,
   },
   rangePill: {
     paddingHorizontal: 16, paddingVertical: 6,
-    borderRadius: 20, backgroundColor: C.card,
-    borderWidth: 0.5, borderColor: C.border,
+    borderRadius: radius.pill, backgroundColor: colors.card,
+    borderWidth: 1, borderColor: colors.divider,
   },
-  rangePillActive: { backgroundColor: C.brand, borderColor: C.brand },
-  rangePillTxt: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  rangePillActive: { backgroundColor: colors.sage, borderColor: colors.sage },
+  rangePillTxt: { fontSize: 13, fontWeight: '500', color: colors.textMid },
   rangePillTxtActive: { color: '#fff' },
 
   chartCard: {
-    backgroundColor: C.card, marginHorizontal: 12,
-    borderRadius: 10, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.card, marginHorizontal: 12,
+    borderRadius: radius.sm, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
+    ...shadows.card,
   },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 9, color: C.textSecondary },
+  legendTxt: { fontSize: 9, color: colors.textMid },
 
   scrollContent: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
-  sectionLabel: { fontSize: 12, fontWeight: '600', color: C.textSecondary, marginBottom: 8 },
+  sectionLabel: { fontSize: 12, fontWeight: '600', color: colors.textMid, marginBottom: 8 },
 
   periodContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, marginBottom: 4,
   },
   periodBlock: { alignItems: 'center', flex: 1 },
-  periodLabel: { fontSize: 11, color: C.textSecondary, marginBottom: 4 },
-  periodSep: { fontSize: 18, color: C.textSecondary, marginTop: 16 },
+  periodLabel: { fontSize: 11, color: colors.textMid, marginBottom: 4 },
+  periodSep: { fontSize: 18, color: colors.textMid, marginTop: 16 },
   yearRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   arrowBtn: {
     width: 32, height: 32, borderRadius: 16,
-    backgroundColor: C.card, borderWidth: 1, borderColor: C.borderMd,
+    backgroundColor: colors.card, borderWidth: 1, borderColor: colors.divider,
     justifyContent: 'center', alignItems: 'center',
   },
-  arrowTxt: { fontSize: 18, color: C.brand },
-  yearTxt: { fontSize: 16, fontWeight: '700', color: C.textPrimary, minWidth: 50, textAlign: 'center' },
+  arrowTxt: { fontSize: 18, color: colors.sage },
+  yearTxt: { fontSize: 16, fontWeight: '700', color: colors.text, minWidth: 50, textAlign: 'center' },
 
   accountBlock: {
-    backgroundColor: C.card, borderRadius: 10,
-    borderWidth: 0.5, borderColor: C.border,
+    backgroundColor: colors.card, borderRadius: radius.sm,
     padding: 12, marginBottom: 8,
+    ...shadows.card,
   },
   accountNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   colorDot: { width: 10, height: 10, borderRadius: 3 },
-  accountName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  accountName: { fontSize: 14, fontWeight: '600', color: colors.text },
   fieldsRow: { flexDirection: 'row', alignItems: 'flex-start' },
   fieldCol: { flex: 1 },
-  fieldLabel: { fontSize: 10, color: C.textSecondary, fontWeight: '500', marginBottom: 3 },
+  fieldLabel: { fontSize: 10, color: colors.textMid, fontWeight: '500', marginBottom: 3 },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.bg, borderRadius: 6,
-    borderWidth: 0.5, borderColor: C.borderMd, overflow: 'hidden',
+    backgroundColor: colors.bg, borderRadius: 6,
+    borderWidth: 1, borderColor: colors.divider, overflow: 'hidden',
   },
   stepBtn: {
     width: 32, height: 36, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#f0f0f8',
+    backgroundColor: colors.sageBg,
   },
-  stepBtnTxt: { fontSize: 18, color: C.brand, fontWeight: '300' },
+  stepBtnTxt: { fontSize: 18, color: colors.sage, fontWeight: '300' },
   stepInput: {
     flex: 1, textAlign: 'center',
-    fontSize: 13, fontWeight: '700', color: C.textPrimary, paddingVertical: 4,
+    fontSize: 13, fontWeight: '700', color: colors.text, paddingVertical: 4,
   },
-  unitTxt: { fontSize: 11, color: C.brand, textAlign: 'center', marginTop: 2 },
+  unitTxt: { fontSize: 11, color: colors.sage, textAlign: 'center', marginTop: 2 },
   footer: {
-    paddingHorizontal: 16, paddingVertical: 10,
-    borderTopWidth: 0.5, borderTopColor: C.border,
-    backgroundColor: C.bg,
+    paddingHorizontal: spacing.lg, paddingVertical: 10,
+    borderTopWidth: 1, borderTopColor: colors.divider,
+    backgroundColor: colors.bg,
   },
   applyBtn: {
-    backgroundColor: C.brand, borderRadius: 12,
-    paddingVertical: 13, alignItems: 'center',
+    backgroundColor: colors.sage, borderRadius: radius.md,
+    paddingVertical: 14, alignItems: 'center',
+    ...shadows.card,
   },
   applyTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });
 
-// ── メイン画面 ────────────────────────────────────────────────────
+// ── メイン画面 ────────────────────────────────────────────────────────
 
 export default function PoolScreen() {
   const insets = useSafeAreaInsets();
@@ -675,19 +655,16 @@ export default function PoolScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor={C.brand} />
+    <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
-      {/* ヘッダー */}
-      <View style={ps.header}>
-        <View style={ps.headerRow}>
-          <Logo iconSize={22} />
-          <View style={{ alignItems: 'flex-end' }}>
-            <Text style={ps.totalLbl}>総残高</Text>
-            <Text style={ps.totalAmt}>¥{totalBalance.toLocaleString('ja-JP')}</Text>
-          </View>
+      {/* ページタイトル + 総残高 */}
+      <View style={ps.titleRow}>
+        <Text style={ps.pageTitle}>プール金</Text>
+        <View style={{ alignItems: 'flex-end' }}>
+          <Text style={ps.totalLbl}>総残高</Text>
+          <Text style={ps.totalAmt}>¥{totalBalance.toLocaleString('ja-JP')}</Text>
         </View>
-        <Text style={ps.headerSub}>プール金 · 口座管理</Text>
       </View>
 
       {/* 積み上げ面積グラフ */}
@@ -708,7 +685,7 @@ export default function PoolScreen() {
         />
       </View>
 
-      {/* 残高リストパネル */}
+      {/* 残高リスト */}
       <View style={ps.listPanel}>
         <View style={ps.secRow}>
           <Text style={ps.secTitle}>口座残高</Text>
@@ -716,15 +693,11 @@ export default function PoolScreen() {
         </View>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: insets.bottom + 70 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: insets.bottom + 80 }}
           showsVerticalScrollIndicator={false}
         >
           {poolItems.map(item => (
-            <BalanceRow
-              key={item.projectId}
-              item={item}
-              onSave={handleBalanceSave}
-            />
+            <BalanceRow key={item.projectId} item={item} onSave={handleBalanceSave} />
           ))}
         </ScrollView>
       </View>
@@ -732,11 +705,10 @@ export default function PoolScreen() {
       {/* 積立調整ボタン */}
       <View style={[ps.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
         <Pressable style={ps.allocBtn} onPress={openOverlay}>
-          <Text style={ps.allocBtnTxt}>⚙ 積立・複利を調整する</Text>
+          <Text style={ps.allocBtnTxt}>積立・複利を調整する</Text>
         </Pressable>
       </View>
 
-      {/* 積立・複利オーバーレイ */}
       <AllocationSheet
         open={overlayOpen}
         draft={draft}
@@ -753,39 +725,50 @@ export default function PoolScreen() {
 }
 
 const ps = StyleSheet.create({
-  header: { backgroundColor: C.brand, paddingHorizontal: 20, paddingTop: 10, paddingBottom: 10 },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
-  totalLbl: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
-  totalAmt: { fontSize: 18, fontWeight: '600', color: '#fff' },
+  titleRow: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
+    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md,
+  },
+  pageTitle: {
+    fontSize: fontSizes.pageTitle,
+    fontFamily: typography.display,
+    color: colors.text,
+  },
+  totalLbl: { fontSize: 11, color: colors.textMid },
+  totalAmt: {
+    fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
+    fontFamily: typography.display,
+  },
 
   chartCard: {
-    marginHorizontal: 16, marginTop: 10, marginBottom: 6,
-    backgroundColor: C.card, borderRadius: 12,
-    borderWidth: 0.5, borderColor: C.border,
+    marginHorizontal: spacing.lg, marginBottom: spacing.sm,
+    backgroundColor: colors.card, borderRadius: radius.lg,
     paddingTop: 10, paddingBottom: 6, overflow: 'hidden',
+    ...shadows.card,
   },
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 10, color: C.textSecondary },
+  legendTxt: { fontSize: 10, color: colors.textMid },
 
-  listPanel: { flex: 1, backgroundColor: C.bg, borderTopWidth: 0.5, borderTopColor: C.border },
+  listPanel: { flex: 1, backgroundColor: colors.bg },
   secRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 6,
+    paddingHorizontal: spacing.lg, paddingVertical: 6,
   },
-  secTitle: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
-  secSub: { fontSize: 12, color: C.brand, fontWeight: '500' },
+  secTitle: { fontSize: 13, fontWeight: '500', color: colors.textMid },
+  secSub: { fontSize: 12, color: colors.sage, fontWeight: '500', textDecorationLine: 'underline' },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: 16, paddingTop: 10,
-    backgroundColor: C.bg, borderTopWidth: 0.5, borderTopColor: C.border,
+    paddingHorizontal: spacing.lg, paddingTop: 10,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1, borderTopColor: colors.divider,
   },
   allocBtn: {
-    backgroundColor: C.brand, borderRadius: 12,
+    backgroundColor: colors.sage, borderRadius: radius.md,
     paddingVertical: 14, alignItems: 'center',
+    ...shadows.card,
   },
   allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
 });

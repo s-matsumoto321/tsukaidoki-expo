@@ -9,16 +9,16 @@ import { useStore, type FamilyMember, type Dream } from '@/store/useStore';
 
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  amber: '#EF9F27',
-  red: '#E24B4A',
-  purple: '#534AB7',
-  bg: '#f5f4ee',
+  brand: '#5B8E7D',
+  green: '#5B8E7D',
+  amber: '#E8B86D',
+  red: '#E8B86D',
+  purple: '#B8AFD9',
+  bg: '#FAF7F2',
   card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
-  border: 'rgba(0,0,0,0.08)',
+  textPrimary: '#2C3539',
+  textSecondary: '#6B7378',
+  border: '#EDE8DF',
 };
 
 const { width: SW } = Dimensions.get('window');
