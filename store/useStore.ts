@@ -32,6 +32,7 @@ export type AllocationEntry = {
 
 export type SavingsAllocation = {
   entries: AllocationEntry[];
+  interestRates?: Record<string, number>;
 };
 
 export type ScenarioMeta = {
