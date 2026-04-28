@@ -8,7 +8,6 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg';
 import { POOL_ITEMS } from '@/constants/data';
 import { useStore } from '@/store/useStore';
-import { BalanceSheet } from '@/components/balance-sheet';
 import { Logo } from '@/components/logo';
 
 const C = {
@@ -23,7 +22,6 @@ const C = {
 
 const NOW_YEAR = new Date().getFullYear();
 
-// デフォルト金利（未設定時の提案値）
 const DEFAULT_RATES: Record<string, number> = {
   'pool-shoken': 0.05,
   'pool-teiki': 0.005,
@@ -32,7 +30,6 @@ const DEFAULT_RATES: Record<string, number> = {
   'pool-sub': 0.001,
 };
 
-// デフォルト月次積立額（未設定時）
 const DEFAULT_POOL_MONTHLY: Record<string, number> = {
   'pool-shoken': 50_000,
   'pool-teiki': 0,
@@ -86,7 +83,7 @@ function fmtAxis(v: number): string {
   return `${Math.round(v / 1e4)}万`;
 }
 
-// ── 積み上げ面積グラフ ─────────────────────────────────────────────
+// ── 積み上げ面積グラフ（メイン画面用） ──────────────────────────
 
 const PL = 48, PR = 10, PT = 10, PB = 24;
 
@@ -138,27 +135,110 @@ function StackedAreaChart({
   );
 }
 
-// ── 残高行 ────────────────────────────────────────────────────────
+// ── 積み上げ折れ線グラフ（モーダル用） ──────────────────────────
+
+function MultiLineChart({
+  svgW, chartH = 140, yearCount, stacks, colors,
+}: {
+  svgW: number; chartH?: number; yearCount: number;
+  stacks: number[][]; colors: string[];
+}) {
+  if (!stacks.length || yearCount < 2) return null;
+  const gW = svgW - PL - PR;
+  const gH = chartH - PT - PB;
+  const n = Math.min(yearCount, stacks[0]?.length ?? yearCount);
+  const topStack = stacks[stacks.length - 1].slice(0, n);
+  const maxVal = Math.max(...topStack, 1);
+  const topVal = maxVal * 1.1;
+  const step = niceStep(topVal, 4);
+  const maxTick = Math.ceil(topVal / step) * step;
+  const ticks: number[] = [];
+  for (let v = 0; v <= maxTick; v += step) ticks.push(v);
+  const xi = (i: number) => PL + (i / (n - 1)) * gW;
+  const yv = (v: number) => PT + gH * (1 - Math.min(v / maxTick, 1));
+  const xStep = n <= 6 ? 1 : n <= 15 ? 3 : n <= 30 ? 5 : 10;
+  const xLabels = new Set([0, n - 1]);
+  for (let i = xStep; i < n - 1; i += xStep) xLabels.add(i);
+
+  return (
+    <Svg width={svgW} height={chartH}>
+      {ticks.map(v => (
+        <G key={v}>
+          <SvgLine x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
+            stroke="rgba(0,0,0,0.07)" strokeWidth={0.5} />
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill="#999">{fmtAxis(v)}</SvgText>
+        </G>
+      ))}
+      {[...xLabels].sort((a, b) => a - b).map(i => (
+        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill="#999">
+          {NOW_YEAR + i}
+        </SvgText>
+      ))}
+      {stacks.map((stack, si) => {
+        const pts = stack.slice(0, n).map((v, i) => `${xi(i).toFixed(1)},${yv(v).toFixed(1)}`).join(' L ');
+        return (
+          <Path key={si} d={`M ${pts}`} fill="none" stroke={colors[si]} strokeWidth={2} />
+        );
+      })}
+    </Svg>
+  );
+}
+
+// ── 残高行（インライン編集） ──────────────────────────────────────
 
 type PoolItem = typeof POOL_ITEMS[0] & { balance: number; rate: number; monthly: number };
 
-function BalanceRow({ item, onPress }: { item: PoolItem; onPress: () => void }) {
+function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, newVal: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState('');
+
+  const startEdit = () => {
+    setEditVal(String(item.balance));
+    setEditing(true);
+  };
+
+  const commit = () => {
+    const n = parseInt(editVal.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(n) && n > 0 && n !== item.balance) {
+      onSave(item.projectId!, n);
+    }
+    setEditing(false);
+  };
+
   return (
-    <Pressable style={bl.row} onPress={onPress}>
+    <View style={bl.row}>
       <View style={[bl.bar, { backgroundColor: item.color }]} />
       <View style={{ flex: 1 }}>
         <Text style={bl.name}>{item.name}</Text>
         <Text style={bl.meta}>{item.meta}</Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={bl.amt}>¥{item.balance.toLocaleString('ja-JP')}</Text>
+        {editing ? (
+          <View style={bl.editRow}>
+            <Text style={bl.editPrefix}>¥</Text>
+            <TextInput
+              style={bl.editInput}
+              value={editVal}
+              onChangeText={v => setEditVal(v.replace(/[^0-9]/g, ''))}
+              keyboardType="number-pad"
+              autoFocus
+              onBlur={commit}
+              onSubmitEditing={commit}
+              selectTextOnFocus
+            />
+          </View>
+        ) : (
+          <Pressable style={bl.amtPressable} onPress={startEdit}>
+            <Text style={bl.amt}>¥{item.balance.toLocaleString('ja-JP')}</Text>
+            <Text style={bl.editIcon}>✎</Text>
+          </Pressable>
+        )}
         <Text style={bl.rate}>
           年利 {(item.rate * 100).toFixed(1)}%
           {item.monthly > 0 ? `  月¥${item.monthly.toLocaleString('ja-JP')}` : ''}
         </Text>
       </View>
-      <Text style={bl.chevron}>›</Text>
-    </Pressable>
+    </View>
   );
 }
 
@@ -172,18 +252,31 @@ const bl = StyleSheet.create({
   bar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
   name: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   meta: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
+  amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amt: { fontSize: 15, fontWeight: '700', color: C.brand },
-  rate: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
-  chevron: { fontSize: 18, color: '#ccc', marginLeft: 2 },
+  editIcon: { fontSize: 11, color: C.brand },
+  editRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderBottomWidth: 1.5, borderBottomColor: C.brand, paddingBottom: 1,
+  },
+  editPrefix: { fontSize: 14, color: C.brand, fontWeight: '600', marginRight: 2 },
+  editInput: {
+    fontSize: 15, fontWeight: '700', color: C.brand,
+    paddingVertical: 0, minWidth: 80,
+  },
+  rate: { fontSize: 11, color: C.textSecondary, marginTop: 2 },
 });
 
 // ── 積立・複利オーバーレイ ────────────────────────────────────────
 
 type DraftState = {
   fromYear: number;
+  toYear: number;
   monthlyAmounts: Record<string, number>;
   interestRates: Record<string, number>;
 };
+
+type RangeMode = '生涯' | '5年' | '1年';
 
 const AMT_STEP = 1000;
 const RATE_STEP = 0.001;
@@ -201,7 +294,14 @@ function AllocationSheet({
   onClose: () => void;
   bottomPad: number;
 }) {
+  const insets = useSafeAreaInsets();
+  const [rangeMode, setRangeMode] = useState<RangeMode>('生涯');
+
   if (!open) return null;
+
+  const displayYearCount = rangeMode === '生涯' ? yearCount
+    : rangeMode === '5年' ? Math.min(6, yearCount)
+    : Math.min(2, yearCount);
 
   const setMonthly = (id: string, val: number) =>
     onChangeDraft({ ...draft, monthlyAmounts: { ...draft.monthlyAmounts, [id]: Math.max(0, val) } });
@@ -216,173 +316,230 @@ function AllocationSheet({
     });
 
   return (
-    <>
-      <Pressable
-        onPress={onClose}
-        style={[StyleSheet.absoluteFillObject, { backgroundColor: 'rgba(0,0,0,0.38)' }]}
-      />
-      <View style={[sh.sheet, { paddingBottom: bottomPad }]}>
-        <View style={sh.handle} />
-
-        <View style={sh.previewCard}>
-          <Text style={sh.previewLabel}>試算プレビュー（リアルタイム更新）</Text>
-          <View style={sh.legendRow}>
-            {POOL_ITEMS.map(item => (
-              <View key={item.projectId} style={sh.legendItem}>
-                <View style={[sh.legendDot, { backgroundColor: item.color }]} />
-                <Text style={sh.legendTxt}>{item.name}</Text>
-              </View>
-            ))}
-          </View>
-          <StackedAreaChart
-            svgW={svgW - 24}
-            chartH={130}
-            yearCount={yearCount}
-            stacks={draftStacks}
-            colors={POOL_ITEMS.map(i => i.color)}
-          />
-        </View>
-
-        <View style={sh.settingsHeader}>
-          <Text style={sh.settingsTitle}>積立・複利を調整する</Text>
-          <Pressable style={sh.closeBtn} onPress={onClose}>
-            <Text style={sh.closeTxt}>✕</Text>
-          </Pressable>
-        </View>
-
-        <ScrollView
-          style={{ flex: 1 }}
-          contentContainerStyle={sh.scrollContent}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
-          <Text style={sh.sectionLabel}>何年から適用</Text>
-          <View style={sh.yearRow}>
-            <Pressable
-              style={sh.arrowBtn}
-              onPress={() => onChangeDraft({ ...draft, fromYear: Math.max(NOW_YEAR, draft.fromYear - 1) })}
-            >
-              <Text style={sh.arrowTxt}>‹</Text>
-            </Pressable>
-            <Text style={sh.yearTxt}>{draft.fromYear}年〜</Text>
-            <Pressable
-              style={sh.arrowBtn}
-              onPress={() => onChangeDraft({ ...draft, fromYear: Math.min(NOW_YEAR + 30, draft.fromYear + 1) })}
-            >
-              <Text style={sh.arrowTxt}>›</Text>
-            </Pressable>
-          </View>
-
-          {POOL_ITEMS.map(item => {
-            const id = item.projectId!;
-            const monthly = draft.monthlyAmounts[id] ?? 0;
-            const rate = draft.interestRates[id] ?? 0;
-            return (
-              <View key={id} style={sh.accountBlock}>
-                <View style={sh.accountNameRow}>
-                  <View style={[sh.colorDot, { backgroundColor: item.color }]} />
-                  <Text style={sh.accountName}>{item.name}</Text>
-                </View>
-
-                <Text style={sh.fieldLabel}>月次積立額</Text>
-                <View style={sh.stepper}>
-                  <Pressable style={sh.stepBtn} onPress={() => setMonthly(id, monthly - AMT_STEP)}>
-                    <Text style={sh.stepBtnTxt}>−</Text>
-                  </Pressable>
-                  <TextInput
-                    style={sh.stepInput}
-                    value={String(monthly)}
-                    onChangeText={v => setMonthly(id, parseInt(v.replace(/\D/g, ''), 10) || 0)}
-                    keyboardType="number-pad"
-                    selectTextOnFocus
-                  />
-                  <Pressable style={sh.stepBtn} onPress={() => setMonthly(id, monthly + AMT_STEP)}>
-                    <Text style={sh.stepBtnTxt}>＋</Text>
-                  </Pressable>
-                </View>
-                <Text style={sh.unitTxt}>¥{monthly.toLocaleString('ja-JP')} / 月</Text>
-
-                <Text style={[sh.fieldLabel, { marginTop: 10 }]}>複利（年利）</Text>
-                <View style={sh.stepper}>
-                  <Pressable style={sh.stepBtn} onPress={() => setRate(id, rate - RATE_STEP)}>
-                    <Text style={sh.stepBtnTxt}>−</Text>
-                  </Pressable>
-                  <TextInput
-                    style={sh.stepInput}
-                    value={(rate * 100).toFixed(1)}
-                    onChangeText={v => setRate(id, (parseFloat(v) || 0) / 100)}
-                    keyboardType="decimal-pad"
-                    selectTextOnFocus
-                  />
-                  <Pressable style={sh.stepBtn} onPress={() => setRate(id, rate + RATE_STEP)}>
-                    <Text style={sh.stepBtnTxt}>＋</Text>
-                  </Pressable>
-                </View>
-                <Text style={sh.unitTxt}>{(rate * 100).toFixed(1)}% / 年</Text>
-              </View>
-            );
-          })}
-        </ScrollView>
-
-        <View style={sh.footer}>
-          <Pressable style={sh.applyBtn} onPress={onApply}>
-            <Text style={sh.applyTxt}>適用する</Text>
-          </Pressable>
-        </View>
+    <View style={[sh.sheet, { paddingTop: insets.top, paddingBottom: bottomPad }]}>
+      {/* ヘッダー */}
+      <View style={sh.sheetHeader}>
+        <Text style={sh.sheetTitle}>積立・複利を調整する</Text>
+        <Pressable style={sh.closeBtn} onPress={onClose}>
+          <Text style={sh.closeTxt}>✕</Text>
+        </Pressable>
       </View>
-    </>
+
+      {/* 時系列範囲セレクター */}
+      <View style={sh.rangeRow}>
+        {(['生涯', '5年', '1年'] as RangeMode[]).map(r => (
+          <Pressable
+            key={r}
+            style={[sh.rangePill, rangeMode === r && sh.rangePillActive]}
+            onPress={() => setRangeMode(r)}
+          >
+            <Text style={[sh.rangePillTxt, rangeMode === r && sh.rangePillTxtActive]}>{r}</Text>
+          </Pressable>
+        ))}
+      </View>
+
+      {/* 積み上げ折れ線グラフ */}
+      <View style={sh.chartCard}>
+        <View style={sh.legendRow}>
+          {POOL_ITEMS.map(item => (
+            <View key={item.projectId} style={sh.legendItem}>
+              <View style={[sh.legendDot, { backgroundColor: item.color }]} />
+              <Text style={sh.legendTxt}>{item.name}</Text>
+            </View>
+          ))}
+        </View>
+        <MultiLineChart
+          svgW={svgW - 24}
+          chartH={130}
+          yearCount={displayYearCount}
+          stacks={draftStacks}
+          colors={POOL_ITEMS.map(i => i.color)}
+        />
+      </View>
+
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={sh.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* 適用期間 */}
+        <Text style={sh.sectionLabel}>適用期間</Text>
+        <View style={sh.periodContainer}>
+          <View style={sh.periodBlock}>
+            <Text style={sh.periodLabel}>From</Text>
+            <View style={sh.yearRow}>
+              <Pressable
+                style={sh.arrowBtn}
+                onPress={() => onChangeDraft({ ...draft, fromYear: Math.max(NOW_YEAR, draft.fromYear - 1) })}
+              >
+                <Text style={sh.arrowTxt}>‹</Text>
+              </Pressable>
+              <Text style={sh.yearTxt}>{draft.fromYear}</Text>
+              <Pressable
+                style={sh.arrowBtn}
+                onPress={() => onChangeDraft({ ...draft, fromYear: Math.min(draft.toYear, draft.fromYear + 1) })}
+              >
+                <Text style={sh.arrowTxt}>›</Text>
+              </Pressable>
+            </View>
+          </View>
+          <Text style={sh.periodSep}>〜</Text>
+          <View style={sh.periodBlock}>
+            <Text style={sh.periodLabel}>To</Text>
+            <View style={sh.yearRow}>
+              <Pressable
+                style={sh.arrowBtn}
+                onPress={() => onChangeDraft({ ...draft, toYear: Math.max(draft.fromYear, draft.toYear - 1) })}
+              >
+                <Text style={sh.arrowTxt}>‹</Text>
+              </Pressable>
+              <Text style={sh.yearTxt}>{draft.toYear}</Text>
+              <Pressable
+                style={sh.arrowBtn}
+                onPress={() => onChangeDraft({ ...draft, toYear: Math.min(NOW_YEAR + 50, draft.toYear + 1) })}
+              >
+                <Text style={sh.arrowTxt}>›</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+
+        {/* 各口座の設定 */}
+        <Text style={[sh.sectionLabel, { marginTop: 12 }]}>各口座の設定</Text>
+        {POOL_ITEMS.map(item => {
+          const id = item.projectId!;
+          const monthly = draft.monthlyAmounts[id] ?? 0;
+          const rate = draft.interestRates[id] ?? 0;
+          return (
+            <View key={id} style={sh.accountBlock}>
+              <View style={sh.accountNameRow}>
+                <View style={[sh.colorDot, { backgroundColor: item.color }]} />
+                <Text style={sh.accountName}>{item.name}</Text>
+              </View>
+              <View style={sh.fieldsRow}>
+                {/* 月次積立額 */}
+                <View style={sh.fieldCol}>
+                  <Text style={sh.fieldLabel}>月次積立額</Text>
+                  <View style={sh.stepper}>
+                    <Pressable style={sh.stepBtn} onPress={() => setMonthly(id, monthly - AMT_STEP)}>
+                      <Text style={sh.stepBtnTxt}>−</Text>
+                    </Pressable>
+                    <TextInput
+                      style={sh.stepInput}
+                      value={String(monthly)}
+                      onChangeText={v => setMonthly(id, parseInt(v.replace(/\D/g, ''), 10) || 0)}
+                      keyboardType="number-pad"
+                      selectTextOnFocus
+                    />
+                    <Pressable style={sh.stepBtn} onPress={() => setMonthly(id, monthly + AMT_STEP)}>
+                      <Text style={sh.stepBtnTxt}>＋</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={sh.unitTxt}>¥{monthly.toLocaleString('ja-JP')}/月</Text>
+                </View>
+
+                <View style={{ width: 8 }} />
+
+                {/* 複利 */}
+                <View style={sh.fieldCol}>
+                  <Text style={sh.fieldLabel}>複利（年利）</Text>
+                  <View style={sh.stepper}>
+                    <Pressable style={sh.stepBtn} onPress={() => setRate(id, rate - RATE_STEP)}>
+                      <Text style={sh.stepBtnTxt}>−</Text>
+                    </Pressable>
+                    <TextInput
+                      style={sh.stepInput}
+                      value={(rate * 100).toFixed(1)}
+                      onChangeText={v => setRate(id, (parseFloat(v) || 0) / 100)}
+                      keyboardType="decimal-pad"
+                      selectTextOnFocus
+                    />
+                    <Pressable style={sh.stepBtn} onPress={() => setRate(id, rate + RATE_STEP)}>
+                      <Text style={sh.stepBtnTxt}>＋</Text>
+                    </Pressable>
+                  </View>
+                  <Text style={sh.unitTxt}>{(rate * 100).toFixed(1)}%/年</Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
+
+      <View style={sh.footer}>
+        <Pressable style={sh.applyBtn} onPress={onApply}>
+          <Text style={sh.applyTxt}>適用する</Text>
+        </Pressable>
+      </View>
+    </View>
   );
 }
 
 const sh = StyleSheet.create({
   sheet: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    height: '72%',
+    position: 'absolute', top: 0, bottom: 0, left: 0, right: 0,
     backgroundColor: C.bg,
-    borderTopLeftRadius: 20, borderTopRightRadius: 20,
     shadowColor: '#000', shadowOffset: { width: 0, height: -4 },
     shadowOpacity: 0.14, shadowRadius: 10, elevation: 12,
-    overflow: 'hidden',
   },
-  handle: {
-    width: 36, height: 4, borderRadius: 2, backgroundColor: '#ddd',
-    alignSelf: 'center', marginTop: 10, marginBottom: 6,
-  },
-  previewCard: {
-    backgroundColor: C.card, marginHorizontal: 12,
-    borderRadius: 10, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
-    borderWidth: 0.5, borderColor: C.border,
-  },
-  previewLabel: { fontSize: 10, color: C.textSecondary, marginBottom: 2 },
-  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-  legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 9, color: C.textSecondary },
-  settingsHeader: {
+  sheetHeader: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 8, marginTop: 8,
+    paddingHorizontal: 16, paddingVertical: 12,
     borderBottomWidth: 0.5, borderBottomColor: C.border,
     backgroundColor: C.card,
   },
-  settingsTitle: { fontSize: 14, fontWeight: '700', color: C.textPrimary },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: C.textPrimary },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: C.bg, justifyContent: 'center', alignItems: 'center',
   },
   closeTxt: { fontSize: 13, color: C.textSecondary },
+
+  rangeRow: {
+    flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingVertical: 8,
+    backgroundColor: C.bg,
+  },
+  rangePill: {
+    paddingHorizontal: 16, paddingVertical: 6,
+    borderRadius: 20, backgroundColor: C.card,
+    borderWidth: 0.5, borderColor: C.border,
+  },
+  rangePillActive: { backgroundColor: C.brand, borderColor: C.brand },
+  rangePillTxt: { fontSize: 13, fontWeight: '500', color: C.textSecondary },
+  rangePillTxtActive: { color: '#fff' },
+
+  chartCard: {
+    backgroundColor: C.card, marginHorizontal: 12,
+    borderRadius: 10, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 6,
+    borderWidth: 0.5, borderColor: C.border,
+  },
+  legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  legendDot: { width: 8, height: 8, borderRadius: 2 },
+  legendTxt: { fontSize: 9, color: C.textSecondary },
+
   scrollContent: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
   sectionLabel: { fontSize: 12, fontWeight: '600', color: C.textSecondary, marginBottom: 8 },
-  yearRow: {
+
+  periodContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 16, marginBottom: 14,
+    gap: 8, marginBottom: 4,
+  },
+  periodBlock: { alignItems: 'center', flex: 1 },
+  periodLabel: { fontSize: 11, color: C.textSecondary, marginBottom: 4 },
+  periodSep: { fontSize: 18, color: C.textSecondary, marginTop: 16 },
+  yearRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
   arrowBtn: {
-    width: 36, height: 36, borderRadius: 18,
+    width: 32, height: 32, borderRadius: 16,
     backgroundColor: C.card, borderWidth: 1, borderColor: C.borderMd,
     justifyContent: 'center', alignItems: 'center',
   },
-  arrowTxt: { fontSize: 20, color: C.brand },
-  yearTxt: { fontSize: 18, fontWeight: '700', color: C.textPrimary, minWidth: 90, textAlign: 'center' },
+  arrowTxt: { fontSize: 18, color: C.brand },
+  yearTxt: { fontSize: 16, fontWeight: '700', color: C.textPrimary, minWidth: 50, textAlign: 'center' },
+
   accountBlock: {
     backgroundColor: C.card, borderRadius: 10,
     borderWidth: 0.5, borderColor: C.border,
@@ -391,22 +548,24 @@ const sh = StyleSheet.create({
   accountNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   colorDot: { width: 10, height: 10, borderRadius: 3 },
   accountName: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
-  fieldLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 4 },
+  fieldsRow: { flexDirection: 'row', alignItems: 'flex-start' },
+  fieldCol: { flex: 1 },
+  fieldLabel: { fontSize: 10, color: C.textSecondary, fontWeight: '500', marginBottom: 3 },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: C.bg, borderRadius: 8,
+    backgroundColor: C.bg, borderRadius: 6,
     borderWidth: 0.5, borderColor: C.borderMd, overflow: 'hidden',
   },
   stepBtn: {
-    width: 44, height: 42, justifyContent: 'center', alignItems: 'center',
+    width: 32, height: 36, justifyContent: 'center', alignItems: 'center',
     backgroundColor: '#f0f0f8',
   },
-  stepBtnTxt: { fontSize: 20, color: C.brand, fontWeight: '300' },
+  stepBtnTxt: { fontSize: 18, color: C.brand, fontWeight: '300' },
   stepInput: {
     flex: 1, textAlign: 'center',
-    fontSize: 16, fontWeight: '700', color: C.textPrimary, paddingVertical: 6,
+    fontSize: 13, fontWeight: '700', color: C.textPrimary, paddingVertical: 4,
   },
-  unitTxt: { fontSize: 12, color: C.brand, textAlign: 'center', marginTop: 3 },
+  unitTxt: { fontSize: 11, color: C.brand, textAlign: 'center', marginTop: 2 },
   footer: {
     paddingHorizontal: 16, paddingVertical: 10,
     borderTopWidth: 0.5, borderTopColor: C.border,
@@ -424,16 +583,15 @@ const sh = StyleSheet.create({
 export default function PoolScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers } = useStore();
+  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers, updateBalance } = useStore();
 
   const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1990;
   const yearCount = Math.max(10, (selfBirthYear + 100) - NOW_YEAR);
 
   const [overlayOpen, setOverlayOpen] = useState(false);
   const [draft, setDraft] = useState<DraftState>({
-    fromYear: NOW_YEAR, monthlyAmounts: {}, interestRates: {},
+    fromYear: NOW_YEAR, toYear: NOW_YEAR + 10, monthlyAmounts: {}, interestRates: {},
   });
-  const [sheetTarget, setSheetTarget] = useState<string | null>(null);
 
   const svgW = screenWidth - 32;
   const savedRates = savingsAllocation.interestRates ?? {};
@@ -446,9 +604,7 @@ export default function PoolScreen() {
       return {
         ...item,
         balance: balances[id] ?? item.amount,
-        // 積立金額：ユーザー設定 → デフォルト値の順で使用
         monthly: currentEntry?.monthlyAmounts[id] ?? DEFAULT_POOL_MONTHLY[id] ?? 0,
-        // 金利：ユーザー設定 → デフォルト提案値の順で使用
         rate: savedRates[id] ?? DEFAULT_RATES[id] ?? 0,
       };
     });
@@ -476,6 +632,7 @@ export default function PoolScreen() {
   const openOverlay = () => {
     setDraft({
       fromYear: NOW_YEAR,
+      toYear: NOW_YEAR + 10,
       monthlyAmounts: Object.fromEntries(poolItems.map(i => [i.projectId!, i.monthly])),
       interestRates: Object.fromEntries(
         poolItems.map(i => [i.projectId!, savedRates[i.projectId!] ?? DEFAULT_RATES[i.projectId!] ?? 0])
@@ -511,7 +668,11 @@ export default function PoolScreen() {
     setOverlayOpen(false);
   };
 
-  const sheetItem = sheetTarget ? poolItems.find(i => i.projectId === sheetTarget) ?? null : null;
+  const handleBalanceSave = (id: string, newVal: number) => {
+    const item = poolItems.find(i => i.projectId === id);
+    if (!item) return;
+    updateBalance(id, item.balance, newVal, '残高修正');
+  };
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: C.bg }} edges={['top']}>
@@ -562,7 +723,7 @@ export default function PoolScreen() {
             <BalanceRow
               key={item.projectId}
               item={item}
-              onPress={() => setSheetTarget(item.projectId!)}
+              onSave={handleBalanceSave}
             />
           ))}
         </ScrollView>
@@ -587,17 +748,6 @@ export default function PoolScreen() {
         onClose={() => setOverlayOpen(false)}
         bottomPad={insets.bottom + 4}
       />
-
-      {/* 残高修正モーダル */}
-      {sheetItem && (
-        <BalanceSheet
-          visible={!!sheetTarget}
-          projectId={sheetItem.projectId!}
-          currentAmount={sheetItem.balance}
-          label={sheetItem.name}
-          onClose={() => setSheetTarget(null)}
-        />
-      )}
     </SafeAreaView>
   );
 }

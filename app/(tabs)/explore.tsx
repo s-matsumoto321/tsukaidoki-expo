@@ -59,17 +59,25 @@ function AiInsightCard({ text }: { text: string }) {
   );
 }
 
-// ─── 積立・残高金調整パネル（本体のみ） ──────────────────────────
+// ─── 積立金調整パネル ─────────────────────────────────────────────
 
 type AllocationPanelProps = {
   pfItems: CardItem[];
   balances: Record<string, number>;
   localMonthly: Record<string, number>;
+  localBalances: Record<string, number>;
   onChangeMonthly: (projectId: string, newAmt: number) => void;
+  onChangeBalance: (projectId: string, newAmt: number) => void;
+  onAiApply: (newMonthly: Record<string, number>) => void;
   onSave: () => void;
 };
 
-function AllocationPanel({ pfItems, balances, localMonthly, onChangeMonthly, onSave }: AllocationPanelProps) {
+function AllocationPanel({
+  pfItems, balances, localMonthly, localBalances,
+  onChangeMonthly, onChangeBalance, onAiApply, onSave,
+}: AllocationPanelProps) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+
   const totalMonthly = pfItems.reduce(
     (sum, i) => sum + (i.projectId ? (localMonthly[i.projectId] ?? 0) : 0), 0,
   );
@@ -110,21 +118,46 @@ function AllocationPanel({ pfItems, balances, localMonthly, onChangeMonthly, onS
         </View>
 
         {/* 各PJ調整行 */}
-        <Text style={[ap.sectionLabel, { marginTop: 14 }]}>各PJ 月積立・残高調整</Text>
+        <Text style={[ap.sectionLabel, { marginTop: 14 }]}>各PJ調整（月積立 / 残高）</Text>
         {pfItems.filter(i => i.projectId).map(item => {
-          const balance = item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount;
-          const monthly = item.projectId ? (localMonthly[item.projectId] ?? 0) : 0;
+          const id = item.projectId!;
+          const balance = localBalances[id] ?? balances[id] ?? item.amount;
+          const monthly = localMonthly[id] ?? 0;
+          const isEditingBal = editingId === id;
           return (
-            <View key={item.projectId} style={ap.row}>
+            <View key={id} style={ap.row}>
               <View style={[ap.pjDot, { backgroundColor: item.color }]} />
               <View style={ap.pjInfo}>
                 <Text style={ap.pjName} numberOfLines={1}>{item.name}</Text>
-                <Text style={ap.pjBalance}>残高 ¥{balance.toLocaleString('ja-JP')}</Text>
+                {/* 残高：鉛筆アイコンでインライン編集 */}
+                {isEditingBal ? (
+                  <View style={ap.balanceEditRow}>
+                    <Text style={ap.balancePrefix}>¥</Text>
+                    <TextInput
+                      style={ap.balanceInput}
+                      value={String(balance)}
+                      onChangeText={v => {
+                        const n = parseInt(v.replace(/[^0-9]/g, ''), 10);
+                        onChangeBalance(id, isNaN(n) ? 0 : n);
+                      }}
+                      keyboardType="number-pad"
+                      autoFocus
+                      onBlur={() => setEditingId(null)}
+                      selectTextOnFocus
+                    />
+                  </View>
+                ) : (
+                  <Pressable style={ap.balancePressable} onPress={() => setEditingId(id)}>
+                    <Text style={ap.pjBalance}>残高 ¥{balance.toLocaleString('ja-JP')}</Text>
+                    <Text style={ap.editIcon}>✎</Text>
+                  </Pressable>
+                )}
               </View>
+              {/* 月積立ステッパー */}
               <View style={ap.stepper}>
                 <Pressable
                   style={ap.stepBtn}
-                  onPress={() => item.projectId && onChangeMonthly(item.projectId, Math.max(0, monthly - 1000))}
+                  onPress={() => onChangeMonthly(id, Math.max(0, monthly - 1000))}
                 >
                   <Text style={ap.stepBtnTxt}>−</Text>
                 </Pressable>
@@ -133,14 +166,14 @@ function AllocationPanel({ pfItems, balances, localMonthly, onChangeMonthly, onS
                   value={String(monthly)}
                   onChangeText={v => {
                     const n = parseInt(v.replace(/[^0-9]/g, ''), 10);
-                    if (item.projectId) onChangeMonthly(item.projectId, isNaN(n) ? 0 : n);
+                    onChangeMonthly(id, isNaN(n) ? 0 : n);
                   }}
                   keyboardType="number-pad"
                   selectTextOnFocus
                 />
                 <Pressable
                   style={ap.stepBtn}
-                  onPress={() => item.projectId && onChangeMonthly(item.projectId, monthly + 1000)}
+                  onPress={() => onChangeMonthly(id, monthly + 1000)}
                 >
                   <Text style={ap.stepBtnTxt}>＋</Text>
                 </Pressable>
@@ -148,6 +181,9 @@ function AllocationPanel({ pfItems, balances, localMonthly, onChangeMonthly, onS
             </View>
           );
         })}
+
+        {/* AI自動配分調整（パネル内） */}
+        <AiAllocationCard items={pfItems} localMonthly={localMonthly} onApply={onAiApply} />
 
         <Pressable style={ap.applyBtn} onPress={onSave}>
           <Text style={ap.applyBtnTxt}>適用する</Text>
@@ -185,7 +221,21 @@ const ap = StyleSheet.create({
   pjDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   pjInfo: { flex: 1 },
   pjName: { fontSize: 13, fontWeight: '600', color: C.textPrimary },
-  pjBalance: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
+  // 残高表示（タップで編集）
+  balancePressable: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  pjBalance: { fontSize: 11, color: C.textSecondary },
+  editIcon: { fontSize: 11, color: C.brand },
+  // 残高インライン編集
+  balanceEditRow: {
+    flexDirection: 'row', alignItems: 'center',
+    marginTop: 2, borderBottomWidth: 1, borderBottomColor: C.brand,
+    paddingBottom: 1,
+  },
+  balancePrefix: { fontSize: 12, color: C.brand, fontWeight: '600', marginRight: 2 },
+  balanceInput: {
+    fontSize: 13, fontWeight: '600', color: C.brand,
+    paddingVertical: 0, minWidth: 80,
+  },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: C.bg, borderRadius: 8,
@@ -284,15 +334,6 @@ function AllocationBar({ items, surplus, total }: {
   const surplusColor = '#888780';
   return (
     <View style={s.allocWrap}>
-      <View style={s.allocHeader}>
-        <View>
-          <Text style={s.allocLabel}>総資産</Text>
-          <Text style={s.allocTotal}>¥{total.toLocaleString('ja-JP')}</Text>
-        </View>
-        <Pressable style={s.dreamBtn} onPress={() => router.push('/dream-timeline' as any)}>
-          <Text style={s.dreamBtnTxt}>★ 夢年表を見る →</Text>
-        </Pressable>
-      </View>
       <View style={s.allocBar}>
         {items.map((item, i) => (
           <Fragment key={item.projectId ?? item.name}>
@@ -415,44 +456,49 @@ function generateAiInsight(items: CardItem[], dreams: { year: number; title: str
 const NOW_YEAR = new Date().getFullYear();
 
 export default function DreamsScreen() {
-  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation } = useStore();
+  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance } = useStore();
   const [sortMode, setSortMode] = useState<SortMode>('custom');
   const [panelOpen, setPanelOpen] = useState(false);
-  const [aiCardOpen, setAiCardOpen] = useState(false);
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
+  const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
 
   // パネルを開いたときストアの値で初期化
   useEffect(() => {
-    if (panelOpen || aiCardOpen) {
-      const initial: Record<string, number> = {};
+    if (panelOpen) {
+      const monthly: Record<string, number> = {};
+      const bals: Record<string, number> = {};
       PF_ITEMS.forEach(item => {
         if (item.projectId && SHOWN_IDS.includes(item.projectId)) {
-          initial[item.projectId] = getMonthlyAmt(savingsAllocation.entries, item.projectId);
+          monthly[item.projectId] = getMonthlyAmt(savingsAllocation.entries, item.projectId);
+          bals[item.projectId] = balances[item.projectId] ?? item.amount;
         }
       });
-      setLocalMonthly(initial);
+      setLocalMonthly(monthly);
+      setLocalBalances(bals);
     }
-  }, [panelOpen, aiCardOpen, savingsAllocation]);
+  }, [panelOpen, savingsAllocation, balances]);
 
-  // 動的プログレス計算（localMonthlyが変わるとリアルタイムに更新）
+  // 動的プログレス計算（localMonthly/localBalancesが変わるとリアルタイムに更新）
   const enriched: CardItem[] = useMemo(() => {
     return PF_ITEMS
       .filter(item => item.projectId != null && SHOWN_IDS.includes(item.projectId!))
       .map(item => {
-        const balance = item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount;
-        const goalYear = GOAL_YEARS[item.projectId!] ?? NOW_YEAR + 10;
+        const id = item.projectId!;
+        const balance = panelOpen
+          ? (localBalances[id] ?? balances[id] ?? item.amount)
+          : (balances[id] ?? item.amount);
+        const goalYear = GOAL_YEARS[id] ?? NOW_YEAR + 10;
         const yearsLeft = Math.max(0, goalYear - NOW_YEAR);
-        const isEditing = panelOpen || aiCardOpen;
-        const monthly = item.projectId
-          ? (isEditing ? (localMonthly[item.projectId] ?? getMonthlyAmt(savingsAllocation.entries, item.projectId)) : getMonthlyAmt(savingsAllocation.entries, item.projectId))
-          : 0;
+        const monthly = panelOpen
+          ? (localMonthly[id] ?? getMonthlyAmt(savingsAllocation.entries, id))
+          : getMonthlyAmt(savingsAllocation.entries, id);
         const projected = balance + monthly * 12 * yearsLeft;
-        const target = PJ_TARGETS[item.projectId!] ?? 1;
+        const target = PJ_TARGETS[id] ?? 1;
         const progress = Math.min(projected / target, 1);
         const status: 'ok' | 'warn' = projected >= target ? 'ok' : 'warn';
         return { ...item, amount: balance, progress, status };
       });
-  }, [balances, localMonthly, panelOpen, aiCardOpen, savingsAllocation]);
+  }, [balances, localBalances, localMonthly, panelOpen, savingsAllocation]);
 
   // 余剰資金
   const surplusItem = PF_ITEMS.find(i => i.name === '余剰資金');
@@ -469,8 +515,13 @@ export default function DreamsScreen() {
     setLocalMonthly(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
   }, []);
 
+  const handleChangeBalance = useCallback((projectId: string, newAmt: number) => {
+    setLocalBalances(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
+  }, []);
+
   const handleSaveAllocation = useCallback(() => {
     const now = NOW_YEAR;
+    // 月積立を保存
     const sorted = [...savingsAllocation.entries].sort((a, b) => a.fromYear - b.fromYear);
     const hasCurrentEntry = sorted.some(e => e.fromYear <= now);
     let updatedEntries = sorted.map(entry => {
@@ -483,13 +534,20 @@ export default function DreamsScreen() {
       updatedEntries = [{ fromYear: now, monthlyAmounts: localMonthly }, ...updatedEntries];
     }
     saveSavingsAllocation({ entries: updatedEntries });
+    // 残高変更を保存（差分があるものだけ updateBalance で履歴記録）
+    SHOWN_IDS.forEach(id => {
+      const newBal = localBalances[id];
+      if (newBal === undefined) return;
+      const origBal = balances[id] ?? (PF_ITEMS.find(i => i.projectId === id)?.amount ?? 0);
+      if (newBal !== origBal) {
+        updateBalance(id, origBal, newBal, '残高修正');
+      }
+    });
     setPanelOpen(false);
-  }, [localMonthly, savingsAllocation, saveSavingsAllocation]);
+  }, [localMonthly, localBalances, savingsAllocation, saveSavingsAllocation, balances, updateBalance]);
 
   const handleAiApply = useCallback((newMonthly: Record<string, number>) => {
     setLocalMonthly(newMonthly);
-    setAiCardOpen(false);
-    setPanelOpen(true);
   }, []);
 
   const sortedItems = useMemo(() => {
@@ -530,43 +588,29 @@ export default function DreamsScreen() {
       <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
       <AiInsightCard text={aiText} />
 
-      {/* ─ ボタン行（AIインサイトと並び順の間） ─ */}
+      {/* ─ 積立金調整ボタン ─ */}
       <View style={s.actionBtnRow}>
         <Pressable
           style={[s.actionBtn, panelOpen && s.actionBtnActive]}
-          onPress={() => { setPanelOpen(v => !v); setAiCardOpen(false); }}
+          onPress={() => setPanelOpen(v => !v)}
         >
           <Text style={s.actionBtnIcon}>⚙</Text>
-          <Text style={[s.actionBtnTxt, panelOpen && s.actionBtnTxtActive]}>積立・残高金調整</Text>
+          <Text style={[s.actionBtnTxt, panelOpen && s.actionBtnTxtActive]}>積立金調整</Text>
           <Text style={[s.actionBtnArrow, panelOpen && s.actionBtnTxtActive]}>{panelOpen ? '∧' : '∨'}</Text>
-        </Pressable>
-        <Pressable
-          style={[s.actionBtn, aiCardOpen && s.actionBtnActive]}
-          onPress={() => { setAiCardOpen(v => !v); setPanelOpen(false); }}
-        >
-          <Text style={s.actionBtnIcon}>✦</Text>
-          <Text style={[s.actionBtnTxt, aiCardOpen && s.actionBtnTxtActive]}>AI自動配分調整</Text>
-          <Text style={[s.actionBtnArrow, aiCardOpen && s.actionBtnTxtActive]}>{aiCardOpen ? '∧' : '∨'}</Text>
         </Pressable>
       </View>
 
-      {/* 積立・残高金調整パネル */}
+      {/* 積立金調整パネル（残高編集・AI提案を内包） */}
       {panelOpen && (
         <AllocationPanel
           pfItems={enriched}
           balances={balances}
           localMonthly={localMonthly}
+          localBalances={localBalances}
           onChangeMonthly={handleChangeMonthly}
+          onChangeBalance={handleChangeBalance}
+          onAiApply={handleAiApply}
           onSave={handleSaveAllocation}
-        />
-      )}
-
-      {/* AI自動配分調整カード */}
-      {aiCardOpen && (
-        <AiAllocationCard
-          items={enriched}
-          localMonthly={localMonthly}
-          onApply={handleAiApply}
         />
       )}
 
@@ -578,7 +622,13 @@ export default function DreamsScreen() {
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="light-content" backgroundColor={C.brand} />
       <View style={s.header}>
-        <Logo iconSize={26} />
+        <View style={s.headerRow}>
+          <Logo iconSize={22} />
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={s.totalLbl}>総資産</Text>
+            <Text style={s.totalAmt}>¥{totalAmount.toLocaleString('ja-JP')}</Text>
+          </View>
+        </View>
         <Text style={s.headerSub}>ライフマネープラン</Text>
       </View>
       <DraggableFlatList
@@ -602,10 +652,13 @@ const s = StyleSheet.create({
   header: {
     backgroundColor: C.brand,
     paddingHorizontal: 20,
-    paddingTop: 12,
-    paddingBottom: 16,
+    paddingTop: 10,
+    paddingBottom: 10,
   },
-  headerSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', marginTop: 3 },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  headerSub: { fontSize: 12, color: 'rgba(255,255,255,0.6)', marginTop: 4 },
+  totalLbl: { fontSize: 11, color: 'rgba(255,255,255,0.55)' },
+  totalAmt: { fontSize: 18, fontWeight: '600', color: '#fff' },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 2, backgroundColor: C.bg },
@@ -654,17 +707,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10,
     borderBottomWidth: 0.5, borderBottomColor: C.border,
   },
-  allocHeader: {
-    flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  allocLabel: { fontSize: 11, color: C.textSecondary, fontWeight: '500', marginBottom: 1 },
-  allocTotal: { fontSize: 24, fontWeight: '700', color: C.brand },
-  dreamBtn: {
-    backgroundColor: '#FEF3E2', paddingHorizontal: 10, paddingVertical: 6,
-    borderRadius: 10, borderWidth: 0.5, borderColor: '#EF9F27',
-  },
-  dreamBtnTxt: { fontSize: 12, fontWeight: '600', color: '#D46000' },
   allocBar: {
     flexDirection: 'row', height: 14, borderRadius: 7,
     overflow: 'hidden', marginBottom: 8,
