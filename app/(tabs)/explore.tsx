@@ -6,6 +6,7 @@ import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
+import { usePalette } from '@/constants/colors';
 
 type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
@@ -301,7 +302,7 @@ function AllocationBar({ items, surplus, total }: {
   total: number;
 }) {
   if (total === 0) return null;
-  const surplusColor = colors.chart6;
+  const surplusColor = usePalette.neutral;
   return (
     <View style={s.allocWrap}>
       <View style={s.allocBar}>

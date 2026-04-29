@@ -3,17 +3,18 @@ import { View, Text, Pressable, StyleSheet, ScrollView, Animated } from 'react-n
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore } from '@/store/useStore';
+import { brand, neutral, usePalette, tints } from '@/constants/colors';
 
 const C = {
-  brand: '#5B8E7D',
-  green: '#5B8E7D',
-  amber: '#E8B86D',
-  purple: '#B8AFD9',
-  bg: '#FAF7F2',
-  card: '#ffffff',
-  textPrimary: '#2C3539',
-  textSecondary: '#6B7378',
-  border: '#EDE8DF',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  amber: brand.honey.base,
+  purple: usePalette.jewels[3],
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
+  border: neutral.divider,
 };
 
 const FEATURES = [
@@ -168,7 +169,7 @@ const s = StyleSheet.create({
 
   headerWrap: { alignItems: 'center', marginBottom: 28 },
   badge: {
-    backgroundColor: '#EEE8FF', paddingHorizontal: 14, paddingVertical: 6,
+    backgroundColor: tints.amethystTint, paddingHorizontal: 14, paddingVertical: 6,
     borderRadius: 20, marginBottom: 16,
   },
   badgeTxt: { fontSize: 13, fontWeight: '700', color: C.purple },
@@ -208,7 +209,7 @@ const s = StyleSheet.create({
     borderWidth: 1.5, borderColor: C.border,
     padding: 14, flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  planCardActive: { borderColor: C.brand, backgroundColor: '#F0F5FC' },
+  planCardActive: { borderColor: C.brand, backgroundColor: tints.sageTint },
   planRadio: {
     width: 18, height: 18, borderRadius: 9,
     borderWidth: 2, borderColor: C.textSecondary,
@@ -222,10 +223,10 @@ const s = StyleSheet.create({
   planPrice: { fontSize: 20, fontWeight: '800', color: C.textPrimary },
   planUnit: { fontSize: 12, fontWeight: '400', color: C.textSecondary },
   saveBadge: {
-    backgroundColor: '#FEF3E2', paddingHorizontal: 6, paddingVertical: 2,
+    backgroundColor: brand.honey.bg, paddingHorizontal: 6, paddingVertical: 2,
     borderRadius: 6, alignSelf: 'flex-start', marginTop: 4,
   },
-  saveBadgeTxt: { fontSize: 11, color: '#D46000', fontWeight: '600' },
+  saveBadgeTxt: { fontSize: 11, color: brand.honey.dark, fontWeight: '600' },
 
   priceNote: { fontSize: 12, color: C.textSecondary, textAlign: 'center', marginBottom: 16 },
 

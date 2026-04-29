@@ -1,5 +1,6 @@
 import Svg, { Circle, G } from 'react-native-svg';
 import { View, Text, StyleSheet } from 'react-native';
+import { neutral } from '@/constants/colors';
 
 export type ChartSegment = { color: string; value: number };
 
@@ -24,7 +25,7 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
       <Svg width={size} height={size} style={StyleSheet.absoluteFillObject}>
         {total === 0 ? (
-          <Circle cx={cx} cy={cy} r={radius} fill="none" stroke="#EDE8DF" strokeWidth={thickness} />
+          <Circle cx={cx} cy={cy} r={radius} fill="none" stroke={neutral.divider} strokeWidth={thickness} />
         ) : (
           segments.map((seg, i) => {
             const segAngle = (seg.value / total) * 360;
@@ -57,6 +58,6 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center' },
-  label: { fontSize: 14, fontWeight: '600', color: '#2C3539', fontFamily: 'Fraunces_400Regular' },
-  sub: { fontSize: 9, color: '#6B7378', marginTop: 1 },
+  label: { fontSize: 14, fontWeight: '600', color: neutral.text.primary, fontFamily: 'Fraunces_400Regular' },
+  sub: { fontSize: 9, color: neutral.text.mid, marginTop: 1 },
 });

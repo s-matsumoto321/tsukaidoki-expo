@@ -1,5 +1,6 @@
 import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
+import { brand } from '@/constants/colors';
 
 type Props = {
   color?: string;
@@ -15,7 +16,7 @@ export function Logo({ color = '#ffffff', iconSize = 26 }: Props) {
         {/* 左の葉 */}
         <Path
           d="M7 13 C7 13 2 9 2 4 C2 4 7 6 7 13Z"
-          fill="#1D9E75"
+          fill={brand.sage.base}
         />
         {/* 右の葉（やや透過）*/}
         <Path

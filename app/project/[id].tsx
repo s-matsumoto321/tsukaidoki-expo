@@ -12,22 +12,23 @@ import Svg, {
 import { type Project, type ProjectEvent } from '@/constants/projects';
 import { useStore, type AllocationEntry, type Dream } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
+import { brand, neutral, usePalette, tints } from '@/constants/colors';
 
 const C = {
-  brand: '#5B8E7D',
-  green: '#5B8E7D',
-  red: '#E8B86D',
-  orange: '#C8826B',
-  bg: '#FAF7F2',
-  card: '#ffffff',
-  aiCard: '#E8EFEB',
-  textPrimary: '#2C3539',
-  textSecondary: '#6B7378',
-  textTertiary: '#A0A6A9',
-  border: '#EDE8DF',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  red: brand.honey.base,
+  orange: usePalette.jewels[2],
+  bg: neutral.bg,
+  card: neutral.card,
+  aiCard: brand.sage.bg,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
+  textTertiary: neutral.text.light,
+  border: neutral.divider,
   borderMd: 'rgba(44,53,57,0.2)',
-  warn: '#FBF1DD',
-  starGold: '#E8B86D',
+  warn: brand.honey.bg,
+  starGold: brand.honey.base,
 };
 
 function parseYear(s: string): number {
@@ -345,7 +346,7 @@ const al = StyleSheet.create({
   stepBtn: {
     width: 56, height: 56,
     justifyContent: 'center', alignItems: 'center',
-    backgroundColor: '#f0f0f8',
+    backgroundColor: tints.amethystTint,
   },
   stepBtnTxt: { fontSize: 24, color: C.brand, fontWeight: '300' },
   stepInput: {
@@ -361,7 +362,7 @@ const al = StyleSheet.create({
     paddingVertical: 10, paddingHorizontal: 8,
     borderRadius: 8, marginBottom: 4,
   },
-  entryRowSel: { backgroundColor: '#EBF2FB' },
+  entryRowSel: { backgroundColor: tints.poolActive },
   entryBar: { width: 3, height: 32, borderRadius: 2 },
   entryYear: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   entryAmt: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
@@ -416,8 +417,8 @@ const ev2 = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   detail: { fontSize: 11, color: C.textSecondary, marginTop: 1 },
   amt: { fontSize: 13, fontWeight: '600' },
-  pos: { color: '#27500A' },
-  neg: { color: '#791F1F' },
+  pos: { color: brand.sage.base },
+  neg: { color: brand.honey.dark },
 });
 
 // ─── 夢行 ────────────────────────────────────────────────────────
@@ -652,8 +653,8 @@ const s = StyleSheet.create({
     backgroundColor: C.aiCard, borderRadius: 12, padding: 9,
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
   },
-  aiIcon: { fontSize: 14, color: '#185FA5', lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: '#185FA5', fontWeight: '500', marginBottom: 1 },
+  aiIcon: { fontSize: 14, color: brand.sage.base, lineHeight: 22 },
+  aiLabel: { fontSize: 11, color: brand.sage.base, fontWeight: '500', marginBottom: 1 },
   aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
 
   graphCard: {

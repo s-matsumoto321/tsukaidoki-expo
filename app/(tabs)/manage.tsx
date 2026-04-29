@@ -3,16 +3,17 @@ import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar } from 'react-
 import { router } from 'expo-router';
 import { useStore } from '@/store/useStore';
 import { Logo } from '@/components/logo';
+import { brand, neutral } from '@/constants/colors';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  greenBg: '#EAF3DE',
-  greenText: '#27500A',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  greenBg: brand.sage.bg,
+  greenText: neutral.text.primary,
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
   border: 'rgba(0,0,0,0.08)',
 };
 

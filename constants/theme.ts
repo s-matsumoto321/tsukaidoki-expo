@@ -1,27 +1,38 @@
+import { brand, neutral, poolPalette, usePalette } from './colors';
+
 export const colors = {
-  bg: '#FAF7F2',
-  card: '#FFFFFF',
-  cardAlt: '#FFFEFB',
+  bg: neutral.bg,
+  card: neutral.card,
+  cardAlt: neutral.cardAlt,
 
-  sage: '#5B8E7D',
-  sageLight: '#8BB0A2',
-  sageBg: '#E8EFEB',
+  sage: brand.sage.base,
+  sageLight: brand.sage.light,
+  sageBg: brand.sage.bg,
 
-  honey: '#E8B86D',
-  honeyBg: '#FBF1DD',
+  honey: brand.honey.base,
+  honeyDark: brand.honey.dark,
+  honeyBg: brand.honey.bg,
 
-  text: '#2C3539',
-  textMid: '#6B7378',
-  textLight: '#A0A6A9',
+  text: neutral.text.primary,
+  textMid: neutral.text.mid,
+  textLight: neutral.text.light,
 
-  divider: '#EDE8DF',
+  divider: neutral.divider,
 
-  chart1: '#5B8E7D',
-  chart2: '#4A7FA8',
-  chart3: '#E8B86D',
-  chart4: '#C8826B',
-  chart5: '#B8AFD9',
-  chart6: '#BDC4C7',
+  // プール金パレット（tone-1〜5: 濃→淡）
+  chart1: poolPalette.tones[0],
+  chart2: poolPalette.tones[1],
+  chart3: poolPalette.tones[2],
+  chart4: poolPalette.tones[3],
+  chart5: poolPalette.tones[4],
+
+  // 使いみちパレット（jewel-1〜6）
+  use1: usePalette.jewels[0],
+  use2: usePalette.jewels[1],
+  use3: usePalette.jewels[2],
+  use4: usePalette.jewels[3],
+  use5: usePalette.jewels[4],
+  use6: usePalette.jewels[5],
 };
 
 export const typography = {
@@ -55,21 +66,21 @@ export const radius = {
 
 export const shadows = {
   card: {
-    shadowColor: '#2C3539',
+    shadowColor: neutral.text.primary,
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 3,
     elevation: 1,
   },
   floating: {
-    shadowColor: '#2C3539',
+    shadowColor: neutral.text.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.08,
     shadowRadius: 32,
     elevation: 8,
   },
   fab: {
-    shadowColor: '#2C3539',
+    shadowColor: neutral.text.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.25,
     shadowRadius: 24,

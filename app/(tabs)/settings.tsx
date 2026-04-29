@@ -3,6 +3,7 @@ import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, Alert } from 
 import { router } from 'expo-router';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
+import { semantic } from '@/constants/colors';
 
 type MenuItemProps = {
   label: string;
@@ -84,7 +85,7 @@ export default function SettingsScreen() {
             <MenuItem
               label="口座振替"
               sub="口座間の資金を移動する"
-              accent={colors.chart6}
+              accent={colors.textLight}
               onPress={() => router.push('/transfer')}
             />
           </View>
@@ -127,7 +128,7 @@ export default function SettingsScreen() {
               <MenuItem
                 label="プレミアム会員"
                 sub="✓ シナリオ無制限 · ありがとうございます"
-                accent={colors.chart5}
+                accent={colors.use4}
                 showArrow={false}
                 onPress={() => {}}
               />
@@ -135,7 +136,7 @@ export default function SettingsScreen() {
               <MenuItem
                 label="プレミアムにアップグレード"
                 sub="シナリオを無制限に作れるようになります"
-                accent={colors.chart5}
+                accent={colors.use4}
                 onPress={() => router.push('/premium' as any)}
               />
             )}
@@ -160,7 +161,7 @@ export default function SettingsScreen() {
             <MenuItem
               label="テストデータをリセット"
               sub="口座・残高・プロジェクト・シナリオをデフォルトに戻す"
-              accent="#E24B4A"
+              accent={semantic.negative}
               onPress={handleResetAllData}
             />
           </View>
@@ -171,19 +172,19 @@ export default function SettingsScreen() {
           <View style={s.menuCard}>
             <MenuItem
               label="ヘルプ・お問い合わせ"
-              accent={colors.chart6}
+              accent={colors.textLight}
               onPress={() => {}}
             />
             <View style={s.divider} />
             <MenuItem
               label="利用規約"
-              accent={colors.chart6}
+              accent={colors.textLight}
               onPress={() => {}}
             />
             <View style={s.divider} />
             <MenuItem
               label="プライバシーポリシー"
-              accent={colors.chart6}
+              accent={colors.textLight}
               onPress={() => {}}
             />
           </View>

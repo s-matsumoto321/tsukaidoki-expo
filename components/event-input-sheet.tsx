@@ -12,15 +12,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect } from 'react';
 import { type ProjectEvent } from '@/constants/projects';
 import { useStore, type ActualOverride, type SpendPlanOverride } from '@/store/useStore';
+import { brand, neutral, semantic } from '@/constants/colors';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  red: '#E24B4A',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  red: semantic.negative,
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
   border: 'rgba(0,0,0,0.12)',
 };
 

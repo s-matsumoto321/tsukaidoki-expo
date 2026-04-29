@@ -8,18 +8,19 @@ import { router } from 'expo-router';
 import { useStore, type Dream, type FamilyMember } from '@/store/useStore';
 import { PROJECTS } from '@/constants/projects';
 import { PF_ITEMS } from '@/constants/data';
+import { brand, neutral, semantic } from '@/constants/colors';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  amber: '#EF9F27',
-  red: '#E24B4A',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  amber: brand.honey.base,
+  red: semantic.negative,
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
   border: 'rgba(0,0,0,0.08)',
-  starGold: '#D4A017',
+  starGold: brand.honey.dark,
 };
 
 const NOW_YEAR = new Date().getFullYear();
@@ -166,7 +167,7 @@ const m = StyleSheet.create({
     paddingVertical: 12, paddingHorizontal: 14,
     marginBottom: 8,
   },
-  pjItemSelected: { borderColor: C.brand, backgroundColor: '#EEF4FB' },
+  pjItemSelected: { borderColor: C.brand, backgroundColor: brand.sage.bg },
   pjDot: { width: 12, height: 12, borderRadius: 6 },
   pjName: { flex: 1, fontSize: 15, color: C.textPrimary },
   pjCheck: { fontSize: 14, color: C.brand, fontWeight: '700' },

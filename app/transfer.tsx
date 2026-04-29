@@ -3,18 +3,19 @@ import { router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { brand, neutral, semantic } from '@/constants/colors';
 
 const C = {
-  brand: '#5B8E7D',
-  green: '#5B8E7D',
-  bg: '#FAF7F2',
-  card: '#ffffff',
-  textPrimary: '#2C3539',
-  textSecondary: '#6B7378',
-  border: '#EDE8DF',
-  borderFocus: '#5B8E7D',
-  selected: '#E8EFEB',
-  selectedBorder: '#5B8E7D',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
+  border: neutral.divider,
+  borderFocus: brand.sage.base,
+  selected: brand.sage.bg,
+  selectedBorder: brand.sage.base,
 };
 
 export default function TransferScreen() {
@@ -238,7 +239,7 @@ const s = StyleSheet.create({
     color: C.textPrimary,
     paddingVertical: 10,
   },
-  errorTxt: { fontSize: 11, color: '#E24B4A', paddingHorizontal: 14, paddingBottom: 10 },
+  errorTxt: { fontSize: 11, color: semantic.negative, paddingHorizontal: 14, paddingBottom: 10 },
 
   noteInput: {
     paddingHorizontal: 14,
@@ -248,7 +249,7 @@ const s = StyleSheet.create({
   },
 
   preview: {
-    backgroundColor: '#E6F1FB',
+    backgroundColor: brand.sage.bg,
     borderRadius: 10,
     padding: 12,
     marginTop: 16,

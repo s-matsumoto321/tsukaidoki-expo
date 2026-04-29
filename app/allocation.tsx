@@ -10,14 +10,15 @@ import Svg, {
 } from 'react-native-svg';
 import { type FinancialItem } from '@/constants/data';
 import { useStore, type AllocationEntry } from '@/store/useStore';
+import { brand, neutral, semantic, tints } from '@/constants/colors';
 
 const C = {
-  brand: '#0C447C',
-  green: '#1D9E75',
-  bg: '#f5f4ee',
-  card: '#ffffff',
-  textPrimary: '#2c2c2a',
-  textSecondary: '#73726c',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
   border: 'rgba(0,0,0,0.08)',
   borderMd: 'rgba(0,0,0,0.18)',
 };
@@ -538,9 +539,9 @@ const s = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 8,
-    backgroundColor: '#FCEBEB',
+    backgroundColor: brand.honey.bg,
   },
-  deleteTxt: { fontSize: 12, color: '#E24B4A', fontWeight: '500' },
+  deleteTxt: { fontSize: 12, color: semantic.negative, fontWeight: '500' },
 
   editorRow: {
     flexDirection: 'row',
@@ -616,7 +617,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 6,
     gap: 10,
   },
-  entryRowSel: { backgroundColor: '#EBF2FB' },
+  entryRowSel: { backgroundColor: tints.poolActive },
   entryBar: { width: 3, height: 32, borderRadius: 2 },
   entryYear: { fontSize: 13, fontWeight: '500', color: C.textPrimary },
   entrySub: { fontSize: 11, color: C.textSecondary, marginTop: 2 },

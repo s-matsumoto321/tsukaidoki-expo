@@ -3,6 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { POOL_ITEMS as DEFAULT_POOL_ITEMS, PF_ITEMS as DEFAULT_PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { PROJECTS as DEFAULT_PROJECTS, type Project } from '@/constants/projects';
+import { semantic } from '@/constants/colors';
 
 export type UserEvent = {
   id: string;
@@ -199,7 +200,7 @@ export const useStore = create<State & Actions>()(
         const event: UserEvent = {
           id: `${Date.now()}-${projectId}`,
           type: diff >= 0 ? 'in' : 'spend',
-          dot: diff >= 0 ? '#1D9E75' : '#E24B4A',
+          dot: diff >= 0 ? semantic.positive : semantic.negative,
           date: dateLabel(),
           name: note || '残高修正',
           detail: `¥${prevAmount.toLocaleString('ja-JP')} → ¥${newAmount.toLocaleString('ja-JP')}`,
@@ -241,13 +242,13 @@ export const useStore = create<State & Actions>()(
         const amtStr = `¥${amount.toLocaleString('ja-JP')}`;
         const fromEvent: UserEvent = {
           id: `${Date.now()}-from`,
-          type: 'spend', dot: '#E24B4A', date: dateLabel(),
+          type: 'spend', dot: semantic.negative, date: dateLabel(),
           name: label, detail: '出金',
           amt: `-${amtStr}`, pos: false,
         };
         const toEvent: UserEvent = {
           id: `${Date.now()}-to`,
-          type: 'in', dot: '#1D9E75', date: dateLabel(),
+          type: 'in', dot: semantic.positive, date: dateLabel(),
           name: label, detail: '入金',
           amt: `+${amtStr}`, pos: true,
         };

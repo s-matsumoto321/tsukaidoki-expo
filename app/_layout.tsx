@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { neutral } from '@/constants/colors';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
@@ -48,8 +49,8 @@ export default function RootLayout() {
             name="pool"
             options={{
               title: 'プール金',
-              headerStyle: { backgroundColor: '#FAF7F2' },
-              headerTintColor: '#2C3539',
+              headerStyle: { backgroundColor: neutral.bg },
+              headerTintColor: neutral.text.primary,
               headerBackTitle: 'ホーム',
             }}
           />

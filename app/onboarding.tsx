@@ -6,19 +6,19 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useStore, type FamilyMember, type Dream } from '@/store/useStore';
-
+import { brand, neutral, usePalette as usePaletteColors } from '@/constants/colors';
 
 const C = {
-  brand: '#5B8E7D',
-  green: '#5B8E7D',
-  amber: '#E8B86D',
-  red: '#E8B86D',
-  purple: '#B8AFD9',
-  bg: '#FAF7F2',
-  card: '#ffffff',
-  textPrimary: '#2C3539',
-  textSecondary: '#6B7378',
-  border: '#EDE8DF',
+  brand: brand.sage.base,
+  green: brand.sage.base,
+  amber: brand.honey.base,
+  red: brand.honey.base,
+  purple: usePaletteColors.jewels[3],
+  bg: neutral.bg,
+  card: neutral.card,
+  textPrimary: neutral.text.primary,
+  textSecondary: neutral.text.mid,
+  border: neutral.divider,
 };
 
 const { width: SW } = Dimensions.get('window');
@@ -234,7 +234,7 @@ const is = StyleSheet.create({
     backgroundColor: C.card, borderWidth: 0.5, borderColor: C.border,
     alignItems: 'center', gap: 4, position: 'relative',
   },
-  cardSelected: { borderColor: C.brand, backgroundColor: '#EEF4FB', borderWidth: 1.5 },
+  cardSelected: { borderColor: C.brand, backgroundColor: brand.sage.bg, borderWidth: 1.5 },
   cardIcon: { fontSize: 24 },
   cardName: { fontSize: 12, fontWeight: '500', color: C.textPrimary },
   cardNameSelected: { color: C.brand },
@@ -577,10 +577,10 @@ const fm = StyleSheet.create({
 
 const DEFAULT_ALLOCATION = { edu: 30000, ret: 50000, car: 40000, trip: 10000 };
 const PJ_CONFIG = [
-  { id: 'edu', name: '教育資金', color: '#2B7FC0' },
-  { id: 'ret', name: '老後資金', color: '#1D9E75' },
-  { id: 'car', name: '車資金', color: '#D46000' },
-  { id: 'trip', name: '旅行資金', color: '#7B5EA7' },
+  { id: 'edu', name: '教育資金', color: usePaletteColors.jewels[0] },
+  { id: 'ret', name: '老後資金', color: usePaletteColors.jewels[1] },
+  { id: 'car', name: '車資金', color: usePaletteColors.jewels[2] },
+  { id: 'trip', name: '旅行資金', color: usePaletteColors.jewels[3] },
 ];
 
 function SavingsStep({ onNext }: { onNext: (allocation: Record<string, number>) => void }) {
