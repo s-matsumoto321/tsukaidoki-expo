@@ -1,7 +1,7 @@
-import { useRef, useState } from 'react';
+import { useMemo } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  Animated, View, Text, Pressable,
+  View, Text, Pressable,
   StyleSheet, StatusBar, ScrollView,
 } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
@@ -9,48 +9,61 @@ import { DonutChart } from '@/components/donut-chart';
 import { type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
-import { X, Menu, ChevronDown } from 'lucide-react-native';
-
-const MENU_WIDTH = 270;
+import { assignPoolColors } from '@/constants/colors';
+import { ChevronDown } from 'lucide-react-native';
 
 // ─── 円グラフカード ─────────────────────────────────────────────────
 
-type LegendItemProps = { color: string; name: string; val: string };
+type LegendItemProps = { color: string; name: string; val: string; muted?: boolean };
 
-function LegendItem({ color, name, val }: LegendItemProps) {
+function LegendItem({ color, name, val, muted = false }: LegendItemProps) {
   return (
     <View style={s.legRow}>
       <View style={s.legLeft}>
         <View style={[s.legDot, { backgroundColor: color }]} />
-        <Text style={s.legName} numberOfLines={1}>{name}</Text>
+        <Text style={[s.legName, muted && s.legNameMuted]} numberOfLines={1}>{name}</Text>
       </View>
-      <Text style={s.legVal}>{val}</Text>
+      <Text style={[s.legVal, muted && s.legValMuted]}>{val}</Text>
     </View>
   );
 }
 
 type ChartCardProps = {
   title: string;
-  badge: string;
+  subTitle: string;
   total: string;
   sub: string;
   items: FinancialItem[];
   route: Href;
+  accentColor: string;
 };
 
-function ChartCard({ title, badge, total, sub, items, route }: ChartCardProps) {
+function ChartCard({ title, subTitle, total, sub, items, route, accentColor }: ChartCardProps) {
   const segments = items.map(i => ({ color: i.color, value: i.amount }));
-  const topItems = items.slice(0, 3);
+  const top2 = items.slice(0, 2);
+  const rest = items.slice(2);
+  const restTotal = rest.reduce((sum, i) => sum + i.amount, 0);
   return (
     <Link href={route} asChild>
       <Pressable style={s.chartCard}>
+        <View style={[s.cardTopBar, { backgroundColor: accentColor }]} />
         <View style={s.chartHeader}>
-          <Text style={s.chartHeaderTitle}>{title}</Text>
-          <Text style={s.chartHeaderBadge}>{badge}</Text>
+          <View>
+            <Text style={s.chartHeaderTitle}>{title}</Text>
+            <Text style={s.chartHeaderSub}>{subTitle}</Text>
+          </View>
+          <Text style={s.chartArrow}>›</Text>
         </View>
         <View style={s.chartBody}>
-          <DonutChart segments={segments} size={110} thickness={14} centerLabel={total} centerSub={sub} />
-          {topItems.map(item => <LegendItem key={item.name} color={item.color} name={item.name} val={item.val} />)}
+          <DonutChart segments={segments} size={120} thickness={15} centerLabel={total} centerSub={sub} />
+        </View>
+        <View style={s.legWrap}>
+          {top2.map(item => (
+            <LegendItem key={item.name} color={item.color} name={item.name} val={item.val} />
+          ))}
+          {rest.length > 0 && (
+            <LegendItem color={colors.textLight} name={`他${rest.length}件`} val={fmtMan(restTotal)} muted />
+          )}
         </View>
       </Pressable>
     </Link>
@@ -75,19 +88,14 @@ function generateHomeInsight(pfItems: FinancialItem[], dreamCount: number): stri
 
 function AiInsightCard({ pfItems, dreamCount }: { pfItems: FinancialItem[]; dreamCount: number }) {
   const text = generateHomeInsight(pfItems, dreamCount);
-  const hasWarn = pfItems.some(i => i.status === 'warn' && i.projectId);
   return (
     <View style={s.aiCard}>
+      <View style={s.aiGlow} pointerEvents="none" />
       <View style={s.aiInner}>
         <Text style={s.aiMark}>✦</Text>
         <View style={{ flex: 1 }}>
           <Text style={s.aiLabel}>AIインサイト</Text>
           <Text style={s.aiTxt}>{text}</Text>
-          {!hasWarn && (
-            <Pressable style={s.aiBtn} onPress={() => router.push('/(tabs)/explore' as any)}>
-              <Text style={s.aiBtnTxt}>試算してみる</Text>
-            </Pressable>
-          )}
         </View>
       </View>
     </View>
@@ -106,38 +114,17 @@ export default function HomeScreen() {
   const { balances, scenarios, activeScenarioId, dreams, poolItems, pfItems } = useStore();
   const activeScenario = scenarios.find(sc => sc.id === activeScenarioId) ?? scenarios[0];
 
-  const [menuVisible, setMenuVisible] = useState(false);
-  const menuAnim    = useRef(new Animated.Value(MENU_WIDTH)).current;
-  const overlayAnim = useRef(new Animated.Value(0)).current;
-  const btnScale    = useRef(new Animated.Value(1)).current;
+  const livePoolItems = useMemo(() => {
+    const items = poolItems.map(item => ({
+      ...item,
+      amount: balances[item.projectId!] ?? item.amount,
+    }));
+    const colorMap = assignPoolColors(items.map(i => ({ id: i.projectId!, amount: i.amount })));
+    return items
+      .map(i => ({ ...i, color: colorMap.get(i.projectId!) ?? i.color }))
+      .sort((a, b) => b.amount - a.amount);
+  }, [poolItems, balances]);
 
-  const openMenu = () => {
-    setMenuVisible(true);
-    Animated.parallel([
-      Animated.spring(menuAnim,    { toValue: 0, useNativeDriver: true, bounciness: 4 }),
-      Animated.timing(overlayAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-    ]).start();
-  };
-
-  const closeMenu = () => {
-    Animated.parallel([
-      Animated.timing(menuAnim,    { toValue: MENU_WIDTH, duration: 220, useNativeDriver: true }),
-      Animated.timing(overlayAnim, { toValue: 0,          duration: 200, useNativeDriver: true }),
-    ]).start(() => setMenuVisible(false));
-  };
-
-  const onMenuBtnPress = () => {
-    Animated.sequence([
-      Animated.timing(btnScale, { toValue: 0.75, duration: 80, useNativeDriver: true }),
-      Animated.spring(btnScale, { toValue: 1, bounciness: 14, useNativeDriver: true }),
-    ]).start();
-    openMenu();
-  };
-
-  const livePoolItems = poolItems.map(item => ({
-    ...item,
-    amount: balances[item.projectId!] ?? item.amount,
-  }));
   const livePfItems = pfItems.map(item => ({
     ...item,
     amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
@@ -147,9 +134,6 @@ export default function HomeScreen() {
   const pfTotal   = livePfItems.reduce((sum, item) => sum + item.amount, 0);
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
-
-  const pjCount   = pfItems.filter(i => i.projectId).length;
-  const acctCount = poolItems.length;
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
@@ -161,17 +145,9 @@ export default function HomeScreen() {
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {/* ① ヘッダー */}
-          <View style={s.header}>
-            <View>
-              <Text style={s.headerGreeting}>こんにちは</Text>
-              <Text style={s.headerTitle}>あなたの{'\n'}ライフプラン</Text>
-            </View>
-            <Animated.View style={{ transform: [{ scale: btnScale }] }}>
-              <Pressable style={s.menuBtn} onPress={onMenuBtnPress}>
-                <Menu size={18} color={colors.text} strokeWidth={1.8} />
-              </Pressable>
-            </Animated.View>
+          {/* ① ページタイトル */}
+          <View style={s.titleRow}>
+            <Text style={s.pageTitle}>ホーム</Text>
           </View>
 
           {/* ② プラン選択ピル */}
@@ -185,61 +161,44 @@ export default function HomeScreen() {
 
           {/* ③ 総資産ヒーローカード */}
           <View style={s.totalCard}>
+            <View style={s.totalGlow} pointerEvents="none" />
             <Text style={s.totalLabel}>総資産</Text>
             <View style={s.totalAmtRow}>
               <Text style={s.totalCurrency}>¥</Text>
               <Text style={s.totalAmt}>{poolTotal.toLocaleString('ja-JP')}</Text>
             </View>
-            <View style={s.totalDivider} />
-            <View style={s.totalMeta}>
-              <View style={s.totalMetaItem}>
-                <Text style={s.totalMetaNum}>{pjCount}</Text>
-                <Text style={s.totalMetaLbl}>プロジェクト</Text>
-              </View>
-              <View style={s.totalMetaSep} />
-              <View style={s.totalMetaItem}>
-                <Text style={s.totalMetaNum}>{dreams.length}</Text>
-                <Text style={s.totalMetaLbl}>の夢</Text>
-              </View>
-              <View style={s.totalMetaSep} />
-              <View style={s.totalMetaItem}>
-                <Text style={s.totalMetaNum}>{acctCount}</Text>
-                <Text style={s.totalMetaLbl}>口座</Text>
-              </View>
-            </View>
           </View>
 
-          {/* ④ アラート（差異あり時のみ） */}
-          {!isBalanced && (
-            <View style={s.alertCard}>
-              <View style={s.alertBadge}>
-                <Text style={s.alertBadgeTxt}>!</Text>
-              </View>
-              <Text style={s.alertTxt}>
-                <Text style={{ fontWeight: '700' }}>残高修正が必要です</Text>
-                {`　差額 ¥${Math.abs(diff).toLocaleString('ja-JP')}`}
-              </Text>
+          {/* ④ 円グラフ2枚（差額バッジ中央オーバーレイ） */}
+          <View style={s.dualWrap}>
+            <View style={s.dualChart}>
+              <ChartCard
+                title="プール金"
+                subTitle="どこにある"
+                total={fmtMan(poolTotal)}
+                sub={`${poolItems.length}口座`}
+                items={livePoolItems}
+                route={'/(tabs)/pool' as any}
+                accentColor={colors.chart2}
+              />
+              <ChartCard
+                title="使いみち"
+                subTitle="何のために"
+                total={fmtMan(pfTotal)}
+                sub={`${pfItems.length}件`}
+                items={livePfItems}
+                route="/(tabs)/explore"
+                accentColor={colors.sage}
+              />
             </View>
-          )}
-
-          {/* ⑤ 円グラフ2枚 */}
-          <View style={s.dualChart}>
-            <ChartCard
-              title="プール金"
-              badge="口座別"
-              total={fmtMan(poolTotal)}
-              sub={`${poolItems.length}口座`}
-              items={livePoolItems}
-              route={'/(tabs)/pool' as any}
-            />
-            <ChartCard
-              title="使いみち"
-              badge="用途別"
-              total={fmtMan(pfTotal)}
-              sub={`${pfItems.length}件`}
-              items={livePfItems}
-              route="/(tabs)/explore"
-            />
+            {!isBalanced && (
+              <View pointerEvents="none" style={s.diffCenter}>
+                <View style={s.diffBubble}>
+                  <Text style={s.diffNeq}>≠</Text>
+                  <Text style={s.diffTxt}>差額 {fmtMan(Math.abs(diff))}</Text>
+                </View>
+              </View>
+            )}
           </View>
 
           {/* ⑥ AIインサイト */}
@@ -248,47 +207,6 @@ export default function HomeScreen() {
         </ScrollView>
       </SafeAreaView>
 
-      {/* オーバーレイ */}
-      {menuVisible && (
-        <Animated.View
-          style={[StyleSheet.absoluteFill, { opacity: overlayAnim }]}
-          pointerEvents="auto"
-        >
-          <Pressable
-            style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.35)' }}
-            onPress={closeMenu}
-          />
-        </Animated.View>
-      )}
-
-      {/* スライドメニュー */}
-      {menuVisible && (
-        <Animated.View style={[s.menuPanel, { transform: [{ translateX: menuAnim }] }]}>
-          <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-            <View style={s.menuHeader}>
-              <Text style={s.menuTitle}>ツカイドキ</Text>
-              <Pressable style={s.menuCloseBtn} onPress={closeMenu}>
-                <X size={14} color={colors.textMid} strokeWidth={2} />
-              </Pressable>
-            </View>
-            <View style={s.menuList}>
-              {[
-                { label: 'ホーム',   route: '/(tabs)/' },
-                { label: '使いみち', route: '/(tabs)/explore' },
-                { label: '設定',     route: '/(tabs)/settings' },
-              ].map(item => (
-                <Pressable
-                  key={item.label}
-                  style={s.menuItem}
-                  onPress={() => { closeMenu(); router.push(item.route as any); }}
-                >
-                  <Text style={s.menuItemLabel}>{item.label}</Text>
-                </Pressable>
-              ))}
-            </View>
-          </SafeAreaView>
-        </Animated.View>
-      )}
     </View>
   );
 }
@@ -297,28 +215,16 @@ const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
   scrollContent: { paddingBottom: 100 },
 
-  // ヘッダー
-  header: {
+  // ページタイトル
+  titleRow: {
     paddingHorizontal: spacing.xl,
     paddingTop: spacing.lg,
-    paddingBottom: spacing.xxl,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    paddingBottom: spacing.md,
   },
-  headerGreeting: { fontSize: 13, color: colors.textMid, marginBottom: 4 },
-  headerTitle: {
+  pageTitle: {
     fontSize: fontSizes.pageTitle,
     fontFamily: typography.display,
     color: colors.text,
-    lineHeight: 40,
-  },
-
-  menuBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: colors.card,
-    justifyContent: 'center', alignItems: 'center',
-    ...shadows.card,
   },
 
   // プラン選択ピル
@@ -334,7 +240,7 @@ const s = StyleSheet.create({
   planDot: {
     width: 6, height: 6, borderRadius: 3, backgroundColor: colors.sage,
   },
-  planTxt: { fontSize: 13, color: colors.sage, fontWeight: '500' },
+  planTxt: { fontSize: 13, color: colors.sage, fontWeight: '500', fontFamily: typography.display },
 
   // 総資産ヒーローカード
   totalCard: {
@@ -345,65 +251,71 @@ const s = StyleSheet.create({
     padding: spacing.xxl,
     ...shadows.card,
   },
-  totalLabel: { fontSize: fontSizes.caption, color: colors.textMid, letterSpacing: 1 },
+  totalGlow: {
+    position: 'absolute', top: -40, right: -40,
+    width: 160, height: 160, borderRadius: 80,
+    backgroundColor: 'rgba(91, 142, 125, 0.08)',
+  },
+  totalLabel: { fontSize: fontSizes.caption, color: colors.textMid, letterSpacing: 1, fontFamily: typography.display },
   totalAmtRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: spacing.sm },
   totalCurrency: {
-    fontSize: 28, color: colors.textMid, fontFamily: typography.display,
+    fontSize: 28, color: colors.textMid, fontFamily: typography.displayMedium,
     paddingBottom: 4, marginRight: 2,
   },
   totalAmt: {
     fontSize: fontSizes.amountHero,
-    fontFamily: typography.display,
+    fontFamily: typography.displaySemiBold,
     color: colors.text,
     lineHeight: 48,
   },
-  totalDivider: { height: 1, backgroundColor: colors.divider, marginVertical: spacing.lg },
-  totalMeta: { flexDirection: 'row', alignItems: 'center' },
-  totalMetaItem: { flex: 1, alignItems: 'center' },
-  totalMetaNum: { fontSize: 14, fontWeight: '700', color: colors.text },
-  totalMetaLbl: { fontSize: 11, color: colors.textLight, marginTop: 2 },
-  totalMetaSep: { width: 1, height: 24, backgroundColor: colors.divider },
-
-  // アラート
-  alertCard: {
+  // 円グラフ（2枚＋差額バッジ）
+  dualWrap: {
     marginHorizontal: spacing.xl,
     marginBottom: spacing.md,
-    backgroundColor: colors.honeyBg,
-    borderRadius: radius.md,
-    padding: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
+    position: 'relative',
   },
-  alertBadge: {
-    width: 24, height: 24, borderRadius: 12,
-    backgroundColor: colors.honey,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  alertBadgeTxt: { fontSize: 13, fontWeight: '700', color: '#fff' },
-  alertTxt: { flex: 1, fontSize: 13, color: colors.text, lineHeight: 19 },
-
-  // 円グラフ
   dualChart: {
     flexDirection: 'row', gap: spacing.sm,
-    paddingHorizontal: spacing.xl,
-    marginBottom: spacing.md,
   },
+  diffCenter: {
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    justifyContent: 'center', alignItems: 'center', zIndex: 5,
+  },
+  diffBubble: {
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    backgroundColor: colors.honey, paddingHorizontal: 11, paddingVertical: 7,
+    borderRadius: 100, borderWidth: 3, borderColor: colors.bg,
+    shadowColor: colors.honey, shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
+  },
+  diffNeq: { fontSize: 13, color: '#fff', fontFamily: typography.displayBold },
+  diffTxt: { fontSize: 10, color: '#fff', fontFamily: typography.displayBold },
+
   chartCard: {
     flex: 1, backgroundColor: colors.card,
     borderRadius: radius.lg, overflow: 'hidden',
     ...shadows.card,
   },
+  cardTopBar: { height: 4 },
   chartHeader: {
-    paddingHorizontal: spacing.md, paddingVertical: 10,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 12, paddingTop: 12, paddingBottom: 6,
+    flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between',
   },
-  chartHeaderTitle: { fontSize: 14, fontWeight: '700', color: colors.text },
-  chartHeaderBadge: { fontSize: 10, color: colors.textLight },
-  chartBody: { paddingHorizontal: 12, paddingBottom: 14, alignItems: 'center' },
-  legRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 3, width: '100%' },
+  chartHeaderTitle: { fontSize: 14, fontWeight: '700', color: colors.text, fontFamily: typography.displayBold },
+  chartHeaderSub: { fontSize: 10, color: colors.textLight, marginTop: 1, fontFamily: typography.display },
+  chartArrow: { fontSize: 18, color: colors.textLight, lineHeight: 20 },
+  chartBody: { paddingHorizontal: 12, paddingBottom: 8, alignItems: 'center' },
+  legWrap: {
+    paddingHorizontal: 12, paddingTop: 8, paddingBottom: 12,
+    borderTopWidth: 1, borderTopColor: colors.divider, gap: 4,
+  },
+  legRow: { flexDirection: 'row', alignItems: 'center' },
   legLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 },
-  legDot: { width: 7, height: 7, borderRadius: 3.5, flexShrink: 0 },
-  legName: { fontSize: 11, color: colors.textMid, flex: 1 },
-  legVal: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 36, textAlign: 'right' },
+  legDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
+  legName: { fontSize: 10, color: colors.textMid, flex: 1, fontFamily: typography.display },
+  legNameMuted: { color: colors.textLight },
+  legVal: { fontSize: 10, color: colors.text, minWidth: 36, textAlign: 'right', fontFamily: typography.displaySemiBold },
+  legValMuted: { color: colors.textLight, fontFamily: typography.display },
 
   // AIインサイト
   aiCard: {
@@ -412,38 +324,16 @@ const s = StyleSheet.create({
     backgroundColor: colors.sageBg,
     borderRadius: radius.lg,
     overflow: 'hidden',
+    position: 'relative',
+  },
+  aiGlow: {
+    position: 'absolute', bottom: -30, right: -30,
+    width: 100, height: 100, borderRadius: 50,
+    backgroundColor: 'rgba(91, 142, 125, 0.15)',
   },
   aiInner: { padding: spacing.xl, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4 },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 21 },
-  aiBtn: {
-    marginTop: 10, backgroundColor: colors.sage,
-    borderRadius: radius.sm, paddingVertical: 8, paddingHorizontal: 16,
-    alignSelf: 'flex-start',
-  },
-  aiBtnTxt: { fontSize: 13, fontWeight: '600', color: '#fff' },
+  aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.display },
+  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.displayBold },
+  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 21, fontFamily: typography.display },
 
-  // スライドメニュー
-  menuPanel: {
-    position: 'absolute', top: 0, right: 0, bottom: 0, width: MENU_WIDTH,
-    backgroundColor: colors.card,
-    ...shadows.floating,
-  },
-  menuHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.xl,
-    borderBottomWidth: 1, borderBottomColor: colors.divider,
-  },
-  menuTitle: { fontSize: 18, fontFamily: typography.display, color: colors.text },
-  menuCloseBtn: {
-    width: 32, height: 32, borderRadius: 16,
-    backgroundColor: colors.bg,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  menuList: { paddingTop: spacing.sm },
-  menuItem: {
-    paddingHorizontal: spacing.xxl, paddingVertical: spacing.lg,
-  },
-  menuItemLabel: { fontSize: 16, fontWeight: '500', color: colors.text },
 });

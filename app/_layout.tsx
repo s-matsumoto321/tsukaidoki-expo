@@ -6,10 +6,11 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { useFonts } from 'expo-font';
 import {
-  Fraunces_400Regular,
-  Fraunces_500Medium,
-  Fraunces_700Bold,
-} from '@expo-google-fonts/fraunces';
+  Manrope_400Regular,
+  Manrope_500Medium,
+  Manrope_600SemiBold,
+  Manrope_700Bold,
+} from '@expo-google-fonts/manrope';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 
@@ -24,9 +25,10 @@ export const unstable_settings = {
 export default function RootLayout() {
   const colorScheme = useColorScheme();
   const [fontsLoaded] = useFonts({
-    Fraunces_400Regular,
-    Fraunces_500Medium,
-    Fraunces_700Bold,
+    Manrope_400Regular,
+    Manrope_500Medium,
+    Manrope_600SemiBold,
+    Manrope_700Bold,
   });
 
   useEffect(() => {

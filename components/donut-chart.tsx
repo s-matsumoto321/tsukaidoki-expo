@@ -1,6 +1,7 @@
 import Svg, { Circle, G } from 'react-native-svg';
 import { View, Text, StyleSheet } from 'react-native';
 import { neutral } from '@/constants/colors';
+import { typography } from '@/constants/theme';
 
 export type ChartSegment = { color: string; value: number };
 
@@ -19,7 +20,14 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
   const cx = size / 2;
   const cy = size / 2;
 
+  const segData: { color: string; segLength: number; rotation: number }[] = [];
   let startAngle = -90;
+  for (const seg of segments) {
+    const segAngle = (seg.value / total) * 360;
+    const segLength = (seg.value / total) * circumference;
+    segData.push({ color: seg.color, segLength, rotation: startAngle });
+    startAngle += segAngle;
+  }
 
   return (
     <View style={{ width: size, height: size, justifyContent: 'center', alignItems: 'center' }}>
@@ -27,25 +35,30 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
         {total === 0 ? (
           <Circle cx={cx} cy={cy} r={radius} fill="none" stroke={neutral.divider} strokeWidth={thickness} />
         ) : (
-          segments.map((seg, i) => {
-            const segAngle = (seg.value / total) * 360;
-            const segLength = (seg.value / total) * circumference;
-            const rotation = startAngle;
-            startAngle += segAngle;
-            return (
+          <>
+            {segData.map(({ color, segLength, rotation }, i) => (
               <G key={i} rotation={rotation} origin={`${cx},${cy}`}>
                 <Circle
-                  cx={cx}
-                  cy={cy}
-                  r={radius}
+                  cx={cx} cy={cy} r={radius}
                   fill="none"
-                  stroke={seg.color}
+                  stroke={color}
                   strokeWidth={thickness}
-                  strokeDasharray={`${Math.max(0, segLength - 1.5)} ${circumference}`}
+                  strokeDasharray={`${segLength} ${circumference}`}
                 />
               </G>
-            );
-          })
+            ))}
+            {segData.length > 1 && segData.map(({ rotation }, i) => (
+              <G key={`sep-${i}`} rotation={rotation} origin={`${cx},${cy}`}>
+                <Circle
+                  cx={cx} cy={cy} r={radius}
+                  fill="none"
+                  stroke="rgba(255, 255, 255, 0.85)"
+                  strokeWidth={thickness}
+                  strokeDasharray={`2 ${circumference}`}
+                />
+              </G>
+            ))}
+          </>
         )}
       </Svg>
       <View style={styles.center}>
@@ -58,6 +71,6 @@ export function DonutChart({ segments, size = 90, thickness = 10, centerLabel, c
 
 const styles = StyleSheet.create({
   center: { alignItems: 'center' },
-  label: { fontSize: 14, fontWeight: '600', color: neutral.text.primary, fontFamily: 'Fraunces_400Regular' },
-  sub: { fontSize: 9, color: neutral.text.mid, marginTop: 1 },
+  label: { fontSize: 16, fontFamily: typography.displaySemiBold, color: neutral.text.primary },
+  sub: { fontSize: 9, color: neutral.text.mid, marginTop: 1, fontFamily: typography.display },
 });

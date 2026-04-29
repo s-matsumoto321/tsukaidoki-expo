@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>ツカイドキ ホーム 最終版 Manrope</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;600;700&family=Manrope:wght@200..800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #FAF7F2;
+    --card: #FFFFFF;
+    --sage: #5B8E7D;
+    --sage-bg: #E8EFEB;
+    --honey: #E8B86D;
+    --honey-bg: #FBF1DD;
+    --honey-dark: #B8893E;
+    --text: #2C3539;
+    --text-mid: #6B7378;
+    --text-light: #A0A6A9;
+    --divider: #EDE8DF;
+
+    --pool: #4A7FA8;
+    --pool-bg: #E8F0F7;
+    --use: #5B8E7D;
+    --use-bg: #E8EFEB;
+
+    /* プール金（口座別）= 青グラデーション統一 */
+    --p1: #2E5F8A;  /* 証券（最濃） */
+    --p2: #4A7FA8;  /* 定期 */
+    --p3: #6B9BC4;  /* NISA */
+    --p4: #95B8D4;  /* メイン銀行 */
+    --p5: #C2D5E5;  /* サブ銀行（最淡） */
+
+    /* 使いみち（用途別） */
+    --u1: #2E6FB8;  /* 教育 */
+    --u2: #3D9670;  /* 老後 */
+    --u3: #E07142;  /* 車 */
+    --u4: #9376C9;  /* 旅行 */
+    --u5: #A8AFB3;  /* 余剰 */
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-font-smoothing: antialiased; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: #d4cec1;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 40px 20px;
+  }
+
+  .phone {
+    width: 390px;
+    height: 844px;
+    background: var(--bg);
+    border-radius: 48px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: 0 30px 80px rgba(44, 53, 57, 0.25);
+    border: 8px solid #1a1a1a;
+  }
+
+  .screen {
+    width: 100%;
+    height: 100%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  .screen::-webkit-scrollbar { display: none; }
+
+  .status-bar {
+    height: 50px;
+    padding: 18px 30px 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .content { padding: 8px 20px 100px; }
+
+  .plan-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--sage-bg);
+    color: var(--sage);
+    padding: 8px 14px;
+    border-radius: 100px;
+    font-size: 13px;
+    font-weight: 600;
+    margin: 8px 0 16px;
+  }
+
+  .plan-pill .dot {
+    width: 6px; height: 6px;
+    background: var(--sage);
+    border-radius: 50%;
+  }
+
+  /* === 総資産カード === */
+  .total-card {
+    background: var(--card);
+    border-radius: 28px;
+    padding: 24px;
+    margin-bottom: 12px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .total-card::before {
+    content: '';
+    position: absolute;
+    top: -60px; right: -60px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(91, 142, 125, 0.08) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .total-label {
+    font-size: 12px;
+    color: var(--text-mid);
+    margin-bottom: 4px;
+  }
+
+  .total-amount {
+    font-family: 'Manrope', sans-serif;
+    font-size: 38px;
+    font-weight: 550;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+
+  .total-amount .yen {
+    font-size: 26px;
+    color: var(--text-mid);
+    margin-right: 2px;
+    font-weight: 500;
+  }
+
+  /* === 2カード並び === */
+  .duo-wrap {
+    position: relative;
+    margin-bottom: 14px;
+  }
+
+  .duo-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .entry-card {
+    background: var(--card);
+    border-radius: 24px;
+    padding: 16px 14px 14px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .entry-card.pool-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--pool);
+  }
+
+  .entry-card.use-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 4px;
+    background: var(--use);
+  }
+
+  .entry-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+  }
+
+  .entry-title-block {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .entry-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .entry-sub {
+    font-size: 10px;
+    color: var(--text-light);
+    margin-top: 1px;
+  }
+
+  .entry-arrow {
+    color: var(--text-light);
+    font-size: 16px;
+    line-height: 1;
+  }
+
+  /* ドーナツチャート */
+  .donut {
+    width: 100%;
+    aspect-ratio: 1;
+    max-width: 130px;
+    margin: 4px auto 12px;
+    position: relative;
+  }
+
+  .donut svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+
+  .donut-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .donut-amount {
+    font-family: 'Manrope', sans-serif;
+    font-size: 19px;
+    font-weight: 550;
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .donut-amount .man {
+    font-size: 11px;
+    color: var(--text-mid);
+    margin-left: 1px;
+    font-weight: 500;
+  }
+
+  .donut-meta {
+    font-size: 9px;
+    color: var(--text-light);
+    margin-top: 3px;
+  }
+
+  /* 凡例（カード内、上位3項目のみ） */
+  .mini-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 10px;
+    border-top: 1px solid var(--divider);
+  }
+
+  .mini-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--text-mid);
+  }
+
+  .mini-legend-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .mini-legend-name {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  .mini-legend-val {
+    font-weight: 600;
+    color: var(--text);
+    font-size: 10px;
+  }
+
+  .mini-legend-row.muted {
+    color: var(--text-light);
+  }
+
+  .mini-legend-row.muted .mini-legend-val {
+    color: var(--text-light);
+    font-weight: 500;
+  }
+
+  /* === 中央バッジ === */
+  .diff-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+  }
+
+  .diff-bubble {
+    background: var(--honey);
+    color: white;
+    padding: 7px 11px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 700;
+    box-shadow: 0 4px 12px rgba(232, 184, 109, 0.4), 0 2px 4px rgba(232, 184, 109, 0.2);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    border: 3px solid var(--bg);
+  }
+
+  .diff-bubble .neq {
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  /* === Insight === */
+  .insight {
+    background: linear-gradient(135deg, var(--sage-bg) 0%, #F0F5F2 100%);
+    border-radius: 24px;
+    padding: 18px 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .insight::before {
+    content: '';
+    position: absolute;
+    bottom: -40px; right: -40px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(91, 142, 125, 0.15) 0%, transparent 70%);
+    border-radius: 50%;
+  }
+
+  .insight-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+
+  .sparkle { color: var(--sage); font-size: 14px; }
+  .insight-label { font-size: 12px; font-weight: 600; color: var(--sage); }
+  .insight-text { font-size: 12.5px; line-height: 1.6; color: var(--text); position: relative; z-index: 1; }
+
+  /* Tab bar */
+  .tab-bar {
+    position: absolute;
+    bottom: 18px;
+    left: 16px; right: 16px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(20px);
+    border-radius: 28px;
+    padding: 10px 8px;
+    display: flex;
+    justify-content: space-around;
+    box-shadow: 0 8px 32px rgba(44, 53, 57, 0.08);
+    border: 0.5px solid rgba(255, 255, 255, 0.5);
+  }
+
+  .tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    padding: 6px 10px;
+    border-radius: 18px;
+    color: var(--text-light);
+    min-width: 60px;
+  }
+
+  .tab.active { background: var(--sage-bg); color: var(--sage); }
+  .tab svg { width: 20px; height: 20px; stroke-width: 1.8; }
+  .tab-label { font-size: 10px; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="phone">
+    <div class="screen">
+      <div class="status-bar">
+        <span>8:41</span>
+        <div>●●● 📶 🔋</div>
+      </div>
+
+      <div class="content">
+        <div class="plan-pill">
+          <span class="dot"></span>
+          <span>プランA・メイン  ⌄</span>
+        </div>
+
+        <!-- 総資産カード -->
+        <div class="total-card">
+          <div class="total-label">総資産</div>
+          <div class="total-amount"><span class="yen">¥</span>9,250,000</div>
+        </div>
+
+        <!-- 2つの入口カード（円グラフ付き） -->
+        <div class="duo-wrap">
+          <div class="duo-grid">
+            <!-- プール金 -->
+            <div class="entry-card pool-card">
+              <div class="entry-header">
+                <div class="entry-title-block">
+                  <span class="entry-title">プール金</span>
+                  <span class="entry-sub">どこにある</span>
+                </div>
+                <span class="entry-arrow">›</span>
+              </div>
+
+              <div class="donut">
+                <svg viewBox="0 0 120 120">
+                  <!-- 925万 = 360度。各セグメント: 証券300, 定期250, NISA100, メイン80, サブ45 -->
+                  <!-- circumference 2πr = 2*π*48 ≈ 301.6 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--divider)" stroke-width="14"/>
+                  <!-- 証券 300/925 = 32.4% → 97.7 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p1)" stroke-width="14" stroke-dasharray="97.7 301.6" stroke-dashoffset="0"/>
+                  <!-- 定期 250/925 = 27.0% → 81.5 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p2)" stroke-width="14" stroke-dasharray="81.5 301.6" stroke-dashoffset="-97.7"/>
+                  <!-- NISA 100/925 = 10.8% → 32.6 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p3)" stroke-width="14" stroke-dasharray="32.6 301.6" stroke-dashoffset="-179.2"/>
+                  <!-- メイン 80/925 = 8.6% → 26.1 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p4)" stroke-width="14" stroke-dasharray="26.1 301.6" stroke-dashoffset="-211.8"/>
+                  <!-- サブ 45/925 = 4.9% → 14.7 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--p5)" stroke-width="14" stroke-dasharray="14.7 301.6" stroke-dashoffset="-237.9"/>
+                  <!-- 白い間仕切り（各セグメント境界に2pxの白線） -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="0"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-97.7"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-179.2"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-211.8"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-237.9"/>
+                </svg>
+                <div class="donut-center">
+                  <div class="donut-amount">¥925<span class="man">万</span></div>
+                  <div class="donut-meta">5口座</div>
+                </div>
+              </div>
+
+              <div class="mini-legend">
+                <div class="mini-legend-row">
+                  <span class="mini-legend-dot" style="background: var(--p1);"></span>
+                  <span class="mini-legend-name">証券口座</span>
+                  <span class="mini-legend-val">300</span>
+                </div>
+                <div class="mini-legend-row">
+                  <span class="mini-legend-dot" style="background: var(--p2);"></span>
+                  <span class="mini-legend-name">定期預金</span>
+                  <span class="mini-legend-val">250</span>
+                </div>
+                <div class="mini-legend-row muted">
+                  <span class="mini-legend-dot" style="background: var(--text-light);"></span>
+                  <span class="mini-legend-name">他3つ</span>
+                  <span class="mini-legend-val">225</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- 使いみち -->
+            <div class="entry-card use-card">
+              <div class="entry-header">
+                <div class="entry-title-block">
+                  <span class="entry-title">使いみち</span>
+                  <span class="entry-sub">何のために</span>
+                </div>
+                <span class="entry-arrow">›</span>
+              </div>
+
+              <div class="donut">
+                <svg viewBox="0 0 120 120">
+                  <!-- 865万 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--divider)" stroke-width="14"/>
+                  <!-- 教育 300/865 = 34.7% → 104.6 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--u1)" stroke-width="14" stroke-dasharray="104.6 301.6" stroke-dashoffset="0"/>
+                  <!-- 老後 250/865 = 28.9% → 87.2 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--u2)" stroke-width="14" stroke-dasharray="87.2 301.6" stroke-dashoffset="-104.6"/>
+                  <!-- 余剰 115/865 = 13.3% → 40.1 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--u5)" stroke-width="14" stroke-dasharray="40.1 301.6" stroke-dashoffset="-191.8"/>
+                  <!-- 車 100/865 = 11.6% → 34.9 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--u3)" stroke-width="14" stroke-dasharray="34.9 301.6" stroke-dashoffset="-231.9"/>
+                  <!-- 旅行 50/865 = 5.8% → 17.4 -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="var(--u4)" stroke-width="14" stroke-dasharray="17.4 301.6" stroke-dashoffset="-266.8"/>
+                  <!-- 白い間仕切り -->
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="0"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-104.6"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-191.8"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-231.9"/>
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="rgba(255,255,255,0.85)" stroke-width="14" stroke-dasharray="2 299.6" stroke-dashoffset="-266.8"/>
+                </svg>
+                <div class="donut-center">
+                  <div class="donut-amount">¥865<span class="man">万</span></div>
+                  <div class="donut-meta">5用途</div>
+                </div>
+              </div>
+
+              <div class="mini-legend">
+                <div class="mini-legend-row">
+                  <span class="mini-legend-dot" style="background: var(--u1);"></span>
+                  <span class="mini-legend-name">教育資金</span>
+                  <span class="mini-legend-val">300</span>
+                </div>
+                <div class="mini-legend-row">
+                  <span class="mini-legend-dot" style="background: var(--u2);"></span>
+                  <span class="mini-legend-name">老後資金</span>
+                  <span class="mini-legend-val">250</span>
+                </div>
+                <div class="mini-legend-row muted">
+                  <span class="mini-legend-dot" style="background: var(--text-light);"></span>
+                  <span class="mini-legend-name">他3つ</span>
+                  <span class="mini-legend-val">315</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 中央バッジ -->
+          <div class="diff-center">
+            <div class="diff-bubble">
+              <span class="neq">≠</span>
+              <span>差額 60万</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- AI Insight -->
+        <div class="insight">
+          <div class="insight-head">
+            <span class="sparkle">✦</span>
+            <span class="insight-label">AIインサイト</span>
+          </div>
+          <div class="insight-text">
+            プール金が60万円多い状態です。新しい夢を追加できるかもしれません。例えば旅行資金や趣味の予算など、使いみちを広げてみませんか？
+          </div>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>
+          <span class="tab-label">シナリオ</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 21h18M5 21V10l7-5 7 5v11M9 21v-6h6v6"/></svg>
+          <span class="tab-label">プール金</span>
+        </div>
+        <div class="tab active">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M3 12L12 3l9 9M5 10v11h14V10"/></svg>
+          <span class="tab-label">ホーム</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg>
+          <span class="tab-label">使いみち</span>
+        </div>
+        <div class="tab">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 1 1-14 0 7 7 0 0 1 14 0z"/></svg>
+          <span class="tab-label">設定</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

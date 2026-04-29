@@ -1,4 +1,4 @@
-import { brand, neutral, poolPalette, usePalette } from './colors';
+import { brand, neutral, poolPalette, usePalette, tints } from './colors';
 
 export const colors = {
   bg: neutral.bg,
@@ -8,6 +8,7 @@ export const colors = {
   sage: brand.sage.base,
   sageLight: brand.sage.light,
   sageBg: brand.sage.bg,
+  poolBg: tints.poolActive,
 
   honey: brand.honey.base,
   honeyDark: brand.honey.dark,
@@ -36,9 +37,11 @@ export const colors = {
 };
 
 export const typography = {
-  display: 'Fraunces_400Regular',
-  displayBold: 'Fraunces_700Bold',
-  body: undefined,
+  display: 'Manrope_400Regular',
+  displayMedium: 'Manrope_500Medium',
+  displaySemiBold: 'Manrope_600SemiBold',
+  displayBold: 'Manrope_700Bold',
+  body: 'Manrope_400Regular',
 };
 
 export const fontSizes = {

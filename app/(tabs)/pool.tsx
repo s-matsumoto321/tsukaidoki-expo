@@ -9,6 +9,7 @@ import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg
 import { type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
+import { assignPoolColors } from '@/constants/colors';
 
 const NOW_YEAR = new Date().getFullYear();
 
@@ -238,21 +239,21 @@ const bl = StyleSheet.create({
     ...shadows.card,
   },
   bar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
-  name: { fontSize: 14, fontWeight: '600', color: colors.text },
-  meta: { fontSize: 11, color: colors.textMid, marginTop: 1 },
+  name: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  meta: { fontSize: 11, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  amt: { fontSize: 15, fontWeight: '700', color: colors.sage },
-  editIcon: { fontSize: 11, color: colors.sage },
+  amt: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   editRow: {
     flexDirection: 'row', alignItems: 'center',
-    borderBottomWidth: 1.5, borderBottomColor: colors.sage, paddingBottom: 1,
+    borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
-  editPrefix: { fontSize: 14, color: colors.sage, fontWeight: '600', marginRight: 2 },
+  editPrefix: { fontSize: 14, color: colors.chart2, fontWeight: '600', marginRight: 2, fontFamily: typography.display },
   editInput: {
-    fontSize: 15, fontWeight: '700', color: colors.sage,
-    paddingVertical: 0, minWidth: 80,
+    fontSize: 15, fontWeight: '700', color: colors.chart2,
+    paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
   },
-  rate: { fontSize: 11, color: colors.textMid, marginTop: 2 },
+  rate: { fontSize: 11, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
 });
 
 // ── 積立・複利オーバーレイ ────────────────────────────────────────────
@@ -470,12 +471,12 @@ const sh = StyleSheet.create({
     borderBottomWidth: 1, borderBottomColor: colors.divider,
     backgroundColor: colors.card,
   },
-  sheetTitle: { fontSize: 15, fontWeight: '700', color: colors.text },
+  sheetTitle: { fontSize: 15, fontWeight: '700', color: colors.text, fontFamily: typography.display },
   closeBtn: {
     width: 28, height: 28, borderRadius: 14,
     backgroundColor: colors.bg, justifyContent: 'center', alignItems: 'center',
   },
-  closeTxt: { fontSize: 13, color: colors.textMid },
+  closeTxt: { fontSize: 13, color: colors.textMid, fontFamily: typography.display },
 
   rangeRow: {
     flexDirection: 'row', gap: 8, paddingHorizontal: 14, paddingVertical: 8,
@@ -486,8 +487,8 @@ const sh = StyleSheet.create({
     borderRadius: radius.pill, backgroundColor: colors.card,
     borderWidth: 1, borderColor: colors.divider,
   },
-  rangePillActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  rangePillTxt: { fontSize: 13, fontWeight: '500', color: colors.textMid },
+  rangePillActive: { backgroundColor: colors.chart2, borderColor: colors.chart2 },
+  rangePillTxt: { fontSize: 13, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
   rangePillTxtActive: { color: '#fff' },
 
   chartCard: {
@@ -498,18 +499,18 @@ const sh = StyleSheet.create({
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 9, color: colors.textMid },
+  legendTxt: { fontSize: 9, color: colors.textMid, fontFamily: typography.display },
 
   scrollContent: { paddingHorizontal: 14, paddingTop: 12, paddingBottom: 16 },
-  sectionLabel: { fontSize: 12, fontWeight: '600', color: colors.textMid, marginBottom: 8 },
+  sectionLabel: { fontSize: 12, fontWeight: '600', color: colors.textMid, marginBottom: 8, fontFamily: typography.display },
 
   periodContainer: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     gap: 8, marginBottom: 4,
   },
   periodBlock: { alignItems: 'center', flex: 1 },
-  periodLabel: { fontSize: 11, color: colors.textMid, marginBottom: 4 },
-  periodSep: { fontSize: 18, color: colors.textMid, marginTop: 16 },
+  periodLabel: { fontSize: 11, color: colors.textMid, marginBottom: 4, fontFamily: typography.display },
+  periodSep: { fontSize: 18, color: colors.textMid, marginTop: 16, fontFamily: typography.display },
   yearRow: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
@@ -518,8 +519,8 @@ const sh = StyleSheet.create({
     backgroundColor: colors.card, borderWidth: 1, borderColor: colors.divider,
     justifyContent: 'center', alignItems: 'center',
   },
-  arrowTxt: { fontSize: 18, color: colors.sage },
-  yearTxt: { fontSize: 16, fontWeight: '700', color: colors.text, minWidth: 50, textAlign: 'center' },
+  arrowTxt: { fontSize: 18, color: colors.chart2, fontFamily: typography.display },
+  yearTxt: { fontSize: 16, fontWeight: '700', color: colors.text, minWidth: 50, textAlign: 'center', fontFamily: typography.display },
 
   accountBlock: {
     backgroundColor: colors.card, borderRadius: radius.sm,
@@ -528,10 +529,10 @@ const sh = StyleSheet.create({
   },
   accountNameRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 },
   colorDot: { width: 10, height: 10, borderRadius: 3 },
-  accountName: { fontSize: 14, fontWeight: '600', color: colors.text },
+  accountName: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   fieldsRow: { flexDirection: 'row', alignItems: 'flex-start' },
   fieldCol: { flex: 1 },
-  fieldLabel: { fontSize: 10, color: colors.textMid, fontWeight: '500', marginBottom: 3 },
+  fieldLabel: { fontSize: 10, color: colors.textMid, fontWeight: '500', marginBottom: 3, fontFamily: typography.display },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: colors.bg, borderRadius: 6,
@@ -539,25 +540,26 @@ const sh = StyleSheet.create({
   },
   stepBtn: {
     width: 32, height: 36, justifyContent: 'center', alignItems: 'center',
-    backgroundColor: colors.sageBg,
+    backgroundColor: colors.poolBg,
   },
-  stepBtnTxt: { fontSize: 18, color: colors.sage, fontWeight: '300' },
+  stepBtnTxt: { fontSize: 18, color: colors.chart2, fontWeight: '300', fontFamily: typography.display },
   stepInput: {
     flex: 1, textAlign: 'center',
     fontSize: 13, fontWeight: '700', color: colors.text, paddingVertical: 4,
+    fontFamily: typography.display,
   },
-  unitTxt: { fontSize: 11, color: colors.sage, textAlign: 'center', marginTop: 2 },
+  unitTxt: { fontSize: 11, color: colors.chart2, textAlign: 'center', marginTop: 2, fontFamily: typography.display },
   footer: {
     paddingHorizontal: spacing.lg, paddingVertical: 10,
     borderTopWidth: 1, borderTopColor: colors.divider,
     backgroundColor: colors.bg,
   },
   applyBtn: {
-    backgroundColor: colors.sage, borderRadius: radius.md,
+    backgroundColor: colors.chart2, borderRadius: radius.md,
     paddingVertical: 14, alignItems: 'center',
     ...shadows.card,
   },
-  applyTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  applyTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.display },
 });
 
 // ── メイン画面 ────────────────────────────────────────────────────────
@@ -581,7 +583,7 @@ export default function PoolScreen() {
   const enrichedPoolItems = useMemo<PoolItem[]>(() => {
     const sortedEntries = [...savingsAllocation.entries].sort((a, b) => b.fromYear - a.fromYear);
     const currentEntry = sortedEntries.find(e => e.fromYear <= NOW_YEAR);
-    return poolItems.map(item => {
+    const items = poolItems.map(item => {
       const id = item.projectId!;
       return {
         ...item,
@@ -590,6 +592,8 @@ export default function PoolScreen() {
         rate: savedRates[id] ?? DEFAULT_RATES[id] ?? 0,
       };
     });
+    const colorMap = assignPoolColors(items.map(i => ({ id: i.projectId!, amount: i.balance })));
+    return items.map(i => ({ ...i, color: colorMap.get(i.projectId!) ?? i.color }));
   }, [balances, savingsAllocation, poolItems]);
 
   const totalBalance = enrichedPoolItems.reduce((sum, i) => sum + i.balance, 0);
@@ -685,7 +689,7 @@ export default function PoolScreen() {
           svgW={svgW}
           yearCount={yearCount}
           stacks={savedStacks}
-          colors={poolItems.map(i => i.color)}
+          colors={enrichedPoolItems.map(i => i.color)}
         />
       </View>
 
@@ -723,7 +727,7 @@ export default function PoolScreen() {
         onApply={applyDraft}
         onClose={() => setOverlayOpen(false)}
         bottomPad={insets.bottom + 4}
-        poolItems={poolItems}
+        poolItems={enrichedPoolItems}
       />
     </SafeAreaView>
   );
@@ -739,7 +743,7 @@ const ps = StyleSheet.create({
     fontFamily: typography.display,
     color: colors.text,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid },
+  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
   totalAmt: {
     fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
     fontFamily: typography.display,
@@ -754,15 +758,15 @@ const ps = StyleSheet.create({
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 10, color: colors.textMid },
+  legendTxt: { fontSize: 10, color: colors.textMid, fontFamily: typography.display },
 
   listPanel: { flex: 1, backgroundColor: colors.bg },
   secRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: 6,
   },
-  secTitle: { fontSize: 13, fontWeight: '500', color: colors.textMid },
-  secSub: { fontSize: 12, color: colors.sage, fontWeight: '500', textDecorationLine: 'underline' },
+  secTitle: { fontSize: 13, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
+  secSub: { fontSize: 12, color: colors.chart2, fontWeight: '500', textDecorationLine: 'underline', fontFamily: typography.display },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -771,9 +775,9 @@ const ps = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.divider,
   },
   allocBtn: {
-    backgroundColor: colors.sage, borderRadius: radius.md,
+    backgroundColor: colors.chart2, borderRadius: radius.md,
     paddingVertical: 14, alignItems: 'center',
     ...shadows.card,
   },
-  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff' },
+  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.display },
 });

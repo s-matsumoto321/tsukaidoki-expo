@@ -397,7 +397,7 @@ const s = StyleSheet.create({
   sectionLabel: {
     fontSize: 12, color: colors.textMid, marginBottom: 10,
     paddingHorizontal: 4, letterSpacing: 0.5,
-    textTransform: 'uppercase',
+    textTransform: 'uppercase', fontFamily: typography.display,
   },
 
   scenarioCard: {
@@ -432,14 +432,14 @@ const s = StyleSheet.create({
   radioInner: {
     width: 8, height: 8, borderRadius: 4, backgroundColor: colors.sage,
   },
-  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.textMid },
+  cardTitle: { flex: 1, fontSize: 16, fontWeight: '600', color: colors.textMid, fontFamily: typography.display },
   cardTitleActive: { color: colors.text },
   activeBadge: {
     backgroundColor: colors.sageBg,
     paddingHorizontal: 8, paddingVertical: 3,
     borderRadius: radius.pill,
   },
-  activeBadgeTxt: { fontSize: 11, color: colors.sage, fontWeight: '600' },
+  activeBadgeTxt: { fontSize: 11, color: colors.sage, fontWeight: '600', fontFamily: typography.display },
   cardStats: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -447,7 +447,7 @@ const s = StyleSheet.create({
   },
   stat: { flex: 1, paddingVertical: 12, paddingHorizontal: spacing.lg },
   statBorder: { borderLeftWidth: 1, borderLeftColor: colors.divider },
-  statLabel: { fontSize: 12, color: colors.textMid },
+  statLabel: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
   statVal: {
     fontSize: fontSizes.amountMedium, fontWeight: '600',
     color: colors.textMid, marginTop: 2,
@@ -470,10 +470,10 @@ const s = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
   },
   addBody: { flex: 1 },
-  addTitle: { fontSize: 16, fontWeight: '600', color: colors.text },
+  addTitle: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   lockRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
   lockIcon: { fontSize: 12 },
-  lockTxt: { fontSize: 12, color: colors.textMid },
+  lockTxt: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
 
-  hint: { fontSize: 11, color: colors.textLight, textAlign: 'center', marginTop: 16 },
+  hint: { fontSize: 11, color: colors.textLight, textAlign: 'center', marginTop: 16, fontFamily: typography.display },
 });

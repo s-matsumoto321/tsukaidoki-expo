@@ -173,7 +173,7 @@ const ap = StyleSheet.create({
     ...shadows.card,
     padding: 14,
   },
-  sectionLabel: { fontSize: 11, color: colors.textMid, fontWeight: '500', marginBottom: 8 },
+  sectionLabel: { fontSize: 11, color: colors.textMid, fontWeight: '500', marginBottom: 8, fontFamily: typography.display },
   allocBar: {
     flexDirection: 'row', height: 14, borderRadius: 7,
     overflow: 'hidden', marginBottom: 8,
@@ -184,8 +184,8 @@ const ap = StyleSheet.create({
     gap: 4, paddingVertical: 2,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  allocLegName: { fontSize: 10, color: colors.textMid, flex: 1 },
-  allocLegPct: { fontSize: 10, fontWeight: '600', color: colors.text, minWidth: 24, textAlign: 'right' },
+  allocLegName: { fontSize: 10, color: colors.textMid, flex: 1, fontFamily: typography.display },
+  allocLegPct: { fontSize: 10, fontWeight: '600', color: colors.text, minWidth: 24, textAlign: 'right', fontFamily: typography.display },
   row: {
     flexDirection: 'row', alignItems: 'center', gap: 10,
     paddingVertical: 8,
@@ -193,19 +193,19 @@ const ap = StyleSheet.create({
   },
   pjDot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   pjInfo: { flex: 1 },
-  pjName: { fontSize: 13, fontWeight: '600', color: colors.text },
+  pjName: { fontSize: 13, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   balancePressable: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  pjBalance: { fontSize: 11, color: colors.textMid },
-  editIcon: { fontSize: 11, color: colors.sage },
+  pjBalance: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  editIcon: { fontSize: 11, color: colors.sage, fontFamily: typography.display },
   balanceEditRow: {
     flexDirection: 'row', alignItems: 'center',
     marginTop: 2, borderBottomWidth: 1, borderBottomColor: colors.sage,
     paddingBottom: 1,
   },
-  balancePrefix: { fontSize: 12, color: colors.sage, fontWeight: '600', marginRight: 2 },
+  balancePrefix: { fontSize: 12, color: colors.sage, fontWeight: '600', marginRight: 2, fontFamily: typography.display },
   balanceInput: {
     fontSize: 13, fontWeight: '600', color: colors.sage,
-    paddingVertical: 0, minWidth: 80,
+    paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
   },
   stepper: {
     flexDirection: 'row', alignItems: 'center',
@@ -218,17 +218,17 @@ const ap = StyleSheet.create({
     justifyContent: 'center', alignItems: 'center',
     backgroundColor: colors.sageBg,
   },
-  stepBtnTxt: { fontSize: 18, color: colors.sage, fontWeight: '300' },
+  stepBtnTxt: { fontSize: 18, color: colors.sage, fontWeight: '300', fontFamily: typography.display },
   stepInput: {
     width: 72, textAlign: 'center',
     fontSize: 13, fontWeight: '600', color: colors.text,
-    paddingVertical: 6,
+    paddingVertical: 6, fontFamily: typography.display,
   },
   applyBtn: {
     marginTop: 12, backgroundColor: colors.sage, borderRadius: radius.sm,
     paddingVertical: 12, alignItems: 'center',
   },
-  applyBtnTxt: { fontSize: 14, fontWeight: '600', color: '#fff' },
+  applyBtnTxt: { fontSize: 14, fontWeight: '600', color: '#fff', fontFamily: typography.display },
 });
 
 // ─── AI自動配分調整カード ──────────────────────────────────────────────
@@ -283,15 +283,15 @@ const aa = StyleSheet.create({
     borderWidth: 1, borderColor: colors.honey,
   },
   inner: { padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  mark: { fontSize: 14, color: colors.honey, lineHeight: 22 },
-  title: { fontSize: 12, color: colors.honey, fontWeight: '600', marginBottom: 3 },
-  txt: { fontSize: 13, color: colors.text, lineHeight: 18 },
+  mark: { fontSize: 14, color: colors.honey, lineHeight: 22, fontFamily: typography.display },
+  title: { fontSize: 12, color: colors.honey, fontWeight: '600', marginBottom: 3, fontFamily: typography.display },
+  txt: { fontSize: 13, color: colors.text, lineHeight: 18, fontFamily: typography.display },
   btn: {
     marginTop: 8, backgroundColor: colors.honey,
     borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14,
     alignSelf: 'flex-start',
   },
-  btnTxt: { fontSize: 12, fontWeight: '600', color: '#fff' },
+  btnTxt: { fontSize: 12, fontWeight: '600', color: '#fff', fontFamily: typography.display },
 });
 
 // ─── 横積み比率バー ────────────────────────────────────────────────────
@@ -622,7 +622,7 @@ const s = StyleSheet.create({
     fontFamily: typography.display,
     color: colors.text,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid },
+  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
   totalAmt: {
     fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
     fontFamily: typography.display,
@@ -634,9 +634,9 @@ const s = StyleSheet.create({
     backgroundColor: colors.sageBg, borderRadius: radius.lg, padding: 16,
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4 },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 20 },
+  aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.display },
+  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.display },
+  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 20, fontFamily: typography.display },
 
   // アクションボタン
   actionBtnRow: {
@@ -651,9 +651,9 @@ const s = StyleSheet.create({
     ...shadows.card,
   },
   actionBtnActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  actionBtnTxt: { fontSize: 12, fontWeight: '600', color: colors.text },
+  actionBtnTxt: { fontSize: 12, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   actionBtnTxtActive: { color: '#fff' },
-  actionBtnArrow: { fontSize: 11, color: colors.textMid },
+  actionBtnArrow: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
 
   sortBar: {
     flexDirection: 'row', gap: 8,
@@ -665,7 +665,7 @@ const s = StyleSheet.create({
     borderWidth: 1, borderColor: colors.divider,
   },
   sortPillActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  sortPillText: { fontSize: 13, fontWeight: '500', color: colors.textMid },
+  sortPillText: { fontSize: 13, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
   sortPillTextActive: { color: '#fff' },
 
   // 横積み比率バー
@@ -684,8 +684,8 @@ const s = StyleSheet.create({
     gap: 4, paddingVertical: 3,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  allocLegName: { fontSize: 11, color: colors.textMid, flex: 1 },
-  allocLegPct: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right' },
+  allocLegName: { fontSize: 11, color: colors.textMid, flex: 1, fontFamily: typography.display },
+  allocLegPct: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display },
 
   content: { paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: 100 },
 
@@ -701,13 +701,13 @@ const s = StyleSheet.create({
   cardAccent: { width: 4 },
   cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
   cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardName: { fontSize: 16, fontWeight: '600', color: colors.text },
+  cardName: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   badge: {
     paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill,
   },
   badgeOk: { backgroundColor: colors.sageBg },
   badgeWarn: { backgroundColor: colors.honeyBg },
-  badgeTxt: { fontSize: 11, fontWeight: '600' },
+  badgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
   badgeOkTxt: { color: colors.sage },
   badgeWarnTxt: { color: colors.honey },
   cardBottom: { marginTop: 8 },
@@ -715,6 +715,6 @@ const s = StyleSheet.create({
   barFill: { height: 5, borderRadius: 3 },
   cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
   cardAmt: { fontSize: 15, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  cardPct: { fontSize: 13, color: colors.textMid },
-  dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center' },
+  cardPct: { fontSize: 13, color: colors.textMid, fontFamily: typography.display },
+  dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center', fontFamily: typography.display },
 });

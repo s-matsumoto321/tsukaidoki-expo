@@ -2,7 +2,7 @@ import { Tabs } from 'expo-router';
 import React from 'react';
 import { View, StyleSheet, Text } from 'react-native';
 import { Activity, Building2, Home, Star, Settings } from 'lucide-react-native';
-import { colors, shadows } from '@/constants/theme';
+import { colors, shadows, typography } from '@/constants/theme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 type TabBarProps = {
@@ -90,9 +90,11 @@ const tb = StyleSheet.create({
   inner: {
     flexDirection: 'row',
     paddingHorizontal: 8,
-    paddingVertical: 6,
-    backgroundColor: 'rgba(255,255,255,0.97)',
+    paddingVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.88)',
     borderRadius: 28,
+    borderWidth: 0.5,
+    borderColor: 'rgba(255,255,255,0.5)',
   },
   tab: {
     flex: 1,
@@ -109,7 +111,7 @@ const tb = StyleSheet.create({
   label: {
     fontSize: 10,
     color: colors.textLight,
-    fontWeight: '500',
+    fontFamily: typography.displaySemiBold,
   },
   labelActive: {
     color: colors.sage,

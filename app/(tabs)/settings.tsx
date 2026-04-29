@@ -78,7 +78,7 @@ export default function SettingsScreen() {
             <MenuItem
               label="プール金"
               sub="口座残高の確認・編集"
-              accent={colors.sage}
+              accent={colors.chart2}
               onPress={() => router.push('/pool')}
             />
             <View style={s.divider} />
@@ -213,6 +213,7 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 12, color: colors.textMid, marginBottom: spacing.sm,
     paddingHorizontal: 4, letterSpacing: 0.5, textTransform: 'uppercase',
+    fontFamily: typography.display,
   },
 
   menuCard: {
@@ -229,11 +230,11 @@ const s = StyleSheet.create({
   },
   menuAccent: { width: 4, height: 36, borderRadius: 2, marginRight: 12 },
   menuBody: { flex: 1 },
-  menuLabel: { fontSize: 16, fontWeight: '600', color: colors.text },
-  menuSub: { fontSize: 13, color: colors.textMid, marginTop: 2 },
-  menuArrow: { fontSize: 20, color: colors.textLight },
+  menuLabel: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  menuSub: { fontSize: 13, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
+  menuArrow: { fontSize: 20, color: colors.textLight, fontFamily: typography.display },
 
   divider: { height: 1, backgroundColor: colors.divider, marginLeft: 30 },
 
-  version: { textAlign: 'center', fontSize: 12, color: colors.textLight, marginTop: 8 },
+  version: { textAlign: 'center', fontSize: 12, color: colors.textLight, marginTop: 8, fontFamily: typography.display },
 });
