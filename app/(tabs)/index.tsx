@@ -135,13 +135,11 @@ export default function HomeScreen() {
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
-  // フォーカス取得ごとにカウントアップ → useEffect で確実にアニメーション起動
-  // pulseAnim: 回転角度（0 = 正位置、±10 = 左右10度）
-  const pulseAnim = useRef(new Animated.Value(0)).current;
-  const rotateInterp = pulseAnim.interpolate({
-    inputRange: [-10, 0, 10],
-    outputRange: ['-10deg', '0deg', '10deg'],
-  });
+  // 左右の円グラフを独立して揺らす（±5度、300msずれてスタート）
+  const pulseAnimL = useRef(new Animated.Value(0)).current;
+  const pulseAnimR = useRef(new Animated.Value(0)).current;
+  const rotateL = pulseAnimL.interpolate({ inputRange: [-5, 0, 5], outputRange: ['-5deg', '0deg', '5deg'] });
+  const rotateR = pulseAnimR.interpolate({ inputRange: [-5, 0, 5], outputRange: ['-5deg', '0deg', '5deg'] });
   const [focusCount, setFocusCount] = useState(0);
 
   useFocusEffect(
@@ -152,19 +150,20 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (focusCount === 0) return;
-    pulseAnim.setValue(0);
+    pulseAnimL.setValue(0);
+    pulseAnimR.setValue(0);
     if (isBalanced) return;
-    // 左右10度を2往復（合計2秒）でスムーズに揺れる
     const ease = Easing.inOut(Easing.sin);
-    const anim = Animated.sequence([
-      Animated.timing(pulseAnim, { toValue:  10, duration: 250, easing: Easing.out(Easing.sin), useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: -10, duration: 500, easing: ease, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue:  10, duration: 500, easing: ease, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: -10, duration: 500, easing: ease, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue:   0, duration: 250, easing: Easing.in(Easing.sin), useNativeDriver: false }),
+    const makeSeq = (anim: Animated.Value) => Animated.sequence([
+      Animated.timing(anim, { toValue:  5, duration: 250, easing: Easing.out(Easing.sin), useNativeDriver: false }),
+      Animated.timing(anim, { toValue: -5, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(anim, { toValue:  5, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(anim, { toValue: -5, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(anim, { toValue:  0, duration: 250, easing: Easing.in(Easing.sin), useNativeDriver: false }),
     ]);
-    anim.start();
-    return () => { anim.stop(); pulseAnim.setValue(0); };
+    const composite = Animated.stagger(300, [makeSeq(pulseAnimL), makeSeq(pulseAnimR)]);
+    composite.start();
+    return () => { composite.stop(); pulseAnimL.setValue(0); pulseAnimR.setValue(0); };
   }, [focusCount, isBalanced]);
 
   return (
@@ -202,26 +201,30 @@ export default function HomeScreen() {
           </View>
 
           {/* ④ 円グラフ2枚（差額バッジ中央オーバーレイ） */}
-          <Animated.View style={[s.dualWrap, { transform: [{ rotate: rotateInterp }] }]}>
+          <View style={s.dualWrap}>
             <View style={s.dualChart}>
-              <ChartCard
-                title="プール金"
-                subTitle="どこにある"
-                total={fmtMan(poolTotal)}
-                sub={`${poolItems.length}口座`}
-                items={livePoolItems}
-                route={'/(tabs)/pool' as any}
-                accentColor={colors.chart2}
-              />
-              <ChartCard
-                title="使いみち"
-                subTitle="何のために"
-                total={fmtMan(pfTotal)}
-                sub={`${PF_ITEMS.length}件`}
-                items={livePfItems}
-                route="/(tabs)/explore"
-                accentColor={colors.sage}
-              />
+              <Animated.View style={[{ flex: 1 }, { transform: [{ rotate: rotateL }] }]}>
+                <ChartCard
+                  title="プール金"
+                  subTitle="どこにある"
+                  total={fmtMan(poolTotal)}
+                  sub={`${poolItems.length}口座`}
+                  items={livePoolItems}
+                  route={'/(tabs)/pool' as any}
+                  accentColor={colors.chart2}
+                />
+              </Animated.View>
+              <Animated.View style={[{ flex: 1 }, { transform: [{ rotate: rotateR }] }]}>
+                <ChartCard
+                  title="使いみち"
+                  subTitle="何のために"
+                  total={fmtMan(pfTotal)}
+                  sub={`${PF_ITEMS.length}件`}
+                  items={livePfItems}
+                  route="/(tabs)/explore"
+                  accentColor={colors.sage}
+                />
+              </Animated.View>
             </View>
             {isBalanced ? (
               <View pointerEvents="none" style={s.diffCenter}>
@@ -239,7 +242,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
-          </Animated.View>
+          </View>
 
           {/* ⑥ AIインサイト */}
           <AiInsightCard pfItems={livePfItems} dreamCount={dreams.length} />
