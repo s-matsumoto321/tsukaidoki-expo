@@ -579,26 +579,27 @@ export default function DreamsScreen() {
       <AiInsightCard text={aiText} />
 
       {/* プロジェクトカード（スクロール） */}
-      <DraggableFlatList
-        style={{ flex: 1 }}
-        data={sortedItems}
-        keyExtractor={item => item.projectId ?? item.name}
-        contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
-        renderItem={renderItem}
-        ListHeaderComponent={panelOpen ? (
-          <AllocationPanel
-            pfItems={enriched}
-            balances={balances}
-            localMonthly={localMonthly}
-            localBalances={localBalances}
-            onChangeMonthly={handleChangeMonthly}
-            onChangeBalance={handleChangeBalance}
-            onAiApply={handleAiApply}
-            onSave={handleSaveAllocation}
-          />
-        ) : null}
-        onDragEnd={({ data }) => setDreamOrder(data.map(i => i.projectId ?? i.name))}
-      />
+      <View style={{ flex: 1 }}>
+        <DraggableFlatList
+          data={sortedItems}
+          keyExtractor={item => item.projectId ?? item.name}
+          contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
+          renderItem={renderItem}
+          ListHeaderComponent={panelOpen ? (
+            <AllocationPanel
+              pfItems={enriched}
+              balances={balances}
+              localMonthly={localMonthly}
+              localBalances={localBalances}
+              onChangeMonthly={handleChangeMonthly}
+              onChangeBalance={handleChangeBalance}
+              onAiApply={handleAiApply}
+              onSave={handleSaveAllocation}
+            />
+          ) : null}
+          onDragEnd={({ data }) => setDreamOrder(data.map(i => i.projectId ?? i.name))}
+        />
+      </View>
 
       {/* 積立調整ボタン（固定） */}
       <View style={[s.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN + BUTTON_BAR_BOTTOM_GAP }]}>
