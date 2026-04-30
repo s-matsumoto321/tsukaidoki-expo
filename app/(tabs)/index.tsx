@@ -221,8 +221,10 @@ export default function HomeScreen() {
             ) : (
               <View pointerEvents="none" style={s.diffCenter}>
                 <View style={s.diffBubble}>
+                  <Text style={s.diffChevron}>‹</Text>
                   <Text style={s.diffNeq}>≠</Text>
-                  <Text style={s.diffTxt}>差額 {fmtMan(Math.abs(diff))}</Text>
+                  <Text style={s.diffAmt}>{fmtMan(Math.abs(diff))}</Text>
+                  <Text style={s.diffChevron}>›</Text>
                 </View>
               </View>
             )}
@@ -317,8 +319,9 @@ const s = StyleSheet.create({
     shadowColor: colors.honey, shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4, shadowRadius: 12, elevation: 6,
   },
-  diffNeq: { fontSize: 13, color: '#fff', fontFamily: typography.displayBold },
-  diffTxt: { fontSize: 10, color: '#fff', fontFamily: typography.displayBold },
+  diffChevron: { fontSize: 15, color: 'rgba(255,255,255,0.65)', fontFamily: typography.displayBold, lineHeight: 18 },
+  diffNeq: { fontSize: 12, color: '#fff', fontFamily: typography.displayBold },
+  diffAmt: { fontSize: 11, color: '#fff', fontFamily: typography.displayBold },
   diffBubbleOk: {
     backgroundColor: colors.sage,
     shadowColor: colors.sage,
