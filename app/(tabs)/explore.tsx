@@ -668,7 +668,7 @@ const s = StyleSheet.create({
   amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
   mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
   mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  diffLine: { fontSize: 15, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },

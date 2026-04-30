@@ -161,7 +161,7 @@ export default function HomeScreen() {
       Animated.timing(anim, { toValue: -5, duration: 500, easing: ease, useNativeDriver: false }),
       Animated.timing(anim, { toValue:  0, duration: 250, easing: Easing.in(Easing.sin), useNativeDriver: false }),
     ]);
-    const composite = Animated.stagger(300, [makeSeq(pulseAnimL), makeSeq(pulseAnimR)]);
+    const composite = Animated.parallel([makeSeq(pulseAnimL), makeSeq(pulseAnimR)]);
     composite.start();
     return () => { composite.stop(); pulseAnimL.setValue(0); pulseAnimR.setValue(0); };
   }, [focusCount, isBalanced]);
