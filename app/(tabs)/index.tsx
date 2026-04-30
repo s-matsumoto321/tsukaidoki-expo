@@ -198,8 +198,8 @@ export default function HomeScreen() {
             <View style={s.totalGlow} pointerEvents="none" />
             <Text style={s.totalLabel}>総資産</Text>
             <View style={s.totalAmtRow}>
-              <Text style={s.totalCurrency}>¥</Text>
-              <Text style={s.totalAmt}>{poolTotal.toLocaleString('ja-JP')}</Text>
+              <Text style={s.totalAmt}>{Math.floor(poolTotal / 10_000).toLocaleString('ja-JP')}</Text>
+              <Text style={s.totalUnit}>万円</Text>
             </View>
           </View>
 
@@ -305,17 +305,16 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(91, 142, 125, 0.08)',
   },
   totalLabel: { fontSize: fontSizes.caption, color: colors.textMid, letterSpacing: 1, fontFamily: typography.bodyMedium },
-  totalAmtRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: spacing.sm },
-  totalCurrency: {
-    fontSize: fontSizes.currencyHero, color: colors.textMid, fontFamily: typography.displayMedium,
-    paddingBottom: 4, marginRight: 2,
-  },
+  totalAmtRow: { flexDirection: 'row', alignItems: 'baseline', marginTop: spacing.sm },
   totalAmt: {
     fontSize: fontSizes.amountHero,
     fontFamily: typography.displaySemiBold,
     color: colors.text,
     lineHeight: fontSizes.amountHero * 1.2,
     letterSpacing: letterSpacing.tight,
+  },
+  totalUnit: {
+    fontSize: 18, color: colors.textMid, fontFamily: typography.display, marginLeft: 4,
   },
   // 円グラフ（2枚＋差額バッジ）
   dualWrap: {
