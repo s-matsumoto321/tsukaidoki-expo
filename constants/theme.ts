@@ -57,13 +57,13 @@ export const fontSizes = {
   amountSmall: 14,
   currencyHero: 26,
   currencyMedium: 13,
-  textLg: 16,            // L2 説明書き大（差額テキスト等）
-  textMd: 16,            // L3 説明書き中・名称（カード名/口座名）
-  textSm: 13,            // L4 説明書き小（メタ・AI本文）
+  textLg: 22,            // L2 説明書き大（差額テキスト等）
+  textMd: 20,            // L3 説明書き中・名称（カード名/口座名/残高金額）
+  textSm: 15,            // L4 説明書き小（凡例・メタ・AI本文）
   heading: 16,
   body: 14,
-  caption: 13,           // L4 キャプション（+1 from 12）
-  micro: 12,             // L4 最小（+2 from 10）
+  caption: 15,           // L4
+  micro: 15,             // L4
 };
 
 export const lineHeights = {
