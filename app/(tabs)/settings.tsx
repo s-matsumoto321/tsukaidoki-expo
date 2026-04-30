@@ -204,8 +204,9 @@ const s = StyleSheet.create({
 
   pageTitle: {
     fontSize: fontSizes.pageTitle,
-    fontFamily: typography.display,
+    fontFamily: typography.bodyBold,
     color: colors.text,
+    lineHeight: fontSizes.pageTitle * 1.1,
     marginBottom: spacing.xxl,
   },
 

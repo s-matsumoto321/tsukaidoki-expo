@@ -13,6 +13,10 @@ import { assignPoolColors } from '@/constants/colors';
 
 const NOW_YEAR = new Date().getFullYear();
 
+const TAB_BAR_HEIGHT = 74; // タブバーの高さ（inner paddingVertical:10×2 + tab item ≈54px）
+const TAB_BAR_MARGIN = 10; // タブバーの bottom offset from safe area
+const BUTTON_BAR_BOTTOM_GAP = 8; // タブバーとボタンバーの間隔
+
 const DEFAULT_RATES: Record<string, number> = {
   'pool-shoken': 0.05,
   'pool-teiki': 0.005,
@@ -701,7 +705,7 @@ export default function PoolScreen() {
         </View>
         <ScrollView
           style={{ flex: 1 }}
-          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: insets.bottom + 80 }}
+          contentContainerStyle={{ paddingHorizontal: 14, paddingBottom: insets.bottom + 160 }}
           showsVerticalScrollIndicator={false}
         >
           {enrichedPoolItems.map(item => (
@@ -711,7 +715,7 @@ export default function PoolScreen() {
       </View>
 
       {/* 積立調整ボタン */}
-      <View style={[ps.bottomBar, { paddingBottom: insets.bottom + 10 }]}>
+      <View style={[ps.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN + BUTTON_BAR_BOTTOM_GAP }]}>
         <Pressable style={ps.allocBtn} onPress={openOverlay}>
           <Text style={ps.allocBtnTxt}>積立・複利を調整する</Text>
         </Pressable>
@@ -740,10 +744,11 @@ const ps = StyleSheet.create({
   },
   pageTitle: {
     fontSize: fontSizes.pageTitle,
-    fontFamily: typography.display,
+    fontFamily: typography.bodyBold,
     color: colors.text,
+    lineHeight: fontSizes.pageTitle * 1.1,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.bodyMedium },
   totalAmt: {
     fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
     fontFamily: typography.display,
@@ -769,8 +774,8 @@ const ps = StyleSheet.create({
   secSub: { fontSize: 12, color: colors.chart2, fontWeight: '500', textDecorationLine: 'underline', fontFamily: typography.display },
 
   bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    paddingHorizontal: spacing.lg, paddingTop: 10,
+    position: 'absolute', left: 0, right: 0,
+    paddingHorizontal: spacing.lg, paddingTop: 10, paddingBottom: 10,
     backgroundColor: colors.bg,
     borderTopWidth: 1, borderTopColor: colors.divider,
   },
@@ -779,5 +784,5 @@ const ps = StyleSheet.create({
     paddingVertical: 14, alignItems: 'center',
     ...shadows.card,
   },
-  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.display },
+  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.bodyMedium },
 });

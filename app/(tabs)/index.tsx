@@ -6,9 +6,9 @@ import {
 } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
-import { type FinancialItem } from '@/constants/data';
+import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
-import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
+import { colors, typography, fontSizes, letterSpacing, spacing, radius, shadows } from '@/constants/theme';
 import { assignPoolColors } from '@/constants/colors';
 import { ChevronDown } from 'lucide-react-native';
 
@@ -111,7 +111,7 @@ function fmtMan(yen: number): string {
 // ─── ホーム画面 ──────────────────────────────────────────────────────
 
 export default function HomeScreen() {
-  const { balances, scenarios, activeScenarioId, dreams, poolItems, pfItems } = useStore();
+  const { balances, scenarios, activeScenarioId, dreams, poolItems } = useStore();
   const activeScenario = scenarios.find(sc => sc.id === activeScenarioId) ?? scenarios[0];
 
   const livePoolItems = useMemo(() => {
@@ -125,7 +125,7 @@ export default function HomeScreen() {
       .sort((a, b) => b.amount - a.amount);
   }, [poolItems, balances]);
 
-  const livePfItems = pfItems.map(item => ({
+  const livePfItems = PF_ITEMS.map(item => ({
     ...item,
     amount: item.projectId ? (balances[item.projectId] ?? item.amount) : item.amount,
   }));
@@ -185,7 +185,7 @@ export default function HomeScreen() {
                 title="使いみち"
                 subTitle="何のために"
                 total={fmtMan(pfTotal)}
-                sub={`${pfItems.length}件`}
+                sub={`${PF_ITEMS.length}件`}
                 items={livePfItems}
                 route="/(tabs)/explore"
                 accentColor={colors.sage}
@@ -223,8 +223,9 @@ const s = StyleSheet.create({
   },
   pageTitle: {
     fontSize: fontSizes.pageTitle,
-    fontFamily: typography.display,
+    fontFamily: typography.bodyBold,
     color: colors.text,
+    lineHeight: fontSizes.pageTitle * 1.1,
   },
 
   // プラン選択ピル
@@ -256,17 +257,18 @@ const s = StyleSheet.create({
     width: 160, height: 160, borderRadius: 80,
     backgroundColor: 'rgba(91, 142, 125, 0.08)',
   },
-  totalLabel: { fontSize: fontSizes.caption, color: colors.textMid, letterSpacing: 1, fontFamily: typography.display },
+  totalLabel: { fontSize: fontSizes.caption, color: colors.textMid, letterSpacing: 1, fontFamily: typography.bodyMedium },
   totalAmtRow: { flexDirection: 'row', alignItems: 'flex-end', marginTop: spacing.sm },
   totalCurrency: {
-    fontSize: 28, color: colors.textMid, fontFamily: typography.displayMedium,
+    fontSize: fontSizes.currencyHero, color: colors.textMid, fontFamily: typography.displayMedium,
     paddingBottom: 4, marginRight: 2,
   },
   totalAmt: {
     fontSize: fontSizes.amountHero,
     fontFamily: typography.displaySemiBold,
     color: colors.text,
-    lineHeight: 48,
+    lineHeight: fontSizes.amountHero,
+    letterSpacing: letterSpacing.tight,
   },
   // 円グラフ（2枚＋差額バッジ）
   dualWrap: {
@@ -332,8 +334,8 @@ const s = StyleSheet.create({
     backgroundColor: 'rgba(91, 142, 125, 0.15)',
   },
   aiInner: { padding: spacing.xl, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
-  aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.display },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.displayBold },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 21, fontFamily: typography.display },
+  aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
+  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
+  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 13 * 1.6, fontFamily: typography.body },
 
 });

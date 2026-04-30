@@ -37,21 +37,43 @@ export const colors = {
 };
 
 export const typography = {
+  // Manrope — 数字・英字
   display: 'Manrope_400Regular',
   displayMedium: 'Manrope_500Medium',
   displaySemiBold: 'Manrope_600SemiBold',
   displayBold: 'Manrope_700Bold',
-  body: 'Manrope_400Regular',
+
+  // Noto Sans JP — 日本語
+  body: 'NotoSansJP_400Regular',
+  bodyMedium: 'NotoSansJP_500Medium',
+  bodyBold: 'NotoSansJP_700Bold',
 };
 
 export const fontSizes = {
   pageTitle: 32,
-  amountHero: 40,
-  amountMedium: 18,
+  amountHero: 38,       // spec: 38
+  amountMedium: 19,     // spec: 19
+  amountSmall: 14,
+  currencyHero: 26,
+  currencyMedium: 13,
   heading: 16,
   body: 14,
   caption: 12,
   micro: 10,
+};
+
+export const lineHeights = {
+  tight: 1,       // 金額表示（行間ゼロ感）
+  snug: 1.2,      // 見出し
+  normal: 1.5,    // 本文
+  relaxed: 1.6,   // 長文・AIインサイト
+};
+
+export const letterSpacing = {
+  tight: -0.02,   // 大きい金額
+  normal: 0,
+  wide: 0.02,     // ラベル・セクションヘッダー
+  wider: 0.05,
 };
 
 export const spacing = {

@@ -543,8 +543,8 @@ export default function ProjectDetailScreen() {
         </View>
       </View>
 
-      {/* AIインサイト + グラフ（上半分・スクロール可能） */}
-      <ScrollView style={{ flex: 1, backgroundColor: C.bg }} contentContainerStyle={{ paddingBottom: 6 }}>
+      {/* AIインサイト + グラフ */}
+      <View style={{ backgroundColor: C.bg, paddingBottom: 6 }}>
 
         {/* AIインサイト */}
         {aiText ? (
@@ -589,9 +589,9 @@ export default function ProjectDetailScreen() {
           <LineChart project={project} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} />
         </View>
 
-      </ScrollView>
+      </View>
 
-      {/* 年表パネル（固定・内部スクロール） */}
+      {/* 年表パネル（内部スクロール） */}
       <View style={s.timelinePanel}>
         <View style={s.secRow}>
           <Text style={s.secTitle}>{isAccount ? '入出金の年表' : '出来事の年表'}</Text>

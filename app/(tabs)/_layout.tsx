@@ -111,7 +111,8 @@ const tb = StyleSheet.create({
   label: {
     fontSize: 10,
     color: colors.textLight,
-    fontFamily: typography.displaySemiBold,
+    fontFamily: typography.bodyMedium,
+    letterSpacing: 0.02,
   },
   labelActive: {
     color: colors.sage,

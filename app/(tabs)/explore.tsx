@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { View, Text, Pressable, StyleSheet, StatusBar, TextInput } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
@@ -8,8 +8,11 @@ import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { usePalette } from '@/constants/colors';
 
-type SortMode = 'custom' | 'urgent' | 'deadline';
 type CardItem = FinancialItem & { amount: number };
+
+const TAB_BAR_HEIGHT = 74;
+const TAB_BAR_MARGIN = 10;
+const BUTTON_BAR_BOTTOM_GAP = 8;
 
 const GOAL_YEARS: Record<string, number> = { edu: 2044, ret: 2050, car: 2028, trip: 2037 };
 const PJ_TARGETS: Record<string, number> = { edu: 5_000_000, ret: 30_000_000, car: 2_000_000, trip: 2_660_000 };
@@ -352,15 +355,32 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
 // ─── PJカード ──────────────────────────────────────────────────────────
 
 function PjCard({
-  color, name, amount, progress = 0, status, projectId, drag, isActive,
-}: CardItem & { drag?: () => void; isActive?: boolean }) {
+  color, name, amount, progress = 0, status, projectId, drag, isActive, onSave,
+}: CardItem & { drag?: () => void; isActive?: boolean; onSave?: (id: string, newVal: number) => void }) {
+  const [editing, setEditing] = useState(false);
+  const [editVal, setEditVal] = useState('');
   const pct = Math.round(progress * 100);
-  const onPress = () => projectId && router.push(`/project/${projectId}`);
+
+  const startEdit = () => {
+    if (!projectId || !onSave) return;
+    setEditVal(String(amount));
+    setEditing(true);
+  };
+
+  const commit = () => {
+    const n = parseInt(editVal.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(n) && n > 0 && n !== amount && projectId && onSave) {
+      onSave(projectId, n);
+    }
+    setEditing(false);
+  };
+
+  const onCardPress = () => projectId && router.push(`/project/${projectId}`);
 
   return (
     <Pressable
       style={[s.card, isActive && s.cardActive]}
-      onPress={onPress}
+      onPress={onCardPress}
       onLongPress={drag}
       delayLongPress={300}
     >
@@ -368,47 +388,45 @@ function PjCard({
       <View style={s.cardBody}>
         <View style={s.cardTop}>
           <Text style={s.cardName}>{name}</Text>
-          {status && (
-            <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
-              <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
-                {status === 'ok' ? '順調' : '要注意'}
-              </Text>
+          {editing ? (
+            <View style={s.editRow}>
+              <Text style={s.editPrefix}>¥</Text>
+              <TextInput
+                style={s.editInput}
+                value={editVal}
+                onChangeText={v => setEditVal(v.replace(/[^0-9]/g, ''))}
+                keyboardType="number-pad"
+                autoFocus
+                onBlur={commit}
+                onSubmitEditing={commit}
+                selectTextOnFocus
+              />
             </View>
+          ) : (
+            <Pressable style={s.amtPressable} onPress={startEdit}>
+              <Text style={s.cardAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
+              <Text style={s.editIcon}>✎</Text>
+            </Pressable>
           )}
         </View>
         <View style={s.cardBottom}>
-          <ProgressBar progress={progress} color={color} />
-          <View style={s.cardStats}>
-            <Text style={s.cardAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
-            <Text style={s.cardPct}>{pct}%</Text>
+          <View style={s.badgeRow}>
+            <View style={[s.pctBadge, { backgroundColor: color + '22' }]}>
+              <Text style={[s.pctBadgeTxt, { color }]}>{pct}%</Text>
+            </View>
+            {status && (
+              <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
+                <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
+                  {status === 'ok' ? '順調' : '要注意'}
+                </Text>
+              </View>
+            )}
           </View>
+          <ProgressBar progress={progress} color={color} />
         </View>
       </View>
       {drag && <Text style={s.dragHandle}>⠿</Text>}
     </Pressable>
-  );
-}
-
-// ─── ソートバー ────────────────────────────────────────────────────────
-
-function SortBar({ mode, onSelect }: { mode: SortMode; onSelect: (m: SortMode) => void }) {
-  const options: { key: SortMode; label: string }[] = [
-    { key: 'custom', label: 'カスタム' },
-    { key: 'urgent', label: '緊急順' },
-    { key: 'deadline', label: '時期順' },
-  ];
-  return (
-    <View style={s.sortBar}>
-      {options.map(o => (
-        <Pressable
-          key={o.key}
-          style={[s.sortPill, mode === o.key && s.sortPillActive]}
-          onPress={() => onSelect(o.key)}
-        >
-          <Text style={[s.sortPillText, mode === o.key && s.sortPillTextActive]}>{o.label}</Text>
-        </Pressable>
-      ))}
-    </View>
   );
 }
 
@@ -427,8 +445,8 @@ function generateAiInsight(items: CardItem[], dreams: { year: number; title: str
 // ─── メイン画面 ────────────────────────────────────────────────────────
 
 export default function DreamsScreen() {
+  const insets = useSafeAreaInsets();
   const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance } = useStore();
-  const [sortMode, setSortMode] = useState<SortMode>('custom');
   const [panelOpen, setPanelOpen] = useState(false);
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
@@ -516,35 +534,27 @@ export default function DreamsScreen() {
     setLocalMonthly(newMonthly);
   }, []);
 
+  const handleBalanceSave = useCallback((id: string, newVal: number) => {
+    const origBal = balances[id] ?? (PF_ITEMS.find(i => i.projectId === id)?.amount ?? 0);
+    updateBalance(id, origBal, newVal, '残高修正');
+  }, [balances, updateBalance]);
+
   const sortedItems = useMemo(() => {
-    if (sortMode === 'custom') {
-      const orderMap = dreamOrder.reduce<Record<string, number>>(
-        (m, id, i) => ({ ...m, [id]: i }), {},
-      );
-      return [...enriched].sort((a, b) =>
-        (orderMap[a.projectId ?? ''] ?? 999) - (orderMap[b.projectId ?? ''] ?? 999),
-      );
-    }
-    if (sortMode === 'urgent') {
-      return [...enriched].sort((a, b) => {
-        if (a.status === 'warn' && b.status !== 'warn') return -1;
-        if (a.status !== 'warn' && b.status === 'warn') return 1;
-        return (a.progress ?? 1) - (b.progress ?? 1);
-      });
-    }
-    return [...enriched].sort((a, b) => {
-      const ay = parseInt(a.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
-      const by = parseInt(b.meta?.match(/(\d{4})年/)?.[1] ?? '9999');
-      return ay - by;
-    });
-  }, [sortMode, enriched, dreamOrder]);
+    const orderMap = dreamOrder.reduce<Record<string, number>>(
+      (m, id, i) => ({ ...m, [id]: i }), {},
+    );
+    return [...enriched].sort((a, b) =>
+      (orderMap[a.projectId ?? ''] ?? 999) - (orderMap[b.projectId ?? ''] ?? 999),
+    );
+  }, [enriched, dreamOrder]);
 
   const renderItem = ({ item, drag, isActive }: RenderItemParams<CardItem>) => (
     <ScaleDecorator activeScale={1.03}>
       <PjCard
         {...item}
-        drag={sortMode === 'custom' ? drag : undefined}
+        drag={drag}
         isActive={isActive}
+        onSave={handleBalanceSave}
       />
     </ScaleDecorator>
   );
@@ -553,16 +563,6 @@ export default function DreamsScreen() {
     <>
       <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
       <AiInsightCard text={aiText} />
-
-      <View style={s.actionBtnRow}>
-        <Pressable
-          style={[s.actionBtn, panelOpen && s.actionBtnActive]}
-          onPress={() => setPanelOpen(v => !v)}
-        >
-          <Text style={[s.actionBtnTxt, panelOpen && s.actionBtnTxtActive]}>積立金調整</Text>
-          <Text style={[s.actionBtnArrow, panelOpen && s.actionBtnTxtActive]}>{panelOpen ? '∧' : '∨'}</Text>
-        </Pressable>
-      </View>
 
       {panelOpen && (
         <AllocationPanel
@@ -576,8 +576,6 @@ export default function DreamsScreen() {
           onSave={handleSaveAllocation}
         />
       )}
-
-      <SortBar mode={sortMode} onSelect={setSortMode} />
     </>
   );
 
@@ -597,15 +595,18 @@ export default function DreamsScreen() {
       <DraggableFlatList
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
-        contentContainerStyle={s.content}
+        contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
         renderItem={renderItem}
         ListHeaderComponent={listHeader}
-        onDragEnd={({ data }) => {
-          if (sortMode === 'custom') {
-            setDreamOrder(data.map(i => i.projectId ?? i.name));
-          }
-        }}
+        onDragEnd={({ data }) => setDreamOrder(data.map(i => i.projectId ?? i.name))}
       />
+
+      {/* 積立調整ボタン */}
+      <View style={[s.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN + BUTTON_BAR_BOTTOM_GAP }]}>
+        <Pressable style={s.allocBtn} onPress={() => setPanelOpen(v => !v)}>
+          <Text style={s.allocBtnTxt}>積立を調整する</Text>
+        </Pressable>
+      </View>
     </SafeAreaView>
   );
 }
@@ -619,10 +620,11 @@ const s = StyleSheet.create({
   },
   pageTitle: {
     fontSize: fontSizes.pageTitle,
-    fontFamily: typography.display,
+    fontFamily: typography.bodyBold,
     color: colors.text,
+    lineHeight: fontSizes.pageTitle * 1.1,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.bodyMedium },
   totalAmt: {
     fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
     fontFamily: typography.display,
@@ -634,39 +636,23 @@ const s = StyleSheet.create({
     backgroundColor: colors.sageBg, borderRadius: radius.lg, padding: 16,
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
-  aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.display },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.display },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 20, fontFamily: typography.display },
+  aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
+  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
+  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 13 * 1.6, fontFamily: typography.body },
 
-  // アクションボタン
-  actionBtnRow: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2,
+  // 積立調整ボタン（プール金画面と同形式）
+  bottomBar: {
+    position: 'absolute', left: 0, right: 0,
+    paddingHorizontal: spacing.lg, paddingTop: 10, paddingBottom: 10,
+    backgroundColor: colors.bg,
+    borderTopWidth: 1, borderTopColor: colors.divider,
   },
-  actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    backgroundColor: colors.card, borderRadius: radius.md,
-    borderWidth: 1, borderColor: colors.divider,
-    paddingHorizontal: 12, paddingVertical: 11,
+  allocBtn: {
+    backgroundColor: colors.chart2, borderRadius: radius.md,
+    paddingVertical: 14, alignItems: 'center',
     ...shadows.card,
   },
-  actionBtnActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  actionBtnTxt: { fontSize: 12, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  actionBtnTxtActive: { color: '#fff' },
-  actionBtnArrow: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
-
-  sortBar: {
-    flexDirection: 'row', gap: 8,
-    paddingHorizontal: spacing.lg, paddingVertical: 10,
-  },
-  sortPill: {
-    paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: radius.pill, backgroundColor: colors.card,
-    borderWidth: 1, borderColor: colors.divider,
-  },
-  sortPillActive: { backgroundColor: colors.sage, borderColor: colors.sage },
-  sortPillText: { fontSize: 13, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
-  sortPillTextActive: { color: '#fff' },
+  allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.bodyMedium },
 
   // 横積み比率バー
   allocWrap: {
@@ -687,7 +673,7 @@ const s = StyleSheet.create({
   allocLegName: { fontSize: 11, color: colors.textMid, flex: 1, fontFamily: typography.display },
   allocLegPct: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display },
 
-  content: { paddingHorizontal: spacing.lg, paddingTop: 4, paddingBottom: 100 },
+  content: { paddingHorizontal: spacing.lg, paddingTop: 4 },
 
   card: {
     backgroundColor: colors.card, borderRadius: radius.lg,
@@ -700,21 +686,34 @@ const s = StyleSheet.create({
   },
   cardAccent: { width: 4 },
   cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
-  cardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  cardName: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  badge: {
-    paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill,
+  cardTop: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    marginBottom: 8,
   },
+  cardName: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  cardAmt: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
+  editRow: {
+    flexDirection: 'row', alignItems: 'center',
+    borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
+  },
+  editPrefix: { fontSize: 14, color: colors.chart2, fontWeight: '600', marginRight: 2, fontFamily: typography.display },
+  editInput: {
+    fontSize: 15, fontWeight: '700', color: colors.chart2,
+    paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
+  },
+  cardBottom: {},
+  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
+  pctBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  pctBadgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
+  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
   badgeOk: { backgroundColor: colors.sageBg },
   badgeWarn: { backgroundColor: colors.honeyBg },
   badgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
   badgeOkTxt: { color: colors.sage },
   badgeWarnTxt: { color: colors.honey },
-  cardBottom: { marginTop: 8 },
   barBg: { height: 5, backgroundColor: colors.divider, borderRadius: 3, overflow: 'hidden' },
   barFill: { height: 5, borderRadius: 3 },
-  cardStats: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 6 },
-  cardAmt: { fontSize: 15, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  cardPct: { fontSize: 13, color: colors.textMid, fontFamily: typography.display },
   dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center', fontFamily: typography.display },
 });
