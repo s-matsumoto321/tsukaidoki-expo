@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
-import { usePalette } from '@/constants/colors';
+// import { usePalette } from '@/constants/colors'; // 横積みバー非表示により未使用
 
 type CardItem = FinancialItem & { amount: number };
 
@@ -301,7 +301,7 @@ const aa = StyleSheet.create({
 });
 
 // ─── 横積み比率バー ────────────────────────────────────────────────────
-
+/*
 function AllocationBar({ items, surplus, total }: {
   items: CardItem[];
   surplus: number;
@@ -328,6 +328,7 @@ function AllocationBar({ items, surplus, total }: {
     </View>
   );
 }
+*/
 
 // ─── PJカード ──────────────────────────────────────────────────────────
 
@@ -464,13 +465,13 @@ export default function DreamsScreen() {
       });
   }, [balances, localBalances, localMonthly, panelOpen, savingsAllocation]);
 
-  const surplusItem = PF_ITEMS.find(i => i.name === '余剰資金');
-  const surplusAmt = surplusItem ? surplusItem.amount : 0;
+  // const surplusItem = PF_ITEMS.find(i => i.name === '余剰資金'); // 横積みバー非表示により未使用
+  // const surplusAmt = surplusItem ? surplusItem.amount : 0;
 
-  const totalAmount = useMemo(
-    () => enriched.reduce((sum, i) => sum + i.amount, 0) + surplusAmt,
-    [enriched, surplusAmt],
-  );
+  // const totalAmount = useMemo( // 横積みバー非表示により未使用
+  //   () => enriched.reduce((sum, i) => sum + i.amount, 0) + surplusAmt,
+  //   [enriched, surplusAmt],
+  // );
 
   const aiText = aiInsights['explore'] ?? generateAiInsight(enriched, dreams);
 
@@ -564,7 +565,7 @@ export default function DreamsScreen() {
       </View>
 
       {/* 棒グラフ（固定） */}
-      <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
+      {/* <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} /> */}
 
       {/* AIインサイト（固定） */}
       <AiInsightCard text={aiText} />
@@ -644,8 +645,8 @@ const s = StyleSheet.create({
   },
   allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.bodyMedium },
 
-  // 横積み比率バー
-  allocWrap: {
+  // 横積み比率バー（非表示）
+  /* allocWrap: {
     backgroundColor: colors.card,
     paddingHorizontal: spacing.lg, paddingTop: 12, paddingBottom: 10,
     borderBottomWidth: 1, borderBottomColor: colors.divider,
@@ -661,7 +662,7 @@ const s = StyleSheet.create({
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
   allocLegName: { fontSize: fontSizes.textSm, color: colors.textMid, flex: 1, fontFamily: typography.display },
-  allocLegPct: { fontSize: fontSizes.textSm, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display },
+  allocLegPct: { fontSize: fontSizes.textSm, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display }, */
 
   content: { paddingHorizontal: spacing.lg, paddingTop: 4 },
 
