@@ -715,18 +715,22 @@ export default function PoolScreen() {
 
       {/* ヘッダー */}
       <View style={ps.header}>
-        <Text style={ps.pageTitle}>プール金</Text>
-        <View style={ps.amtGroup}>
-          <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
-          <Text style={ps.mainUnit}>万円</Text>
+        <View style={ps.headerRow}>
+          <Text style={ps.pageTitle}>プール金</Text>
+          <View style={ps.rightBlock}>
+            <View style={ps.amtGroup}>
+              <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
+              <Text style={ps.mainUnit}>万円</Text>
+            </View>
+            <Animated.Text style={[ps.diffLine, { color: diffColor }]}>
+              {diff === 0
+                ? '(使いみちと一致 ✓)'
+                : diff > 0
+                  ? `(使いみちより +${toMan(diff)}万円)`
+                  : `(使いみちより −${toMan(Math.abs(diff))}万円)`}
+            </Animated.Text>
+          </View>
         </View>
-        <Animated.Text style={[ps.diffLine, { color: diffColor }]}>
-          {diff === 0
-            ? '(使いみちと一致 ✓)'
-            : diff > 0
-              ? `(使いみちより +${toMan(diff)}万円)`
-              : `(使いみちより −${toMan(Math.abs(diff))}万円)`}
-        </Animated.Text>
       </View>
 
       {/* 積み上げ面積グラフ */}
@@ -791,11 +795,13 @@ const ps = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
-  amtGroup: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
-  mainAmt: { fontSize: 24, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
-  mainUnit: { fontSize: 13, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3 },
+  rightBlock: { alignItems: 'flex-end' },
+  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
+  mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
+  diffLine: { fontSize: 17, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,

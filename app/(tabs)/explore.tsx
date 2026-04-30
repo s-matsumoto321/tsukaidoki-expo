@@ -608,18 +608,22 @@ export default function DreamsScreen() {
 
       {/* ページタイトル（固定） */}
       <View style={s.header}>
-        <Text style={s.pageTitle}>使いみち</Text>
-        <View style={s.amtGroup}>
-          <Text style={s.mainAmt}>{toMan(pfTotalForHeader)}</Text>
-          <Text style={s.mainUnit}>万円</Text>
+        <View style={s.headerRow}>
+          <Text style={s.pageTitle}>使いみち</Text>
+          <View style={s.rightBlock}>
+            <View style={s.amtGroup}>
+              <Text style={s.mainAmt}>{toMan(pfTotalForHeader)}</Text>
+              <Text style={s.mainUnit}>万円</Text>
+            </View>
+            <Animated.Text style={[s.diffLine, { color: exploreDiffColor }]}>
+              {exploreDiff === 0
+                ? '(プール金と一致 ✓)'
+                : exploreDiff > 0
+                  ? `(プール金より −${toMan(exploreDiff)}万円)`
+                  : `(プール金より +${toMan(Math.abs(exploreDiff))}万円)`}
+            </Animated.Text>
+          </View>
         </View>
-        <Animated.Text style={[s.diffLine, { color: exploreDiffColor }]}>
-          {exploreDiff === 0
-            ? '(プール金と一致 ✓)'
-            : exploreDiff > 0
-              ? `(プール金より −${toMan(exploreDiff)}万円)`
-              : `(プール金より +${toMan(Math.abs(exploreDiff))}万円)`}
-        </Animated.Text>
       </View>
 
       {/* 棒グラフ（固定） */}
@@ -667,11 +671,13 @@ const s = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
+  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
   pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
-  amtGroup: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
-  mainAmt: { fontSize: 24, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
-  mainUnit: { fontSize: 13, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3 },
+  rightBlock: { alignItems: 'flex-end' },
+  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
+  mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
+  diffLine: { fontSize: 17, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
