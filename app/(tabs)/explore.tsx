@@ -346,20 +346,10 @@ function AllocationBar({ items, surplus, total }: {
   );
 }
 
-// ─── プログレスバー ────────────────────────────────────────────────────
-
-function ProgressBar({ progress, color }: { progress: number; color: string }) {
-  return (
-    <View style={s.barBg}>
-      <View style={[s.barFill, { width: `${Math.min(progress * 100, 100)}%`, backgroundColor: color }]} />
-    </View>
-  );
-}
-
 // ─── PJカード ──────────────────────────────────────────────────────────
 
 function PjCard({
-  color, name, amount, progress = 0, status, projectId, drag, isActive, onSave, onLiveChange,
+  color, name, amount, status, projectId, drag, isActive, onSave, onLiveChange,
 }: CardItem & {
   drag?: () => void;
   isActive?: boolean;
@@ -394,46 +384,44 @@ function PjCard({
       onLongPress={drag}
       delayLongPress={300}
     >
-      <View style={[s.cardAccent, { backgroundColor: color }]} />
-      <View style={s.cardBody}>
-        <View style={s.cardTop}>
-          <Text style={s.cardName}>{name}</Text>
-          {editing ? (
-            <View style={s.editRow}>
-              <TextInput
-                style={s.editInput}
-                value={editVal}
-                onChangeText={v => {
-                  const clean = v.replace(/[^0-9]/g, '');
-                  setEditVal(clean);
-                  const n = parseInt(clean, 10);
-                  if (projectId && !isNaN(n)) onLiveChange?.(projectId, n * 10_000);
-                }}
-                keyboardType="number-pad"
-                autoFocus
-                onBlur={commit}
-                onSubmitEditing={commit}
-                selectTextOnFocus
-              />
-              <Text style={s.editSuffix}>万円</Text>
+      <View style={[s.cardBar, { backgroundColor: color }]} />
+      <View style={{ flex: 1 }}>
+        <Text style={s.cardName}>{name}</Text>
+        {status && (
+          <Text style={[s.cardStatus, status === 'ok' ? s.statusOk : s.statusWarn]}>
+            {status === 'ok' ? '✓ 順調' : '△ 調整の余地'}
+          </Text>
+        )}
+      </View>
+      <View style={{ alignItems: 'flex-end' }}>
+        {editing ? (
+          <View style={s.editRow}>
+            <TextInput
+              style={s.editInput}
+              value={editVal}
+              onChangeText={v => {
+                const clean = v.replace(/[^0-9]/g, '');
+                setEditVal(clean);
+                const n = parseInt(clean, 10);
+                if (projectId && !isNaN(n)) onLiveChange?.(projectId, n * 10_000);
+              }}
+              keyboardType="number-pad"
+              autoFocus
+              onBlur={commit}
+              onSubmitEditing={commit}
+              selectTextOnFocus
+            />
+            <Text style={s.editSuffix}>万円</Text>
+          </View>
+        ) : (
+          <Pressable style={s.amtPressable} onPress={startEdit}>
+            <View style={s.amtDisplay}>
+              <Text style={s.cardAmt}>{toMan(amount)}</Text>
+              <Text style={s.amtUnit}>万円</Text>
             </View>
-          ) : (
-            <Pressable style={s.amtPressable} onPress={startEdit}>
-              <Text style={s.cardAmt}>{toMan(amount)}万円</Text>
-              <Text style={s.editIcon}>✎</Text>
-            </Pressable>
-          )}
-        </View>
-        <View style={s.cardBottom}>
-          {status && (
-            <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn, { marginBottom: 6 }]}>
-              <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
-                {status === 'ok' ? '✓ 順調' : '△ 調整の余地'}
-              </Text>
-            </View>
-          )}
-          <ProgressBar progress={progress} color={color} />
-        </View>
+            <Text style={s.editIcon}>✎</Text>
+          </Pressable>
+        )}
       </View>
       {drag && <Text style={s.dragHandle}>⠿</Text>}
     </Pressable>
@@ -715,23 +703,25 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: spacing.lg, paddingTop: 4 },
 
   card: {
-    backgroundColor: colors.card, borderRadius: radius.lg,
-    flexDirection: 'row', marginBottom: 10, overflow: 'hidden',
+    backgroundColor: colors.card, borderRadius: radius.sm,
+    flexDirection: 'row', alignItems: 'center', gap: 10,
+    paddingHorizontal: 12, paddingVertical: 12, marginBottom: 6,
+    overflow: 'hidden',
     ...shadows.card,
   },
   cardActive: {
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
   },
-  cardAccent: { width: 4 },
-  cardBody: { flex: 1, paddingHorizontal: 12, paddingVertical: 12 },
-  cardTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    marginBottom: 8,
-  },
-  cardName: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  cardBar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
+  cardName: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  cardStatus: { fontSize: 11, marginTop: 2, fontFamily: typography.display },
+  statusOk: { color: colors.sage },
+  statusWarn: { color: colors.honey },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   cardAmt: { fontSize: 18, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtUnit: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
   editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   editRow: {
     flexDirection: 'row', alignItems: 'baseline', gap: 2,
@@ -742,14 +732,5 @@ const s = StyleSheet.create({
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
   editSuffix: { fontSize: 12, color: colors.chart2, fontFamily: typography.display },
-  cardBottom: {},
-  badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
-  badgeOk: { backgroundColor: colors.sageBg },
-  badgeWarn: { backgroundColor: colors.honeyBg },
-  badgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
-  badgeOkTxt: { color: colors.sage },
-  badgeWarnTxt: { color: colors.honey },
-  barBg: { height: 5, backgroundColor: colors.divider, borderRadius: 3, overflow: 'hidden' },
-  barFill: { height: 5, borderRadius: 3 },
   dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center', fontFamily: typography.display },
 });

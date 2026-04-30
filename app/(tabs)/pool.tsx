@@ -628,7 +628,7 @@ export default function PoolScreen() {
     [balances]
   );
   const diff = liveTotalBalance - pfTotal;
-  const diffColor = diff === 0 ? colors.sage : diff > 0 ? '#DC2626' : '#2E6FB8';
+  const diffColor = diff === 0 ? colors.sage : diff > 0 ? '#2E6FB8' : '#DC2626';
   const handleLiveChange = (id: string, val: number | null) => {
     setLiveBalances(prev => {
       if (val === null) { const next = { ...prev }; delete next[id]; return next; }
