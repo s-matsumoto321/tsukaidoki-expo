@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  useWindowDimensions, TextInput, StatusBar, Animated,
+  useWindowDimensions, TextInput, StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -261,15 +261,15 @@ const bl = StyleSheet.create({
   meta: { fontSize: 11, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  amtNum: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
-  amtUnit: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  amtNum: { fontSize: 18, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtUnit: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
   editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   editRow: {
     flexDirection: 'row', alignItems: 'baseline', gap: 2,
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
   editInput: {
-    fontSize: 15, fontWeight: '700', color: colors.chart2,
+    fontSize: 18, fontWeight: '700', color: colors.chart2,
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
   editSuffix: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
@@ -628,16 +628,7 @@ export default function PoolScreen() {
     [balances]
   );
   const diff = liveTotalBalance - pfTotal;
-  const diffAnim = useRef(new Animated.Value(0)).current;
-  const prevDiffZero = useRef(diff === 0);
-  useEffect(() => {
-    const isZero = diff === 0;
-    if (isZero !== prevDiffZero.current) {
-      Animated.timing(diffAnim, { toValue: isZero ? 1 : 0, duration: 300, useNativeDriver: false }).start();
-      prevDiffZero.current = isZero;
-    }
-  }, [diff]);
-  const diffColor = diffAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.honey, colors.sage] });
+  const diffColor = diff === 0 ? colors.sage : diff > 0 ? '#DC2626' : '#2E6FB8';
   const handleLiveChange = (id: string, val: number | null) => {
     setLiveBalances(prev => {
       if (val === null) { const next = { ...prev }; delete next[id]; return next; }
@@ -722,13 +713,13 @@ export default function PoolScreen() {
               <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
               <Text style={ps.mainUnit}>万円</Text>
             </View>
-            <Animated.Text style={[ps.diffLine, { color: diffColor }]}>
+            <Text style={[ps.diffLine, { color: diffColor }]}>
               {diff === 0
                 ? '(使いみちと一致 ✓)'
                 : diff > 0
                   ? `(使いみちより +${toMan(diff)}万円)`
                   : `(使いみちより −${toMan(Math.abs(diff))}万円)`}
-            </Animated.Text>
+            </Text>
           </View>
         </View>
       </View>
@@ -801,7 +792,7 @@ const ps = StyleSheet.create({
   amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
   mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
   mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 17, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,
