@@ -442,10 +442,10 @@ const al = StyleSheet.create({
 
 // ─── 出来事リスト ─────────────────────────────────────────────────
 
-function EventRow({ ev, onPress, isSelected = false }: { ev: ProjectEvent; onPress: (ev: ProjectEvent) => void; isSelected?: boolean }) {
+function EventRow({ ev, onPress, isSelected = false }: { ev: ProjectEvent; onPress: () => void; isSelected?: boolean }) {
   const typeColor = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
   return (
-    <Pressable style={[ev2.row, isSelected && ev2.rowSel]} onPress={() => onPress(ev)}>
+    <Pressable style={[ev2.row, isSelected && ev2.rowSel]} onPress={onPress}>
       <View style={[ev2.dot, { backgroundColor: typeColor }]} />
       <View style={ev2.body}>
         <Text style={ev2.year}>{ev.year}</Text>
@@ -539,8 +539,8 @@ export default function ProjectDetailScreen() {
   );
 
   type TimelineItem =
-    | { kind: 'event'; ev: ProjectEvent; sortYear: number }
-    | { kind: 'dream'; d: Dream; sortYear: number };
+    | { kind: 'event'; ev: ProjectEvent; sortYear: number; chartYear: number }
+    | { kind: 'dream'; d: Dream; sortYear: number; chartYear: number };
 
   const timeline = useMemo<TimelineItem[]>(() => {
     if (!project) return [];
@@ -549,10 +549,12 @@ export default function ProjectDetailScreen() {
     const cutoffYear = firstYear + limits[period];
     const evItems: TimelineItem[] = project.events.map(ev => ({
       kind: 'event', ev, sortYear: parseYear(ev.year),
+      // ev.year とグラフのデータ点年が異なる場合があるため idx で引く
+      chartYear: parseYear(project.years[ev.idx] ?? ev.year),
     }));
     const dreamItems: TimelineItem[] = dreams
       .filter(d => d.projectId === id)
-      .map(d => ({ kind: 'dream', d, sortYear: d.year }));
+      .map(d => ({ kind: 'dream', d, sortYear: d.year, chartYear: d.year }));
     return [...evItems, ...dreamItems]
       .filter(item => item.sortYear <= cutoffYear)
       .sort((a, b) => a.sortYear - b.sortYear);
@@ -566,11 +568,8 @@ export default function ProjectDetailScreen() {
   const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
   const projectColor = pfItems.find(i => i.projectId === (id ?? ''))?.color ?? C.brand;
 
-  const handleTimelineItemPress = useCallback((year: number, ev?: ProjectEvent) => {
+  const handleTimelineItemPress = useCallback((year: number) => {
     setSelectedTimelineYear(prev => prev === year ? null : year);
-    if (ev?.type === 'start') {
-      setAllocationModalVisible(true);
-    }
   }, []);
 
   if (!project) {
@@ -667,15 +666,15 @@ export default function ProjectDetailScreen() {
               ? <EventRow
                   key={`ev-${item.ev.idx}`}
                   ev={item.ev}
-                  isSelected={selectedTimelineYear === item.sortYear}
-                  onPress={(ev) => handleTimelineItemPress(item.sortYear, ev)}
+                  isSelected={selectedTimelineYear === item.chartYear}
+                  onPress={() => handleTimelineItemPress(item.chartYear)}
                 />
               : <DreamRow
                   key={`dream-${item.d.id}`}
                   dream={item.d}
                   color={projectColor}
-                  isSelected={selectedTimelineYear === item.d.year}
-                  onPress={() => handleTimelineItemPress(item.d.year)}
+                  isSelected={selectedTimelineYear === item.chartYear}
+                  onPress={() => handleTimelineItemPress(item.chartYear)}
                 />
           )}
         </ScrollView>

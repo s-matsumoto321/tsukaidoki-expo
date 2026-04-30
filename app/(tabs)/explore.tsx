@@ -559,31 +559,11 @@ export default function DreamsScreen() {
     </ScaleDecorator>
   );
 
-  const listHeader = (
-    <>
-      <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
-      <AiInsightCard text={aiText} />
-
-      {panelOpen && (
-        <AllocationPanel
-          pfItems={enriched}
-          balances={balances}
-          localMonthly={localMonthly}
-          localBalances={localBalances}
-          onChangeMonthly={handleChangeMonthly}
-          onChangeBalance={handleChangeBalance}
-          onAiApply={handleAiApply}
-          onSave={handleSaveAllocation}
-        />
-      )}
-    </>
-  );
-
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
-      {/* ページタイトル */}
+      {/* ページタイトル（固定） */}
       <View style={s.titleRow}>
         <Text style={s.pageTitle}>使いみち</Text>
         <View style={{ alignItems: 'flex-end' }}>
@@ -592,16 +572,35 @@ export default function DreamsScreen() {
         </View>
       </View>
 
+      {/* 棒グラフ（固定） */}
+      <AllocationBar items={enriched} surplus={surplusAmt} total={totalAmount} />
+
+      {/* AIインサイト（固定） */}
+      <AiInsightCard text={aiText} />
+
+      {/* プロジェクトカード（スクロール） */}
       <DraggableFlatList
+        style={{ flex: 1 }}
         data={sortedItems}
         keyExtractor={item => item.projectId ?? item.name}
         contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
         renderItem={renderItem}
-        ListHeaderComponent={listHeader}
+        ListHeaderComponent={panelOpen ? (
+          <AllocationPanel
+            pfItems={enriched}
+            balances={balances}
+            localMonthly={localMonthly}
+            localBalances={localBalances}
+            onChangeMonthly={handleChangeMonthly}
+            onChangeBalance={handleChangeBalance}
+            onAiApply={handleAiApply}
+            onSave={handleSaveAllocation}
+          />
+        ) : null}
         onDragEnd={({ data }) => setDreamOrder(data.map(i => i.projectId ?? i.name))}
       />
 
-      {/* 積立調整ボタン */}
+      {/* 積立調整ボタン（固定） */}
       <View style={[s.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN + BUTTON_BAR_BOTTOM_GAP }]}>
         <Pressable style={s.allocBtn} onPress={() => setPanelOpen(v => !v)}>
           <Text style={s.allocBtnTxt}>積立を調整する</Text>
