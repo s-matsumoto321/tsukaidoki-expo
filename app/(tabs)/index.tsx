@@ -1,10 +1,10 @@
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useCallback, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, Pressable,
   StyleSheet, StatusBar, ScrollView, Animated,
 } from 'react-native';
-import { Link, router, type Href } from 'expo-router';
+import { Link, router, useFocusEffect, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
@@ -135,23 +135,24 @@ export default function HomeScreen() {
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
-  // 2秒間の脈動アニメーション（差額がある時のみ）
+  // 画面フォーカス時に2秒間だけ脈動（差額がある時のみ）
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  useEffect(() => {
-    if (!isBalanced) {
-      const anim = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
-          Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
-        ]),
-        { iterations: 2 }
-      );
-      anim.start();
-      return () => anim.stop();
-    } else {
+  useFocusEffect(
+    useCallback(() => {
       pulseAnim.setValue(1);
-    }
-  }, [isBalanced]);
+      if (!isBalanced) {
+        const anim = Animated.loop(
+          Animated.sequence([
+            Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+            Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+          ]),
+          { iterations: 2 }
+        );
+        anim.start(() => pulseAnim.setValue(1));
+        return () => { anim.stop(); pulseAnim.setValue(1); };
+      }
+    }, [isBalanced])
+  );
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
