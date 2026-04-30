@@ -1,17 +1,23 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  useWindowDimensions, TextInput, StatusBar,
+  useWindowDimensions, TextInput, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg';
-import { type FinancialItem } from '@/constants/data';
+import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { assignPoolColors } from '@/constants/colors';
 
 const NOW_YEAR = new Date().getFullYear();
+
+function fmtDiff(yen: number): string {
+  const abs = Math.abs(yen);
+  if (abs >= 10_000) return `¥${Math.round(abs / 10_000).toLocaleString('ja-JP')}万`;
+  return `¥${abs.toLocaleString('ja-JP')}`;
+}
 
 const TAB_BAR_HEIGHT = 74; // タブバーの高さ（inner paddingVertical:10×2 + tab item ≈54px）
 const TAB_BAR_MARGIN = 10; // タブバーの bottom offset from safe area
@@ -184,7 +190,7 @@ function MultiLineChart({
 
 type PoolItem = FinancialItem & { balance: number; rate: number; monthly: number };
 
-function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, newVal: number) => void }) {
+function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (id: string, newVal: number) => void; onLiveChange?: (id: string, val: number | null) => void }) {
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState('');
 
@@ -195,6 +201,7 @@ function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, new
     if (!isNaN(n) && n > 0 && n !== item.balance) {
       onSave(item.projectId!, n);
     }
+    onLiveChange?.(item.projectId!, null);
     setEditing(false);
   };
 
@@ -212,7 +219,7 @@ function BalanceRow({ item, onSave }: { item: PoolItem; onSave: (id: string, new
             <TextInput
               style={bl.editInput}
               value={editVal}
-              onChangeText={v => setEditVal(v.replace(/[^0-9]/g, ''))}
+              onChangeText={v => { const cleaned = v.replace(/[^0-9]/g, ''); setEditVal(cleaned); const n = parseInt(cleaned, 10); if (!isNaN(n)) onLiveChange?.(item.projectId!, n); }}
               keyboardType="number-pad"
               autoFocus
               onBlur={commit}
@@ -602,6 +609,33 @@ export default function PoolScreen() {
 
   const totalBalance = enrichedPoolItems.reduce((sum, i) => sum + i.balance, 0);
 
+  const [liveBalances, setLiveBalances] = useState<Record<string, number>>({});
+  const liveTotalBalance = enrichedPoolItems.reduce((sum, i) => {
+    const live = liveBalances[i.projectId!];
+    return sum + (live !== undefined ? live : i.balance);
+  }, 0);
+  const pfTotal = useMemo(
+    () => PF_ITEMS.reduce((sum, i) => sum + (i.projectId ? (balances[i.projectId] ?? i.amount) : i.amount), 0),
+    [balances]
+  );
+  const diff = liveTotalBalance - pfTotal;
+  const diffAnim = useRef(new Animated.Value(0)).current;
+  const prevDiffZero = useRef(diff === 0);
+  useEffect(() => {
+    const isZero = diff === 0;
+    if (isZero !== prevDiffZero.current) {
+      Animated.timing(diffAnim, { toValue: isZero ? 1 : 0, duration: 300, useNativeDriver: false }).start();
+      prevDiffZero.current = isZero;
+    }
+  }, [diff]);
+  const diffColor = diffAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.honey, colors.sage] });
+  const handleLiveChange = (id: string, val: number | null) => {
+    setLiveBalances(prev => {
+      if (val === null) { const next = { ...prev }; delete next[id]; return next; }
+      return { ...prev, [id]: val };
+    });
+  };
+
   const savedStacks = useMemo(() => buildCumulativeStacks(
     poolItems,
     Object.fromEntries(enrichedPoolItems.map(i => [i.projectId!, i.balance])),
@@ -670,12 +704,16 @@ export default function PoolScreen() {
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.bg }} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
-      {/* ページタイトル + 総残高 */}
-      <View style={ps.titleRow}>
+      {/* ヘッダー */}
+      <View style={ps.header}>
         <Text style={ps.pageTitle}>プール金</Text>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={ps.totalLbl}>総残高</Text>
-          <Text style={ps.totalAmt}>¥{totalBalance.toLocaleString('ja-JP')}</Text>
+        <Text style={ps.selfAmt}>¥{liveTotalBalance.toLocaleString('ja-JP')}</Text>
+        <View style={ps.headerDivider} />
+        <View style={ps.otherRow}>
+          <Text style={ps.otherLbl}>使いみち　<Text style={ps.otherAmtTxt}>{fmtDiff(pfTotal)}</Text></Text>
+          <Animated.Text style={[ps.diffTxt, { color: diffColor }]}>
+            {diff === 0 ? '✓ 整合' : `≠ 差額  ${fmtDiff(Math.abs(diff))}`}
+          </Animated.Text>
         </View>
       </View>
 
@@ -709,7 +747,7 @@ export default function PoolScreen() {
           showsVerticalScrollIndicator={false}
         >
           {enrichedPoolItems.map(item => (
-            <BalanceRow key={item.projectId} item={item} onSave={handleBalanceSave} />
+            <BalanceRow key={item.projectId} item={item} onSave={handleBalanceSave} onLiveChange={handleLiveChange} />
           ))}
         </ScrollView>
       </View>
@@ -738,8 +776,7 @@ export default function PoolScreen() {
 }
 
 const ps = StyleSheet.create({
-  titleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
+  header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md,
   },
   pageTitle: {
@@ -748,11 +785,15 @@ const ps = StyleSheet.create({
     color: colors.text,
     lineHeight: fontSizes.pageTitle * 1.1,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.bodyMedium },
-  totalAmt: {
-    fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
-    fontFamily: typography.display,
+  selfAmt: {
+    fontSize: 28, fontFamily: typography.displaySemiBold, color: colors.text,
+    letterSpacing: -0.5, marginTop: 2,
   },
+  headerDivider: { height: 0.5, backgroundColor: colors.divider, marginVertical: spacing.sm },
+  otherRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  otherLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  otherAmtTxt: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, fontWeight: '600' },
+  diffTxt: { fontSize: 13, fontWeight: '700', fontFamily: typography.display },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,

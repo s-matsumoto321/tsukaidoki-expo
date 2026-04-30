@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, Pressable, StyleSheet, StatusBar, TextInput } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StatusBar, TextInput, Animated } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -446,7 +446,7 @@ function generateAiInsight(items: CardItem[], dreams: { year: number; title: str
 
 export default function DreamsScreen() {
   const insets = useSafeAreaInsets();
-  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance } = useStore();
+  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance, poolItems } = useStore();
   const [panelOpen, setPanelOpen] = useState(false);
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
@@ -496,6 +496,32 @@ export default function DreamsScreen() {
   );
 
   const aiText = aiInsights['explore'] ?? generateAiInsight(enriched, dreams);
+
+  const poolTotal = useMemo(
+    () => poolItems.reduce((sum, i) => sum + (balances[i.projectId!] ?? i.amount), 0),
+    [poolItems, balances]
+  );
+  const pfTotalForHeader = useMemo(
+    () => PF_ITEMS.reduce((sum, i) => sum + (i.projectId ? (balances[i.projectId] ?? i.amount) : i.amount), 0),
+    [balances]
+  );
+  const exploreDiff = poolTotal - pfTotalForHeader;
+  const exploreDiffAnim = useRef(new Animated.Value(0)).current;
+  const prevExploreDiffZero = useRef(exploreDiff === 0);
+  useEffect(() => {
+    const isZero = exploreDiff === 0;
+    if (isZero !== prevExploreDiffZero.current) {
+      Animated.timing(exploreDiffAnim, { toValue: isZero ? 1 : 0, duration: 300, useNativeDriver: false }).start();
+      prevExploreDiffZero.current = isZero;
+    }
+  }, [exploreDiff]);
+  const exploreDiffColor = exploreDiffAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.honey, colors.sage] });
+
+  function fmtDiffE(yen: number): string {
+    const abs = Math.abs(yen);
+    if (abs >= 10_000) return `¥${Math.round(abs / 10_000).toLocaleString('ja-JP')}万`;
+    return `¥${abs.toLocaleString('ja-JP')}`;
+  }
 
   const handleChangeMonthly = useCallback((projectId: string, newAmt: number) => {
     setLocalMonthly(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
@@ -564,11 +590,15 @@ export default function DreamsScreen() {
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
       {/* ページタイトル（固定） */}
-      <View style={s.titleRow}>
+      <View style={s.header}>
         <Text style={s.pageTitle}>使いみち</Text>
-        <View style={{ alignItems: 'flex-end' }}>
-          <Text style={s.totalLbl}>総資産</Text>
-          <Text style={s.totalAmt}>¥{totalAmount.toLocaleString('ja-JP')}</Text>
+        <Text style={s.selfAmt}>¥{pfTotalForHeader.toLocaleString('ja-JP')}</Text>
+        <View style={s.headerDivider} />
+        <View style={s.otherRow}>
+          <Text style={s.otherLbl}>プール金　<Text style={s.otherAmtTxt}>{fmtDiffE(poolTotal)}</Text></Text>
+          <Animated.Text style={[s.diffTxt, { color: exploreDiffColor }]}>
+            {exploreDiff === 0 ? '✓ 整合' : `≠ 差額  ${fmtDiffE(Math.abs(exploreDiff))}`}
+          </Animated.Text>
         </View>
       </View>
 
@@ -614,9 +644,8 @@ export default function DreamsScreen() {
 const s = StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.bg },
 
-  titleRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end',
-    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md,
+  header: {
+    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
   pageTitle: {
     fontSize: fontSizes.pageTitle,
@@ -624,11 +653,15 @@ const s = StyleSheet.create({
     color: colors.text,
     lineHeight: fontSizes.pageTitle * 1.1,
   },
-  totalLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.bodyMedium },
-  totalAmt: {
-    fontSize: fontSizes.amountMedium, fontWeight: '600', color: colors.text,
-    fontFamily: typography.display,
+  selfAmt: {
+    fontSize: 28, fontFamily: typography.displaySemiBold, color: colors.text,
+    letterSpacing: -0.5, marginTop: 2,
   },
+  headerDivider: { height: 0.5, backgroundColor: colors.divider, marginVertical: spacing.sm },
+  otherRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  otherLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  otherAmtTxt: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, fontWeight: '600' },
+  diffTxt: { fontSize: 13, fontWeight: '700', fontFamily: typography.display },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },

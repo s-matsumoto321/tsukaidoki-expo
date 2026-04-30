@@ -1,8 +1,8 @@
-import { useMemo } from 'react';
+import { useMemo, useEffect, useRef } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, Pressable,
-  StyleSheet, StatusBar, ScrollView,
+  StyleSheet, StatusBar, ScrollView, Animated,
 } from 'react-native';
 import { Link, router, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
@@ -135,6 +135,24 @@ export default function HomeScreen() {
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
+  // 2秒間の脈動アニメーション（差額がある時のみ）
+  const pulseAnim = useRef(new Animated.Value(1)).current;
+  useEffect(() => {
+    if (!isBalanced) {
+      const anim = Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+          Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+        ]),
+        { iterations: 2 }
+      );
+      anim.start();
+      return () => anim.stop();
+    } else {
+      pulseAnim.setValue(1);
+    }
+  }, [isBalanced]);
+
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
       <SafeAreaView style={s.safe} edges={['top']}>
@@ -170,7 +188,7 @@ export default function HomeScreen() {
           </View>
 
           {/* ④ 円グラフ2枚（差額バッジ中央オーバーレイ） */}
-          <View style={s.dualWrap}>
+          <Animated.View style={[s.dualWrap, { opacity: pulseAnim }]}>
             <View style={s.dualChart}>
               <ChartCard
                 title="プール金"
@@ -191,7 +209,13 @@ export default function HomeScreen() {
                 accentColor={colors.sage}
               />
             </View>
-            {!isBalanced && (
+            {isBalanced ? (
+              <View pointerEvents="none" style={s.diffCenter}>
+                <View style={[s.diffBubble, s.diffBubbleOk]}>
+                  <Text style={s.diffOkTxt}>✓ 整合</Text>
+                </View>
+              </View>
+            ) : (
               <View pointerEvents="none" style={s.diffCenter}>
                 <View style={s.diffBubble}>
                   <Text style={s.diffNeq}>≠</Text>
@@ -199,7 +223,7 @@ export default function HomeScreen() {
                 </View>
               </View>
             )}
-          </View>
+          </Animated.View>
 
           {/* ⑥ AIインサイト */}
           <AiInsightCard pfItems={livePfItems} dreamCount={dreams.length} />
@@ -292,6 +316,11 @@ const s = StyleSheet.create({
   },
   diffNeq: { fontSize: 13, color: '#fff', fontFamily: typography.displayBold },
   diffTxt: { fontSize: 10, color: '#fff', fontFamily: typography.displayBold },
+  diffBubbleOk: {
+    backgroundColor: colors.sage,
+    shadowColor: colors.sage,
+  },
+  diffOkTxt: { fontSize: 11, color: '#fff', fontFamily: typography.displayBold },
 
   chartCard: {
     flex: 1, backgroundColor: colors.card,
