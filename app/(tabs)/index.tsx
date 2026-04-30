@@ -2,7 +2,7 @@ import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, Pressable,
-  StyleSheet, StatusBar, ScrollView, Animated,
+  StyleSheet, StatusBar, ScrollView, Animated, Easing,
 } from 'react-native';
 import { Link, router, useFocusEffect, type Href } from 'expo-router';
 import { DonutChart } from '@/components/donut-chart';
@@ -136,7 +136,12 @@ export default function HomeScreen() {
   const isBalanced = diff === 0;
 
   // フォーカス取得ごとにカウントアップ → useEffect で確実にアニメーション起動
-  const pulseAnim = useRef(new Animated.Value(1)).current;
+  // pulseAnim: 回転角度（0 = 正位置、±10 = 左右10度）
+  const pulseAnim = useRef(new Animated.Value(0)).current;
+  const rotateInterp = pulseAnim.interpolate({
+    inputRange: [-10, 0, 10],
+    outputRange: ['-10deg', '0deg', '10deg'],
+  });
   const [focusCount, setFocusCount] = useState(0);
 
   useFocusEffect(
@@ -147,17 +152,19 @@ export default function HomeScreen() {
 
   useEffect(() => {
     if (focusCount === 0) return;
-    pulseAnim.setValue(1);
+    pulseAnim.setValue(0);
     if (isBalanced) return;
-    // useNativeDriver: false に変更（true だと Expo Go で動作しない）
+    // 左右10度を2往復（合計2秒）でスムーズに揺れる
+    const ease = Easing.inOut(Easing.sin);
     const anim = Animated.sequence([
-      Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: false }),
-      Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue:  10, duration: 250, easing: Easing.out(Easing.sin), useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue: -10, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue:  10, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue: -10, duration: 500, easing: ease, useNativeDriver: false }),
+      Animated.timing(pulseAnim, { toValue:   0, duration: 250, easing: Easing.in(Easing.sin), useNativeDriver: false }),
     ]);
     anim.start();
-    return () => { anim.stop(); pulseAnim.setValue(1); };
+    return () => { anim.stop(); pulseAnim.setValue(0); };
   }, [focusCount, isBalanced]);
 
   return (
@@ -195,7 +202,7 @@ export default function HomeScreen() {
           </View>
 
           {/* ④ 円グラフ2枚（差額バッジ中央オーバーレイ） */}
-          <Animated.View style={[s.dualWrap, { opacity: pulseAnim }]}>
+          <Animated.View style={[s.dualWrap, { transform: [{ rotate: rotateInterp }] }]}>
             <View style={s.dualChart}>
               <ChartCard
                 title="プール金"
