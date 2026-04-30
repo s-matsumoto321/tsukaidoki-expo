@@ -207,11 +207,10 @@ function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (i
   return (
     <View style={bl.row}>
       <View style={[bl.bar, { backgroundColor: item.color }]} />
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: 'center' }}>
         <Text style={bl.name}>{item.name}</Text>
-        <Text style={bl.meta}>{item.meta}</Text>
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
+      <View style={{ alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center' }}>
         {editing ? (
           <View style={bl.editRow}>
             <TextInput
@@ -240,10 +239,6 @@ function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (i
             <Text style={bl.editIcon}>✎</Text>
           </Pressable>
         )}
-        <Text style={bl.rate}>
-          年利 {(item.rate * 100).toFixed(1)}%
-          {item.monthly > 0 ? `  月¥${item.monthly.toLocaleString('ja-JP')}` : ''}
-        </Text>
       </View>
     </View>
   );
@@ -256,12 +251,11 @@ const bl = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 12, marginBottom: 6,
     ...shadows.card,
   },
-  bar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
+  bar: { width: 4, alignSelf: 'stretch', borderRadius: 2, flexShrink: 0 },
   name: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  meta: { fontSize: fontSizes.textSm, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  amtNum: { fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtNum: { fontSize: fontSizes.textLg, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
   amtUnit: { fontSize: fontSizes.caption, color: colors.textMid, fontFamily: typography.display },
   editIcon: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
   editRow: {
@@ -269,11 +263,10 @@ const bl = StyleSheet.create({
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
   editInput: {
-    fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2,
+    fontSize: fontSizes.textLg, fontWeight: '700', color: colors.chart2,
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
   editSuffix: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
-  rate: { fontSize: fontSizes.textSm, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
 });
 
 // ── 積立・複利オーバーレイ ────────────────────────────────────────────

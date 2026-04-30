@@ -393,7 +393,7 @@ function PjCard({
           </Text>
         )}
       </View>
-      <View style={{ alignItems: 'flex-end' }}>
+      <View style={{ alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center' }}>
         {editing ? (
           <View style={s.editRow}>
             <TextInput
@@ -713,14 +713,14 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
   },
-  cardBar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
+  cardBar: { width: 4, alignSelf: 'stretch', borderRadius: 2, flexShrink: 0 },
   cardName: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   cardStatus: { fontSize: fontSizes.textSm, marginTop: 2, fontFamily: typography.display },
   statusOk: { color: colors.sage },
   statusWarn: { color: colors.honey },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  cardAmt: { fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  cardAmt: { fontSize: fontSizes.textLg, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
   amtUnit: { fontSize: fontSizes.caption, color: colors.textMid, fontFamily: typography.display },
   editIcon: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
   editRow: {
@@ -728,7 +728,7 @@ const s = StyleSheet.create({
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
   editInput: {
-    fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2,
+    fontSize: fontSizes.textLg, fontWeight: '700', color: colors.chart2,
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
   editSuffix: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },

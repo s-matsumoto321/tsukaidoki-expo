@@ -57,7 +57,7 @@ export const fontSizes = {
   amountSmall: 14,
   currencyHero: 26,
   currencyMedium: 13,
-  textLg: 22,            // L2 説明書き大（差額テキスト等）
+  textLg: 21,            // L2 説明書き大（差額テキスト等）
   textMd: 20,            // L3 説明書き中・名称（カード名/口座名/残高金額）
   textSm: 15,            // L4 説明書き小（凡例・メタ・AI本文）
   heading: 16,
