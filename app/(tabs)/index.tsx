@@ -135,11 +135,13 @@ export default function HomeScreen() {
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
-  // 左右の円グラフを独立して揺らす（±5度、300msずれてスタート）
+  // 左右の円グラフ＋差額バッジを同時に揺らす（±5度）
   const pulseAnimL = useRef(new Animated.Value(0)).current;
   const pulseAnimR = useRef(new Animated.Value(0)).current;
+  const pulseAnimD = useRef(new Animated.Value(0)).current;
   const rotateL = pulseAnimL.interpolate({ inputRange: [-5, 0, 5], outputRange: ['-5deg', '0deg', '5deg'] });
   const rotateR = pulseAnimR.interpolate({ inputRange: [-5, 0, 5], outputRange: ['-5deg', '0deg', '5deg'] });
+  const rotateD = pulseAnimD.interpolate({ inputRange: [-5, 0, 5], outputRange: ['-5deg', '0deg', '5deg'] });
   const [focusCount, setFocusCount] = useState(0);
 
   useFocusEffect(
@@ -152,6 +154,7 @@ export default function HomeScreen() {
     if (focusCount === 0) return;
     pulseAnimL.setValue(0);
     pulseAnimR.setValue(0);
+    pulseAnimD.setValue(0);
     if (isBalanced) return;
     const ease = Easing.inOut(Easing.sin);
     const makeSeq = (anim: Animated.Value) => Animated.sequence([
@@ -161,9 +164,9 @@ export default function HomeScreen() {
       Animated.timing(anim, { toValue: -5, duration: 500, easing: ease, useNativeDriver: false }),
       Animated.timing(anim, { toValue:  0, duration: 250, easing: Easing.in(Easing.sin), useNativeDriver: false }),
     ]);
-    const composite = Animated.parallel([makeSeq(pulseAnimL), makeSeq(pulseAnimR)]);
+    const composite = Animated.parallel([makeSeq(pulseAnimL), makeSeq(pulseAnimR), makeSeq(pulseAnimD)]);
     composite.start();
-    return () => { composite.stop(); pulseAnimL.setValue(0); pulseAnimR.setValue(0); };
+    return () => { composite.stop(); pulseAnimL.setValue(0); pulseAnimR.setValue(0); pulseAnimD.setValue(0); };
   }, [focusCount, isBalanced]);
 
   return (
@@ -234,12 +237,12 @@ export default function HomeScreen() {
               </View>
             ) : (
               <View pointerEvents="none" style={s.diffCenter}>
-                <View style={s.diffBubble}>
+                <Animated.View style={[s.diffBubble, { transform: [{ rotate: rotateD }] }]}>
                   <Text style={s.diffChevron}>‹</Text>
                   <Text style={s.diffNeq}>≠</Text>
                   <Text style={s.diffAmt}>{fmtMan(Math.abs(diff))}</Text>
                   <Text style={s.diffChevron}>›</Text>
-                </View>
+                </Animated.View>
               </View>
             )}
           </View>
@@ -292,7 +295,8 @@ const s = StyleSheet.create({
     marginBottom: spacing.md,
     backgroundColor: colors.card,
     borderRadius: radius.xl,
-    padding: spacing.xxl,
+    paddingHorizontal: spacing.xxl,
+    paddingVertical: 14,
     ...shadows.card,
   },
   totalGlow: {
