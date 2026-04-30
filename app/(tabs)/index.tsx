@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef } from 'react';
+import { useMemo, useCallback, useRef, useEffect } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, Pressable,
@@ -137,21 +137,23 @@ export default function HomeScreen() {
 
   // 画面フォーカス時に2秒間だけ脈動（差額がある時のみ）
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const isBalancedRef = useRef(isBalanced);
+  useEffect(() => { isBalancedRef.current = isBalanced; }, [isBalanced]);
+
   useFocusEffect(
     useCallback(() => {
       pulseAnim.setValue(1);
-      if (!isBalanced) {
-        const anim = Animated.loop(
-          Animated.sequence([
-            Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
-            Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
-          ]),
-          { iterations: 2 }
-        );
-        anim.start(() => pulseAnim.setValue(1));
-        return () => { anim.stop(); pulseAnim.setValue(1); };
-      }
-    }, [isBalanced])
+      if (isBalancedRef.current) return;
+      // Animated.loop + iterationsは不安定なため、4ステップのsequenceで2秒を表現
+      const anim = Animated.sequence([
+        Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+        Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+      ]);
+      anim.start();
+      return () => { anim.stop(); pulseAnim.setValue(1); };
+    }, [])
   );
 
   return (
