@@ -13,10 +13,8 @@ import { assignPoolColors } from '@/constants/colors';
 
 const NOW_YEAR = new Date().getFullYear();
 
-function fmtDiff(yen: number): string {
-  const abs = Math.abs(yen);
-  if (abs >= 10_000) return `¥${Math.round(abs / 10_000).toLocaleString('ja-JP')}万`;
-  return `¥${abs.toLocaleString('ja-JP')}`;
+function toMan(yen: number): number {
+  return Math.floor(Math.abs(yen) / 10_000);
 }
 
 const TAB_BAR_HEIGHT = 74; // タブバーの高さ（inner paddingVertical:10×2 + tab item ≈54px）
@@ -194,12 +192,13 @@ function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (i
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState('');
 
-  const startEdit = () => { setEditVal(String(item.balance)); setEditing(true); };
+  const startEdit = () => { setEditVal(String(toMan(item.balance))); setEditing(true); };
 
   const commit = () => {
     const n = parseInt(editVal.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(n) && n > 0 && n !== item.balance) {
-      onSave(item.projectId!, n);
+    if (!isNaN(n) && n > 0) {
+      const newVal = n * 10_000;
+      if (newVal !== item.balance) onSave(item.projectId!, newVal);
     }
     onLiveChange?.(item.projectId!, null);
     setEditing(false);
@@ -215,21 +214,29 @@ function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (i
       <View style={{ alignItems: 'flex-end' }}>
         {editing ? (
           <View style={bl.editRow}>
-            <Text style={bl.editPrefix}>¥</Text>
             <TextInput
               style={bl.editInput}
               value={editVal}
-              onChangeText={v => { const cleaned = v.replace(/[^0-9]/g, ''); setEditVal(cleaned); const n = parseInt(cleaned, 10); if (!isNaN(n)) onLiveChange?.(item.projectId!, n); }}
+              onChangeText={v => {
+                const cleaned = v.replace(/[^0-9]/g, '');
+                setEditVal(cleaned);
+                const n = parseInt(cleaned, 10);
+                if (!isNaN(n)) onLiveChange?.(item.projectId!, n * 10_000);
+              }}
               keyboardType="number-pad"
               autoFocus
               onBlur={commit}
               onSubmitEditing={commit}
               selectTextOnFocus
             />
+            <Text style={bl.editSuffix}>万円</Text>
           </View>
         ) : (
           <Pressable style={bl.amtPressable} onPress={startEdit}>
-            <Text style={bl.amt}>¥{item.balance.toLocaleString('ja-JP')}</Text>
+            <View style={bl.amtDisplay}>
+              <Text style={bl.amtNum}>{toMan(item.balance)}</Text>
+              <Text style={bl.amtUnit}>万円</Text>
+            </View>
             <Text style={bl.editIcon}>✎</Text>
           </Pressable>
         )}
@@ -253,17 +260,19 @@ const bl = StyleSheet.create({
   name: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   meta: { fontSize: 11, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  amt: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
+  amtNum: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtUnit: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
   editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   editRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'baseline', gap: 2,
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
-  editPrefix: { fontSize: 14, color: colors.chart2, fontWeight: '600', marginRight: 2, fontFamily: typography.display },
   editInput: {
     fontSize: 15, fontWeight: '700', color: colors.chart2,
-    paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
+    paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
+  editSuffix: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   rate: { fontSize: 11, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
 });
 
@@ -706,15 +715,20 @@ export default function PoolScreen() {
 
       {/* ヘッダー */}
       <View style={ps.header}>
-        <Text style={ps.pageTitle}>プール金</Text>
-        <Text style={ps.selfAmt}>¥{liveTotalBalance.toLocaleString('ja-JP')}</Text>
-        <View style={ps.headerDivider} />
-        <View style={ps.otherRow}>
-          <Text style={ps.otherLbl}>使いみち　<Text style={ps.otherAmtTxt}>{fmtDiff(pfTotal)}</Text></Text>
-          <Animated.Text style={[ps.diffTxt, { color: diffColor }]}>
-            {diff === 0 ? '✓ 整合' : `≠ 差額  ${fmtDiff(Math.abs(diff))}`}
-          </Animated.Text>
+        <View style={ps.mainRow}>
+          <Text style={ps.pageTitle}>プール金</Text>
+          <View style={ps.amtGroup}>
+            <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
+            <Text style={ps.mainUnit}>万円</Text>
+          </View>
         </View>
+        <Animated.Text style={[ps.diffLine, { color: diffColor }]}>
+          {diff === 0
+            ? '(使いみちと一致 ✓)'
+            : diff > 0
+              ? `(使いみちより +${toMan(diff)}万円)`
+              : `(使いみちより −${toMan(Math.abs(diff))}万円)`}
+        </Animated.Text>
       </View>
 
       {/* 積み上げ面積グラフ */}
@@ -777,23 +791,14 @@ export default function PoolScreen() {
 
 const ps = StyleSheet.create({
   header: {
-    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.md,
+    paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  pageTitle: {
-    fontSize: fontSizes.pageTitle,
-    fontFamily: typography.bodyBold,
-    color: colors.text,
-    lineHeight: fontSizes.pageTitle * 1.1,
-  },
-  selfAmt: {
-    fontSize: 28, fontFamily: typography.displaySemiBold, color: colors.text,
-    letterSpacing: -0.5, marginTop: 2,
-  },
-  headerDivider: { height: 0.5, backgroundColor: colors.divider, marginVertical: spacing.sm },
-  otherRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  otherLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
-  otherAmtTxt: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, fontWeight: '600' },
-  diffTxt: { fontSize: 13, fontWeight: '700', fontFamily: typography.display },
+  mainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+  pageTitle: { fontSize: 22, fontFamily: typography.bodyBold, color: colors.text },
+  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  mainAmt: { fontSize: 26, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
+  mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
+  diffLine: { fontSize: 13, fontFamily: typography.display, fontWeight: '500', marginTop: 4 },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,

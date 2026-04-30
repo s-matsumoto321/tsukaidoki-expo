@@ -10,6 +10,10 @@ import { usePalette } from '@/constants/colors';
 
 type CardItem = FinancialItem & { amount: number };
 
+function toMan(yen: number): number {
+  return Math.floor(Math.abs(yen) / 10_000);
+}
+
 const TAB_BAR_HEIGHT = 74;
 const TAB_BAR_MARGIN = 10;
 const BUTTON_BAR_BOTTOM_GAP = 8;
@@ -367,14 +371,15 @@ function PjCard({
 
   const startEdit = () => {
     if (!projectId || !onSave) return;
-    setEditVal(String(amount));
+    setEditVal(String(toMan(amount)));
     setEditing(true);
   };
 
   const commit = () => {
     const n = parseInt(editVal.replace(/[^0-9]/g, ''), 10);
-    if (!isNaN(n) && n > 0 && n !== amount && projectId && onSave) {
-      onSave(projectId, n);
+    if (!isNaN(n) && n > 0 && projectId && onSave) {
+      const newVal = n * 10_000;
+      if (newVal !== amount) onSave(projectId, newVal);
     }
     if (projectId) onLiveChange?.(projectId, null);
     setEditing(false);
@@ -395,7 +400,6 @@ function PjCard({
           <Text style={s.cardName}>{name}</Text>
           {editing ? (
             <View style={s.editRow}>
-              <Text style={s.editPrefix}>¥</Text>
               <TextInput
                 style={s.editInput}
                 value={editVal}
@@ -403,7 +407,7 @@ function PjCard({
                   const clean = v.replace(/[^0-9]/g, '');
                   setEditVal(clean);
                   const n = parseInt(clean, 10);
-                  if (projectId && !isNaN(n)) onLiveChange?.(projectId, n);
+                  if (projectId && !isNaN(n)) onLiveChange?.(projectId, n * 10_000);
                 }}
                 keyboardType="number-pad"
                 autoFocus
@@ -411,10 +415,11 @@ function PjCard({
                 onSubmitEditing={commit}
                 selectTextOnFocus
               />
+              <Text style={s.editSuffix}>万円</Text>
             </View>
           ) : (
             <Pressable style={s.amtPressable} onPress={startEdit}>
-              <Text style={s.cardAmt}>¥{amount.toLocaleString('ja-JP')}</Text>
+              <Text style={s.cardAmt}>{toMan(amount)}万円</Text>
               <Text style={s.editIcon}>✎</Text>
             </Pressable>
           )}
@@ -523,12 +528,6 @@ export default function DreamsScreen() {
   }, [exploreDiff]);
   const exploreDiffColor = exploreDiffAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.honey, colors.sage] });
 
-  function fmtDiffE(yen: number): string {
-    const abs = Math.abs(yen);
-    if (abs >= 10_000) return `¥${Math.round(abs / 10_000).toLocaleString('ja-JP')}万`;
-    return `¥${abs.toLocaleString('ja-JP')}`;
-  }
-
   const handleChangeMonthly = useCallback((projectId: string, newAmt: number) => {
     setLocalMonthly(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
   }, []);
@@ -609,15 +608,20 @@ export default function DreamsScreen() {
 
       {/* ページタイトル（固定） */}
       <View style={s.header}>
-        <Text style={s.pageTitle}>使いみち</Text>
-        <Text style={s.selfAmt}>¥{pfTotalForHeader.toLocaleString('ja-JP')}</Text>
-        <View style={s.headerDivider} />
-        <View style={s.otherRow}>
-          <Text style={s.otherLbl}>プール金　<Text style={s.otherAmtTxt}>{fmtDiffE(poolTotal)}</Text></Text>
-          <Animated.Text style={[s.diffTxt, { color: exploreDiffColor }]}>
-            {exploreDiff === 0 ? '✓ 整合' : `≠ 差額  ${fmtDiffE(Math.abs(exploreDiff))}`}
-          </Animated.Text>
+        <View style={s.mainRow}>
+          <Text style={s.pageTitle}>使いみち</Text>
+          <View style={s.amtGroup}>
+            <Text style={s.mainAmt}>{toMan(pfTotalForHeader)}</Text>
+            <Text style={s.mainUnit}>万円</Text>
+          </View>
         </View>
+        <Animated.Text style={[s.diffLine, { color: exploreDiffColor }]}>
+          {exploreDiff === 0
+            ? '(プール金と一致 ✓)'
+            : exploreDiff > 0
+              ? `(プール金より −${toMan(exploreDiff)}万円)`
+              : `(プール金より +${toMan(Math.abs(exploreDiff))}万円)`}
+        </Animated.Text>
       </View>
 
       {/* 棒グラフ（固定） */}
@@ -665,21 +669,12 @@ const s = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  pageTitle: {
-    fontSize: fontSizes.pageTitle,
-    fontFamily: typography.bodyBold,
-    color: colors.text,
-    lineHeight: fontSizes.pageTitle * 1.1,
-  },
-  selfAmt: {
-    fontSize: 28, fontFamily: typography.displaySemiBold, color: colors.text,
-    letterSpacing: -0.5, marginTop: 2,
-  },
-  headerDivider: { height: 0.5, backgroundColor: colors.divider, marginVertical: spacing.sm },
-  otherRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  otherLbl: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
-  otherAmtTxt: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, fontWeight: '600' },
-  diffTxt: { fontSize: 13, fontWeight: '700', fontFamily: typography.display },
+  mainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+  pageTitle: { fontSize: 22, fontFamily: typography.bodyBold, color: colors.text },
+  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
+  mainAmt: { fontSize: 26, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
+  mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
+  diffLine: { fontSize: 13, fontFamily: typography.display, fontWeight: '500', marginTop: 4 },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
@@ -745,14 +740,14 @@ const s = StyleSheet.create({
   cardAmt: { fontSize: 15, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
   editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   editRow: {
-    flexDirection: 'row', alignItems: 'center',
+    flexDirection: 'row', alignItems: 'baseline', gap: 2,
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
-  editPrefix: { fontSize: 14, color: colors.chart2, fontWeight: '600', marginRight: 2, fontFamily: typography.display },
   editInput: {
     fontSize: 15, fontWeight: '700', color: colors.chart2,
-    paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
+    paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
+  editSuffix: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
   cardBottom: {},
   badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
   badgeOk: { backgroundColor: colors.sageBg },
