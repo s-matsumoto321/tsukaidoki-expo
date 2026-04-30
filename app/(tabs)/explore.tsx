@@ -1,6 +1,6 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, Pressable, StyleSheet, StatusBar, TextInput, Animated } from 'react-native';
+import { View, Text, Pressable, StyleSheet, StatusBar, TextInput } from 'react-native';
 import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
 import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
@@ -517,16 +517,7 @@ export default function DreamsScreen() {
     [balances, liveBalances]
   );
   const exploreDiff = poolTotal - pfTotalForHeader;
-  const exploreDiffAnim = useRef(new Animated.Value(0)).current;
-  const prevExploreDiffZero = useRef(exploreDiff === 0);
-  useEffect(() => {
-    const isZero = exploreDiff === 0;
-    if (isZero !== prevExploreDiffZero.current) {
-      Animated.timing(exploreDiffAnim, { toValue: isZero ? 1 : 0, duration: 300, useNativeDriver: false }).start();
-      prevExploreDiffZero.current = isZero;
-    }
-  }, [exploreDiff]);
-  const exploreDiffColor = exploreDiffAnim.interpolate({ inputRange: [0, 1], outputRange: [colors.honey, colors.sage] });
+  const exploreDiffColor = exploreDiff === 0 ? colors.sage : exploreDiff > 0 ? '#DC2626' : '#2E6FB8';
 
   const handleChangeMonthly = useCallback((projectId: string, newAmt: number) => {
     setLocalMonthly(prev => ({ ...prev, [projectId]: Math.max(0, newAmt) }));
@@ -615,13 +606,13 @@ export default function DreamsScreen() {
               <Text style={s.mainAmt}>{toMan(pfTotalForHeader)}</Text>
               <Text style={s.mainUnit}>万円</Text>
             </View>
-            <Animated.Text style={[s.diffLine, { color: exploreDiffColor }]}>
+            <Text style={[s.diffLine, { color: exploreDiffColor }]}>
               {exploreDiff === 0
                 ? '(プール金と一致 ✓)'
                 : exploreDiff > 0
                   ? `(プール金より −${toMan(exploreDiff)}万円)`
                   : `(プール金より +${toMan(Math.abs(exploreDiff))}万円)`}
-            </Animated.Text>
+            </Text>
           </View>
         </View>
       </View>
@@ -677,7 +668,7 @@ const s = StyleSheet.create({
   amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
   mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
   mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 17, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
