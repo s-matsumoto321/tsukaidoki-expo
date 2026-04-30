@@ -648,9 +648,8 @@ const s = StyleSheet.create({
     borderTopWidth: 1, borderTopColor: colors.divider,
   },
   allocBtn: {
-    backgroundColor: colors.chart2, borderRadius: radius.md,
+    backgroundColor: colors.sage, borderRadius: radius.sm,
     paddingVertical: 14, alignItems: 'center',
-    ...shadows.card,
   },
   allocBtnTxt: { fontSize: 15, fontWeight: '600', color: '#fff', fontFamily: typography.bodyMedium },
 

@@ -267,7 +267,7 @@ const s = StyleSheet.create({
     fontSize: fontSizes.amountHero,
     fontFamily: typography.displaySemiBold,
     color: colors.text,
-    lineHeight: fontSizes.amountHero,
+    lineHeight: fontSizes.amountHero * 1.2,
     letterSpacing: letterSpacing.tight,
   },
   // 円グラフ（2枚＋差額バッジ）

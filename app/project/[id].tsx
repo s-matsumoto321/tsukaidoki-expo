@@ -68,12 +68,13 @@ type Period = '生涯' | '5年' | '1年';
 
 // ─── 折れ線グラフ（試算ライン + ★マーカー） ──────────────────────
 
-function LineChart({ project, svgW, period, dreamYears, lifetimeYears }: {
+function LineChart({ project, svgW, period, dreamYears, lifetimeYears, selectedYear = null }: {
   project: Project | undefined;
   svgW: number;
   period: Period;
   dreamYears: number[];
   lifetimeYears: number;
+  selectedYear?: number | null;
 }) {
   if (!project) return null;
 
@@ -101,6 +102,18 @@ function LineChart({ project, svgW, period, dreamYears, lifetimeYears }: {
 
   const xStep = period === '1年' ? 1 : Math.max(1, Math.ceil(n / 5));
   const planPts = plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
+
+  // 選択年の吹き出し計算
+  const selIdx = selectedYear != null ? years.findIndex(y => parseYear(y) === selectedYear) : -1;
+  const hasSel = selIdx >= 0 && selIdx < endN;
+  const selCx = hasSel ? xi(selIdx) : 0;
+  const selCy = hasSel ? yv(plan[selIdx]) : 0;
+  const calloutLabel = hasSel ? `${years[selIdx]}  ${fmtY(plan[selIdx])}` : '';
+  const bubbleW = Math.ceil(calloutLabel.length * 6.5) + 16;
+  const bubbleH = 22;
+  const bubbleX = Math.min(Math.max(selCx - bubbleW / 2, PL), svgW - PR - bubbleW);
+  const bubbleY = selCy - bubbleH - 10;
+  const tipX = Math.min(Math.max(selCx, bubbleX + 6), bubbleX + bubbleW - 6);
 
   return (
     <Svg width={svgW} height={SVG_H}>
@@ -150,6 +163,22 @@ function LineChart({ project, svgW, period, dreamYears, lifetimeYears }: {
           </G>
         );
       })}
+
+      {/* 選択年ハイライト＋吹き出し */}
+      {hasSel && (
+        <G>
+          <Circle cx={selCx} cy={selCy} r={11} fill={C.green} opacity={0.15} />
+          <Rect x={bubbleX} y={bubbleY} width={bubbleW} height={bubbleH} rx={4} ry={4} fill={C.green} />
+          <Path
+            d={`M${tipX - 4},${bubbleY + bubbleH} L${tipX},${bubbleY + bubbleH + 5} L${tipX + 4},${bubbleY + bubbleH}`}
+            fill={C.green}
+          />
+          <SvgText x={bubbleX + bubbleW / 2} y={bubbleY + 15} textAnchor="middle" fontSize={10} fill="#fff" fontWeight="600">
+            {calloutLabel}
+          </SvgText>
+          <Circle cx={selCx} cy={selCy} r={5} fill={C.green} stroke="#fff" strokeWidth={2} />
+        </G>
+      )}
     </Svg>
   );
 }
@@ -159,6 +188,9 @@ function LineChart({ project, svgW, period, dreamYears, lifetimeYears }: {
 type AllocationModalProps = {
   visible: boolean;
   projectId: string;
+  project?: Project;
+  dreamYears?: number[];
+  lifetimeYears?: number;
   onClose: () => void;
 };
 
@@ -166,8 +198,9 @@ const NOW_YEAR = new Date().getFullYear();
 const MONTH_STEP = 1000;
 const MONTH_STEP_LONG = 10000;
 
-function AllocationModal({ visible, projectId, onClose }: AllocationModalProps) {
+function AllocationModal({ visible, projectId, project, dreamYears = [], lifetimeYears = 50, onClose }: AllocationModalProps) {
   const { savingsAllocation, saveSavingsAllocation } = useStore();
+  const { width: modalWidth } = useWindowDimensions();
   const [entries, setEntries] = useState<AllocationEntry[]>([]);
   const [selectedFromYear, setSelectedFromYear] = useState(NOW_YEAR);
   const [inputAmt, setInputAmt] = useState('');
@@ -242,6 +275,18 @@ function AllocationModal({ visible, projectId, onClose }: AllocationModalProps) 
         </View>
 
         <ScrollView style={al.scroll} contentContainerStyle={al.content}>
+          {project && (
+            <View style={al.miniChartWrap}>
+              <LineChart
+                project={project}
+                svgW={modalWidth - 40}
+                period="生涯"
+                dreamYears={dreamYears}
+                lifetimeYears={lifetimeYears}
+                selectedYear={selectedFromYear}
+              />
+            </View>
+          )}
           <Text style={al.sectionLabel}>月の積立額</Text>
           <View style={al.stepper}>
             <Pressable
@@ -367,6 +412,15 @@ const al = StyleSheet.create({
   entryYear: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
   entryAmt: { fontSize: 12, color: C.textSecondary, marginTop: 2 },
 
+  miniChartWrap: {
+    backgroundColor: C.card,
+    borderRadius: 12,
+    borderWidth: 0.5,
+    borderColor: C.border,
+    marginBottom: 16,
+    overflow: 'hidden',
+    paddingVertical: 8,
+  },
   addPointBtn: {
     marginTop: 8, paddingVertical: 12, borderRadius: 10,
     borderWidth: 1, borderColor: C.brand, borderStyle: 'dashed',
@@ -388,10 +442,10 @@ const al = StyleSheet.create({
 
 // ─── 出来事リスト ─────────────────────────────────────────────────
 
-function EventRow({ ev, onPress }: { ev: ProjectEvent; onPress: (ev: ProjectEvent) => void }) {
+function EventRow({ ev, onPress, isSelected = false }: { ev: ProjectEvent; onPress: (ev: ProjectEvent) => void; isSelected?: boolean }) {
   const typeColor = ev.type === 'spend' ? C.red : ev.type === 'in' ? C.orange : C.brand;
   return (
-    <Pressable style={ev2.row} onPress={() => onPress(ev)}>
+    <Pressable style={[ev2.row, isSelected && ev2.rowSel]} onPress={() => onPress(ev)}>
       <View style={[ev2.dot, { backgroundColor: typeColor }]} />
       <View style={ev2.body}>
         <Text style={ev2.year}>{ev.year}</Text>
@@ -419,13 +473,14 @@ const ev2 = StyleSheet.create({
   amt: { fontSize: 13, fontWeight: '600' },
   pos: { color: brand.sage.base },
   neg: { color: brand.honey.dark },
+  rowSel: { backgroundColor: 'rgba(91, 142, 125, 0.10)', borderColor: brand.sage.base },
 });
 
 // ─── 夢行 ────────────────────────────────────────────────────────
 
-function DreamRow({ dream, color }: { dream: Dream; color: string }) {
+function DreamRow({ dream, color, isSelected = false, onPress }: { dream: Dream; color: string; isSelected?: boolean; onPress?: () => void }) {
   return (
-    <View style={dr.row}>
+    <Pressable style={[dr.row, isSelected && dr.rowSel]} onPress={onPress}>
       <View style={[dr.badge, { backgroundColor: color + '22', borderColor: color + '66' }]}>
         <Text style={[dr.star, { color }]}>★</Text>
       </View>
@@ -433,7 +488,7 @@ function DreamRow({ dream, color }: { dream: Dream; color: string }) {
         <Text style={dr.year}>{dream.year}年</Text>
         <Text style={dr.title}>{dream.title}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
@@ -453,6 +508,7 @@ const dr = StyleSheet.create({
   body: { flex: 1 },
   year: { fontSize: 11, color: C.textSecondary },
   title: { fontSize: 14, fontWeight: '600', color: C.textPrimary },
+  rowSel: { backgroundColor: 'rgba(91, 142, 125, 0.10)', borderColor: brand.sage.base },
 });
 
 // ─── PJ詳細 メイン ────────────────────────────────────────────────
@@ -470,6 +526,7 @@ export default function ProjectDetailScreen() {
   const [period, setPeriod] = useState<Period>('生涯');
   const [sheetVisible, setSheetVisible] = useState(false);
   const [allocationModalVisible, setAllocationModalVisible] = useState(false);
+  const [selectedTimelineYear, setSelectedTimelineYear] = useState<number | null>(null);
 
   const svgW = screenWidth - 52;
 
@@ -509,8 +566,9 @@ export default function ProjectDetailScreen() {
   const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
   const projectColor = pfItems.find(i => i.projectId === (id ?? ''))?.color ?? C.brand;
 
-  const handleEventPress = useCallback((ev: ProjectEvent) => {
-    if (ev.type === 'start') {
+  const handleTimelineItemPress = useCallback((year: number, ev?: ProjectEvent) => {
+    setSelectedTimelineYear(prev => prev === year ? null : year);
+    if (ev?.type === 'start') {
       setAllocationModalVisible(true);
     }
   }, []);
@@ -586,7 +644,7 @@ export default function ProjectDetailScreen() {
               ))}
             </View>
           </View>
-          <LineChart project={project} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} />
+          <LineChart project={project} svgW={svgW} period={period} dreamYears={projectDreamYears} lifetimeYears={lifeYears} selectedYear={selectedTimelineYear} />
         </View>
 
       </View>
@@ -606,8 +664,19 @@ export default function ProjectDetailScreen() {
         >
           {timeline.map((item) =>
             item.kind === 'event'
-              ? <EventRow key={`ev-${item.ev.idx}`} ev={item.ev} onPress={handleEventPress} />
-              : <DreamRow key={`dream-${item.d.id}`} dream={item.d} color={projectColor} />
+              ? <EventRow
+                  key={`ev-${item.ev.idx}`}
+                  ev={item.ev}
+                  isSelected={selectedTimelineYear === item.sortYear}
+                  onPress={(ev) => handleTimelineItemPress(item.sortYear, ev)}
+                />
+              : <DreamRow
+                  key={`dream-${item.d.id}`}
+                  dream={item.d}
+                  color={projectColor}
+                  isSelected={selectedTimelineYear === item.d.year}
+                  onPress={() => handleTimelineItemPress(item.d.year)}
+                />
           )}
         </ScrollView>
       </View>
@@ -632,6 +701,9 @@ export default function ProjectDetailScreen() {
       <AllocationModal
         visible={allocationModalVisible}
         projectId={id ?? ''}
+        project={project}
+        dreamYears={projectDreamYears}
+        lifetimeYears={lifeYears}
         onClose={() => setAllocationModalVisible(false)}
       />
     </View>
