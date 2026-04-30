@@ -715,12 +715,10 @@ export default function PoolScreen() {
 
       {/* ヘッダー */}
       <View style={ps.header}>
-        <View style={ps.mainRow}>
-          <Text style={ps.pageTitle}>プール金</Text>
-          <View style={ps.amtGroup}>
-            <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
-            <Text style={ps.mainUnit}>万円</Text>
-          </View>
+        <Text style={ps.pageTitle}>プール金</Text>
+        <View style={ps.amtGroup}>
+          <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
+          <Text style={ps.mainUnit}>万円</Text>
         </View>
         <Animated.Text style={[ps.diffLine, { color: diffColor }]}>
           {diff === 0
@@ -793,12 +791,11 @@ const ps = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  mainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
-  pageTitle: { fontSize: 22, fontFamily: typography.bodyBold, color: colors.text },
-  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
-  mainAmt: { fontSize: 26, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
-  mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 13, fontFamily: typography.display, fontWeight: '500', marginTop: 4 },
+  pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
+  amtGroup: { flexDirection: 'row', alignItems: 'baseline', marginTop: 2 },
+  mainAmt: { fontSize: 24, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5 },
+  mainUnit: { fontSize: 13, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
+  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3 },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,
