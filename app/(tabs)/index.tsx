@@ -1,4 +1,4 @@
-import { useMemo, useCallback, useRef, useEffect } from 'react';
+import { useMemo, useCallback, useRef, useEffect, useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
   View, Text, Pressable,
@@ -135,26 +135,30 @@ export default function HomeScreen() {
   const diff       = poolTotal - pfTotal;
   const isBalanced = diff === 0;
 
-  // 画面フォーカス時に2秒間だけ脈動（差額がある時のみ）
+  // フォーカス取得ごとにカウントアップ → useEffect で確実にアニメーション起動
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const isBalancedRef = useRef(isBalanced);
-  useEffect(() => { isBalancedRef.current = isBalanced; }, [isBalanced]);
+  const [focusCount, setFocusCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
-      pulseAnim.setValue(1);
-      if (isBalancedRef.current) return;
-      // Animated.loop + iterationsは不安定なため、4ステップのsequenceで2秒を表現
-      const anim = Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
-      ]);
-      anim.start();
-      return () => { anim.stop(); pulseAnim.setValue(1); };
+      setFocusCount(c => c + 1);
     }, [])
   );
+
+  useEffect(() => {
+    if (focusCount === 0) return;
+    pulseAnim.setValue(1);
+    if (isBalanced) return;
+    // 4ステップのsequenceで2秒間脈動
+    const anim = Animated.sequence([
+      Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 0.9, duration: 500, useNativeDriver: true }),
+      Animated.timing(pulseAnim, { toValue: 1.0, duration: 500, useNativeDriver: true }),
+    ]);
+    anim.start();
+    return () => { anim.stop(); pulseAnim.setValue(1); };
+  }, [focusCount, isBalanced]);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.bg }}>
