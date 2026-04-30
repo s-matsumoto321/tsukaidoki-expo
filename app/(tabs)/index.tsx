@@ -108,6 +108,24 @@ function fmtMan(yen: number): string {
   return `¥${Math.round(yen / 10000).toLocaleString('ja-JP')}万`;
 }
 
+// ─── DEBUGパルスバー（useNativeDriver:false で独立テスト） ─────────────
+
+function DebugPulseBar() {
+  const anim = useRef(new Animated.Value(1)).current;
+  useFocusEffect(useCallback(() => {
+    anim.setValue(1);
+    const seq = Animated.sequence([
+      Animated.timing(anim, { toValue: 0.2, duration: 500, useNativeDriver: false }),
+      Animated.timing(anim, { toValue: 1.0, duration: 500, useNativeDriver: false }),
+      Animated.timing(anim, { toValue: 0.2, duration: 500, useNativeDriver: false }),
+      Animated.timing(anim, { toValue: 1.0, duration: 500, useNativeDriver: false }),
+    ]);
+    seq.start();
+    return () => { seq.stop(); anim.setValue(1); };
+  }, []));
+  return <Animated.View style={{ height: 20, borderRadius: 4, backgroundColor: '#f80', marginTop: 2, opacity: anim }} />;
+}
+
 // ─── ホーム画面 ──────────────────────────────────────────────────────
 
 export default function HomeScreen() {
@@ -170,6 +188,34 @@ export default function HomeScreen() {
           contentContainerStyle={s.scrollContent}
           showsVerticalScrollIndicator={false}
         >
+          {/* 🛠 DEBUGパネル */}
+          <View style={{ margin: 16, padding: 12, backgroundColor: '#1a1a2e', borderRadius: 8 }}>
+            <Text style={{ color: '#00ff88', fontSize: 11, fontFamily: 'monospace', marginBottom: 4 }}>
+              🛠 DEBUG
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'monospace' }}>
+              poolTotal: {poolTotal.toLocaleString()}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'monospace' }}>
+              pfTotal:   {pfTotal.toLocaleString()}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'monospace' }}>
+              diff:      {diff}
+            </Text>
+            <Text style={{ color: isBalanced ? '#00ff88' : '#ff4444', fontSize: 11, fontFamily: 'monospace' }}>
+              isBalanced: {String(isBalanced)}
+            </Text>
+            <Text style={{ color: '#fff', fontSize: 11, fontFamily: 'monospace' }}>
+              focusCount: {focusCount}
+            </Text>
+            {/* パネルA：常に脈動（isBalanced無視） */}
+            <Text style={{ color: '#aaa', fontSize: 10, fontFamily: 'monospace', marginTop: 8 }}>パネルA: 常に脈動テスト</Text>
+            <Animated.View style={{ height: 20, borderRadius: 4, backgroundColor: '#3af', marginTop: 2, opacity: pulseAnim }} />
+            {/* パネルB：useNativeDriver: false で同じアニメ */}
+            <Text style={{ color: '#aaa', fontSize: 10, fontFamily: 'monospace', marginTop: 6 }}>パネルB: 独自アニメ（nativeDriver:false）</Text>
+            <DebugPulseBar />
+          </View>
+
           {/* ① ページタイトル */}
           <View style={s.titleRow}>
             <Text style={s.pageTitle}>ホーム</Text>
