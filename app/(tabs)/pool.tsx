@@ -85,7 +85,7 @@ function fmtAxis(v: number): string {
 
 // ── 積み上げ面積グラフ ────────────────────────────────────────────────
 
-const PL = 48, PR = 10, PT = 10, PB = 24;
+const PL = 58, PR = 10, PT = 10, PB = 28;
 
 function StackedAreaChart({
   svgW, chartH = 160, yearCount, stacks, colors: chartColors,
@@ -116,12 +116,12 @@ function StackedAreaChart({
         <G key={v}>
           <SvgLine x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
             stroke={colors.divider} strokeWidth={0.5} />
-          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={fontSizes.textSm} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
         </G>
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
-        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill={colors.textLight}>
-          {NOW_YEAR + i}
+        <SvgText key={i} x={xi(i)} y={chartH - 4} textAnchor="middle" fontSize={fontSizes.textSm} fill={colors.textLight}>
+          {(NOW_YEAR + i) % 100}
         </SvgText>
       ))}
       {stacks.map((stack, si) => {
@@ -166,12 +166,12 @@ function MultiLineChart({
         <G key={v}>
           <SvgLine x1={PL} y1={yv(v)} x2={svgW - PR} y2={yv(v)}
             stroke={colors.divider} strokeWidth={0.5} />
-          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={8} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
+          <SvgText x={PL - 4} y={yv(v) + 4} textAnchor="end" fontSize={fontSizes.textSm} fill={colors.textLight}>{fmtAxis(v)}</SvgText>
         </G>
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
-        <SvgText key={i} x={xi(i)} y={chartH - 3} textAnchor="middle" fontSize={8} fill={colors.textLight}>
-          {NOW_YEAR + i}
+        <SvgText key={i} x={xi(i)} y={chartH - 4} textAnchor="middle" fontSize={fontSizes.textSm} fill={colors.textLight}>
+          {(NOW_YEAR + i) % 100}
         </SvgText>
       ))}
       {stacks.map((stack, si) => {
