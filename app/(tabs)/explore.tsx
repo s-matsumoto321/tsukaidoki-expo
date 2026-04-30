@@ -1,7 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { View, Text, Pressable, StyleSheet, StatusBar, TextInput } from 'react-native';
-import DraggableFlatList, { ScaleDecorator, RenderItemParams } from 'react-native-draggable-flatlist';
+import { View, Text, Pressable, StyleSheet, StatusBar, TextInput, FlatList } from 'react-native';
 import { router } from 'expo-router';
 import { PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
@@ -292,7 +291,7 @@ const aa = StyleSheet.create({
   inner: { padding: 12, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   mark: { fontSize: 14, color: colors.honey, lineHeight: 22, fontFamily: typography.display },
   title: { fontSize: 12, color: colors.honey, fontWeight: '600', marginBottom: 3, fontFamily: typography.display },
-  txt: { fontSize: 13, color: colors.text, lineHeight: 18, fontFamily: typography.display },
+  txt: { fontSize: 13, color: colors.text, lineHeight: 16, fontFamily: typography.display },
   btn: {
     marginTop: 8, backgroundColor: colors.honey,
     borderRadius: 8, paddingVertical: 7, paddingHorizontal: 14,
@@ -326,22 +325,6 @@ function AllocationBar({ items, surplus, total }: {
           </>
         )}
       </View>
-      <View style={s.allocLegRow}>
-        {items.map(item => (
-          <View key={item.projectId ?? item.name} style={s.allocLegItem}>
-            <View style={[s.allocDot, { backgroundColor: item.color }]} />
-            <Text style={s.allocLegName} numberOfLines={1}>{item.name}</Text>
-            <Text style={s.allocLegPct}>{Math.round((item.amount / total) * 100)}%</Text>
-          </View>
-        ))}
-        {surplus > 0 && (
-          <View style={s.allocLegItem}>
-            <View style={[s.allocDot, { backgroundColor: surplusColor }]} />
-            <Text style={s.allocLegName}>余剰資金</Text>
-            <Text style={s.allocLegPct}>{Math.round((surplus / total) * 100)}%</Text>
-          </View>
-        )}
-      </View>
     </View>
   );
 }
@@ -349,10 +332,8 @@ function AllocationBar({ items, surplus, total }: {
 // ─── PJカード ──────────────────────────────────────────────────────────
 
 function PjCard({
-  color, name, amount, status, projectId, drag, isActive, onSave, onLiveChange,
+  color, name, amount, status, projectId, onSave, onLiveChange,
 }: CardItem & {
-  drag?: () => void;
-  isActive?: boolean;
   onSave?: (id: string, newVal: number) => void;
   onLiveChange?: (id: string, val: number | null) => void;
 }) {
@@ -379,10 +360,8 @@ function PjCard({
 
   return (
     <Pressable
-      style={[s.card, isActive && s.cardActive]}
+      style={s.card}
       onPress={onCardPress}
-      onLongPress={drag}
-      delayLongPress={300}
     >
       <View style={[s.cardBar, { backgroundColor: color }]} />
       <View style={{ flex: 1 }}>
@@ -393,7 +372,7 @@ function PjCard({
           </Text>
         )}
       </View>
-      <View style={{ alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center' }}>
+      <View style={s.amtContainer}>
         {editing ? (
           <View style={s.editRow}>
             <TextInput
@@ -423,7 +402,6 @@ function PjCard({
           </Pressable>
         )}
       </View>
-      {drag && <Text style={s.dragHandle}>⠿</Text>}
     </Pressable>
   );
 }
@@ -444,7 +422,7 @@ function generateAiInsight(items: CardItem[], dreams: { year: number; title: str
 
 export default function DreamsScreen() {
   const insets = useSafeAreaInsets();
-  const { balances, dreamOrder, setDreamOrder, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance, poolItems } = useStore();
+  const { balances, dreams, aiInsights, savingsAllocation, saveSavingsAllocation, updateBalance, poolItems } = useStore();
   const [panelOpen, setPanelOpen] = useState(false);
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
@@ -560,26 +538,6 @@ export default function DreamsScreen() {
     });
   }, []);
 
-  const sortedItems = useMemo(() => {
-    const orderMap = dreamOrder.reduce<Record<string, number>>(
-      (m, id, i) => ({ ...m, [id]: i }), {},
-    );
-    return [...enriched].sort((a, b) =>
-      (orderMap[a.projectId ?? ''] ?? 999) - (orderMap[b.projectId ?? ''] ?? 999),
-    );
-  }, [enriched, dreamOrder]);
-
-  const renderItem = ({ item, drag, isActive }: RenderItemParams<CardItem>) => (
-    <ScaleDecorator activeScale={1.03}>
-      <PjCard
-        {...item}
-        drag={drag}
-        isActive={isActive}
-        onSave={handleBalanceSave}
-        onLiveChange={handleLiveChange}
-      />
-    </ScaleDecorator>
-  );
 
   return (
     <SafeAreaView style={s.safe} edges={['top']}>
@@ -613,11 +571,17 @@ export default function DreamsScreen() {
 
       {/* プロジェクトカード（スクロール） */}
       <View style={{ flex: 1 }}>
-        <DraggableFlatList
-          data={sortedItems}
+        <FlatList
+          data={enriched}
           keyExtractor={item => item.projectId ?? item.name}
           contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
-          renderItem={renderItem}
+          renderItem={({ item }) => (
+            <PjCard
+              {...item}
+              onSave={handleBalanceSave}
+              onLiveChange={handleLiveChange}
+            />
+          )}
           ListHeaderComponent={panelOpen ? (
             <AllocationPanel
               pfItems={enriched}
@@ -630,7 +594,6 @@ export default function DreamsScreen() {
               onSave={handleSaveAllocation}
             />
           ) : null}
-          onDragEnd={({ data }) => setDreamOrder(data.map(i => i.projectId ?? i.name))}
         />
       </View>
 
@@ -666,7 +629,7 @@ const s = StyleSheet.create({
   },
   aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
   aiLabel: { fontSize: fontSizes.textSm, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
-  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.6, fontFamily: typography.body },
+  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.3, fontFamily: typography.body },
 
   // 積立調整ボタン（プール金画面と同形式）
   bottomBar: {
@@ -709,11 +672,8 @@ const s = StyleSheet.create({
     overflow: 'hidden',
     ...shadows.card,
   },
-  cardActive: {
-    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
-  },
   cardBar: { width: 4, alignSelf: 'stretch', borderRadius: 2, flexShrink: 0 },
+  amtContainer: { alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center' },
   cardName: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
   cardStatus: { fontSize: fontSizes.textSm, marginTop: 2, fontFamily: typography.display },
   statusOk: { color: colors.sage },
@@ -732,5 +692,4 @@ const s = StyleSheet.create({
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
   editSuffix: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
-  dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center', fontFamily: typography.display },
 });

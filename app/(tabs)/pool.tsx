@@ -719,14 +719,6 @@ export default function PoolScreen() {
 
       {/* 積み上げ面積グラフ */}
       <View style={ps.chartCard}>
-        <View style={ps.legendRow}>
-          {poolItems.map(item => (
-            <View key={item.projectId} style={ps.legendItem}>
-              <View style={[ps.legendDot, { backgroundColor: item.color }]} />
-              <Text style={ps.legendTxt}>{item.name}</Text>
-            </View>
-          ))}
-        </View>
         <StackedAreaChart
           svgW={svgW}
           yearCount={yearCount}

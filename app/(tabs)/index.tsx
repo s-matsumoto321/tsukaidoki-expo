@@ -388,6 +388,6 @@ const s = StyleSheet.create({
   aiInner: { padding: spacing.xl, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
   aiLabel: { fontSize: fontSizes.textSm, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
-  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.6, fontFamily: typography.body },
+  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.3, fontFamily: typography.body },
 
 });

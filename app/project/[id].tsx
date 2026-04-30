@@ -726,7 +726,7 @@ const s = StyleSheet.create({
   },
   aiIcon: { fontSize: 14, color: brand.sage.base, lineHeight: 22 },
   aiLabel: { fontSize: 11, color: brand.sage.base, fontWeight: '500', marginBottom: 1 },
-  aiTxt: { fontSize: 13, color: C.brand, lineHeight: 19 },
+  aiTxt: { fontSize: 13, color: C.brand, lineHeight: 16 },
 
   graphCard: {
     marginHorizontal: 14, marginBottom: 6,
