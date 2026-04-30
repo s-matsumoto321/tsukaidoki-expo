@@ -355,11 +355,15 @@ function ProgressBar({ progress, color }: { progress: number; color: string }) {
 // ─── PJカード ──────────────────────────────────────────────────────────
 
 function PjCard({
-  color, name, amount, progress = 0, status, projectId, drag, isActive, onSave,
-}: CardItem & { drag?: () => void; isActive?: boolean; onSave?: (id: string, newVal: number) => void }) {
+  color, name, amount, progress = 0, status, projectId, drag, isActive, onSave, onLiveChange,
+}: CardItem & {
+  drag?: () => void;
+  isActive?: boolean;
+  onSave?: (id: string, newVal: number) => void;
+  onLiveChange?: (id: string, val: number | null) => void;
+}) {
   const [editing, setEditing] = useState(false);
   const [editVal, setEditVal] = useState('');
-  const pct = Math.round(progress * 100);
 
   const startEdit = () => {
     if (!projectId || !onSave) return;
@@ -372,6 +376,7 @@ function PjCard({
     if (!isNaN(n) && n > 0 && n !== amount && projectId && onSave) {
       onSave(projectId, n);
     }
+    if (projectId) onLiveChange?.(projectId, null);
     setEditing(false);
   };
 
@@ -394,7 +399,12 @@ function PjCard({
               <TextInput
                 style={s.editInput}
                 value={editVal}
-                onChangeText={v => setEditVal(v.replace(/[^0-9]/g, ''))}
+                onChangeText={v => {
+                  const clean = v.replace(/[^0-9]/g, '');
+                  setEditVal(clean);
+                  const n = parseInt(clean, 10);
+                  if (projectId && !isNaN(n)) onLiveChange?.(projectId, n);
+                }}
                 keyboardType="number-pad"
                 autoFocus
                 onBlur={commit}
@@ -410,18 +420,13 @@ function PjCard({
           )}
         </View>
         <View style={s.cardBottom}>
-          <View style={s.badgeRow}>
-            <View style={[s.pctBadge, { backgroundColor: color + '22' }]}>
-              <Text style={[s.pctBadgeTxt, { color }]}>{pct}%</Text>
+          {status && (
+            <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn, { marginBottom: 6 }]}>
+              <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
+                {status === 'ok' ? '✓ 順調' : '△ 調整の余地'}
+              </Text>
             </View>
-            {status && (
-              <View style={[s.badge, status === 'ok' ? s.badgeOk : s.badgeWarn]}>
-                <Text style={[s.badgeTxt, status === 'ok' ? s.badgeOkTxt : s.badgeWarnTxt]}>
-                  {status === 'ok' ? '順調' : '要注意'}
-                </Text>
-              </View>
-            )}
-          </View>
+          )}
           <ProgressBar progress={progress} color={color} />
         </View>
       </View>
@@ -450,6 +455,7 @@ export default function DreamsScreen() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [localMonthly, setLocalMonthly] = useState<Record<string, number>>({});
   const [localBalances, setLocalBalances] = useState<Record<string, number>>({});
+  const [liveBalances, setLiveBalances] = useState<Record<string, number>>({});
 
   useEffect(() => {
     if (panelOpen) {
@@ -502,8 +508,8 @@ export default function DreamsScreen() {
     [poolItems, balances]
   );
   const pfTotalForHeader = useMemo(
-    () => PF_ITEMS.reduce((sum, i) => sum + (i.projectId ? (balances[i.projectId] ?? i.amount) : i.amount), 0),
-    [balances]
+    () => PF_ITEMS.reduce((sum, i) => sum + (i.projectId ? (liveBalances[i.projectId] ?? balances[i.projectId] ?? i.amount) : i.amount), 0),
+    [balances, liveBalances]
   );
   const exploreDiff = poolTotal - pfTotalForHeader;
   const exploreDiffAnim = useRef(new Animated.Value(0)).current;
@@ -565,6 +571,17 @@ export default function DreamsScreen() {
     updateBalance(id, origBal, newVal, '残高修正');
   }, [balances, updateBalance]);
 
+  const handleLiveChange = useCallback((id: string, val: number | null) => {
+    setLiveBalances(prev => {
+      if (val === null) {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      }
+      return { ...prev, [id]: val };
+    });
+  }, []);
+
   const sortedItems = useMemo(() => {
     const orderMap = dreamOrder.reduce<Record<string, number>>(
       (m, id, i) => ({ ...m, [id]: i }), {},
@@ -581,6 +598,7 @@ export default function DreamsScreen() {
         drag={drag}
         isActive={isActive}
         onSave={handleBalanceSave}
+        onLiveChange={handleLiveChange}
       />
     </ScaleDecorator>
   );
@@ -736,10 +754,7 @@ const s = StyleSheet.create({
     paddingVertical: 0, minWidth: 80, fontFamily: typography.display,
   },
   cardBottom: {},
-  badgeRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 },
-  pctBadge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
-  pctBadgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
-  badge: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
+  badge: { alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill },
   badgeOk: { backgroundColor: colors.sageBg },
   badgeWarn: { backgroundColor: colors.honeyBg },
   badgeTxt: { fontSize: 11, fontWeight: '600', fontFamily: typography.display },
