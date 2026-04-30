@@ -656,7 +656,7 @@ const s = StyleSheet.create({
   amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
   mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
   mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 15, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  diffLine: { fontSize: fontSizes.textLg, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   // AIインサイト
   aiWrap: { paddingHorizontal: spacing.lg, paddingTop: spacing.sm, paddingBottom: 2 },
@@ -665,8 +665,8 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'flex-start', gap: 10,
   },
   aiIcon: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 13 * 1.6, fontFamily: typography.body },
+  aiLabel: { fontSize: fontSizes.textSm, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
+  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.6, fontFamily: typography.body },
 
   // 積立調整ボタン（プール金画面と同形式）
   bottomBar: {
@@ -697,8 +697,8 @@ const s = StyleSheet.create({
     gap: 4, paddingVertical: 3,
   },
   allocDot: { width: 8, height: 8, borderRadius: 4, flexShrink: 0 },
-  allocLegName: { fontSize: 11, color: colors.textMid, flex: 1, fontFamily: typography.display },
-  allocLegPct: { fontSize: 11, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display },
+  allocLegName: { fontSize: fontSizes.textSm, color: colors.textMid, flex: 1, fontFamily: typography.display },
+  allocLegPct: { fontSize: fontSizes.textSm, fontWeight: '600', color: colors.text, minWidth: 26, textAlign: 'right', fontFamily: typography.display },
 
   content: { paddingHorizontal: spacing.lg, paddingTop: 4 },
 
@@ -714,23 +714,23 @@ const s = StyleSheet.create({
     shadowOpacity: 0.12, shadowRadius: 8, elevation: 8,
   },
   cardBar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
-  cardName: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  cardStatus: { fontSize: 11, marginTop: 2, fontFamily: typography.display },
+  cardName: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  cardStatus: { fontSize: fontSizes.textSm, marginTop: 2, fontFamily: typography.display },
   statusOk: { color: colors.sage },
   statusWarn: { color: colors.honey },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  cardAmt: { fontSize: 18, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
-  amtUnit: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
-  editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
+  cardAmt: { fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtUnit: { fontSize: fontSizes.caption, color: colors.textMid, fontFamily: typography.display },
+  editIcon: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
   editRow: {
     flexDirection: 'row', alignItems: 'baseline', gap: 2,
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
   editInput: {
-    fontSize: 18, fontWeight: '700', color: colors.chart2,
+    fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2,
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
-  editSuffix: { fontSize: 12, color: colors.chart2, fontFamily: typography.display },
+  editSuffix: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
   dragHandle: { fontSize: 20, color: colors.divider, paddingHorizontal: 10, alignSelf: 'center', fontFamily: typography.display },
 });

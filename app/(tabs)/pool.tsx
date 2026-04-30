@@ -257,23 +257,23 @@ const bl = StyleSheet.create({
     ...shadows.card,
   },
   bar: { width: 4, height: 38, borderRadius: 2, flexShrink: 0 },
-  name: { fontSize: 14, fontWeight: '600', color: colors.text, fontFamily: typography.display },
-  meta: { fontSize: 11, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
+  name: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  meta: { fontSize: fontSizes.textSm, color: colors.textMid, marginTop: 1, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
-  amtNum: { fontSize: 18, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
-  amtUnit: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
-  editIcon: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
+  amtNum: { fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
+  amtUnit: { fontSize: fontSizes.caption, color: colors.textMid, fontFamily: typography.display },
+  editIcon: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
   editRow: {
     flexDirection: 'row', alignItems: 'baseline', gap: 2,
     borderBottomWidth: 1.5, borderBottomColor: colors.chart2, paddingBottom: 1,
   },
   editInput: {
-    fontSize: 18, fontWeight: '700', color: colors.chart2,
+    fontSize: fontSizes.amountCard, fontWeight: '700', color: colors.chart2,
     paddingVertical: 0, minWidth: 60, fontFamily: typography.display,
   },
-  editSuffix: { fontSize: 11, color: colors.chart2, fontFamily: typography.display },
-  rate: { fontSize: 11, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
+  editSuffix: { fontSize: fontSizes.caption, color: colors.chart2, fontFamily: typography.display },
+  rate: { fontSize: fontSizes.textSm, color: colors.textMid, marginTop: 2, fontFamily: typography.display },
 });
 
 // ── 積立・複利オーバーレイ ────────────────────────────────────────────
@@ -792,7 +792,7 @@ const ps = StyleSheet.create({
   amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
   mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
   mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: 14, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  diffLine: { fontSize: fontSizes.textLg, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,
@@ -803,15 +803,15 @@ const ps = StyleSheet.create({
   legendRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, paddingHorizontal: 12, marginBottom: 4 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 3 },
   legendDot: { width: 8, height: 8, borderRadius: 2 },
-  legendTxt: { fontSize: 10, color: colors.textMid, fontFamily: typography.display },
+  legendTxt: { fontSize: fontSizes.micro, color: colors.textMid, fontFamily: typography.display },
 
   listPanel: { flex: 1, backgroundColor: colors.bg },
   secRow: {
     flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
     paddingHorizontal: spacing.lg, paddingVertical: 6,
   },
-  secTitle: { fontSize: 13, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
-  secSub: { fontSize: 12, color: colors.chart2, fontWeight: '500', textDecorationLine: 'underline', fontFamily: typography.display },
+  secTitle: { fontSize: fontSizes.textSm, fontWeight: '500', color: colors.textMid, fontFamily: typography.display },
+  secSub: { fontSize: fontSizes.caption, color: colors.chart2, fontWeight: '500', textDecorationLine: 'underline', fontFamily: typography.display },
 
   bottomBar: {
     position: 'absolute', left: 0, right: 0,

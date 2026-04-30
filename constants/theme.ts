@@ -50,16 +50,20 @@ export const typography = {
 };
 
 export const fontSizes = {
-  pageTitle: 32,
-  amountHero: 38,       // spec: 38
-  amountMedium: 19,     // spec: 19
+  pageTitle: 32,         // L1 タイトル
+  amountHero: 38,        // ヒーロー金額（ホーム総資産）
+  amountCard: 20,        // L3 カード残高金額（+2 from 18）
+  amountMedium: 19,
   amountSmall: 14,
   currencyHero: 26,
   currencyMedium: 13,
+  textLg: 16,            // L2 説明書き大（差額テキスト等）
+  textMd: 16,            // L3 説明書き中・名称（カード名/口座名）
+  textSm: 13,            // L4 説明書き小（メタ・AI本文）
   heading: 16,
   body: 14,
-  caption: 12,
-  micro: 10,
+  caption: 13,           // L4 キャプション（+1 from 12）
+  micro: 12,             // L4 最小（+2 from 10）
 };
 
 export const lineHeights = {

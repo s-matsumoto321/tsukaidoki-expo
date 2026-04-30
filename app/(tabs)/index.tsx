@@ -366,9 +366,9 @@ const s = StyleSheet.create({
   legRow: { flexDirection: 'row', alignItems: 'center' },
   legLeft: { flexDirection: 'row', alignItems: 'center', gap: 5, flex: 1, minWidth: 0 },
   legDot: { width: 6, height: 6, borderRadius: 3, flexShrink: 0 },
-  legName: { fontSize: 10, color: colors.textMid, flex: 1, fontFamily: typography.display },
+  legName: { fontSize: fontSizes.micro, color: colors.textMid, flex: 1, fontFamily: typography.display },
   legNameMuted: { color: colors.textLight },
-  legVal: { fontSize: 10, color: colors.text, minWidth: 36, textAlign: 'right', fontFamily: typography.displaySemiBold },
+  legVal: { fontSize: fontSizes.micro, color: colors.text, minWidth: 36, textAlign: 'right', fontFamily: typography.displaySemiBold },
   legValMuted: { color: colors.textLight, fontFamily: typography.display },
 
   // AIインサイト
@@ -387,7 +387,7 @@ const s = StyleSheet.create({
   },
   aiInner: { padding: spacing.xl, flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   aiMark: { fontSize: 14, color: colors.sage, lineHeight: 22, fontFamily: typography.body },
-  aiLabel: { fontSize: 11, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
-  aiTxt: { fontSize: 13, color: colors.text, lineHeight: 13 * 1.6, fontFamily: typography.body },
+  aiLabel: { fontSize: fontSizes.textSm, color: colors.sage, fontWeight: '700', marginBottom: 4, fontFamily: typography.bodyBold },
+  aiTxt: { fontSize: fontSizes.textSm, color: colors.text, lineHeight: fontSizes.textSm * 1.6, fontFamily: typography.body },
 
 });
