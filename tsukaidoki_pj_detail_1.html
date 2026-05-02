@@ -1,0 +1,1506 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ツカイドキ PJ詳細 v3</title>
+<style>
+:root {
+  --bg-primary: #f5f4ee;
+  --bg-card: #ffffff;
+  --text-primary: #2c2c2a;
+  --text-secondary: #73726c;
+  --text-tertiary: #9c9a92;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.18);
+  --plan-color: #185FA5;
+  --actual-color: #1D9E75;
+  --expense-color: #E24B4A;
+  --milestone-color: #185FA5;
+  --orange: #EF9F27;
+  --warn-bg: #FAEEDA;
+  --warn-text: #9c5800;
+  --ai-bg: #EAF3DE;
+  --ai-color: #1D9E75;
+  --select-bg: #E6F1FB;
+  --select-border: #185FA5;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ヘッダー */
+.hdr {
+  padding: max(env(safe-area-inset-top), 12px) 16px 10px;
+  flex-shrink: 0;
+}
+.back-btn {
+  font-size: 14px;
+  color: var(--ai-color);
+  font-weight: 500;
+  margin-bottom: 6px;
+  cursor: pointer;
+  background: none;
+  border: none;
+  padding: 0;
+  font-family: inherit;
+}
+.hdr-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+.hdr-left { flex: 1; min-width: 0; }
+.hdr-right { flex-shrink: 0; text-align: right; padding-top: 2px; }
+.pj-name {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+}
+.pj-timing {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+.amt-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.amt-value {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+  margin-top: 1px;
+}
+.amt-value .unit {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-left: 1px;
+}
+.amt-sub {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  margin-top: 1px;
+}
+
+/* グラフカード */
+.graph-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  margin: 0 16px 8px;
+  padding: 10px 12px 6px;
+  border: 0.5px solid var(--border);
+  flex-shrink: 0;
+}
+.graph-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.legend {
+  display: flex;
+  gap: 12px;
+  font-size: 10px;
+  color: var(--text-secondary);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.legend-dash {
+  width: 14px;
+  height: 0;
+  border-top: 2px dashed var(--plan-color);
+}
+.legend-line {
+  width: 14px;
+  height: 2px;
+  background: var(--actual-color);
+  border-radius: 1px;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--expense-color);
+}
+.legend-unit {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  margin-left: 8px;
+}
+
+.range-tabs {
+  display: flex;
+  gap: 4px;
+}
+.range-tab {
+  font-size: 10px;
+  padding: 3px 9px;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border-strong);
+  cursor: pointer;
+  font-family: inherit;
+}
+.range-tab.active {
+  background: var(--plan-color);
+  color: white;
+  border-color: var(--plan-color);
+  font-weight: 500;
+}
+
+.graph-svg-wrap { width: 100%; }
+.graph-svg-wrap svg { display: block; width: 100%; height: auto; }
+
+/* 積立/支出タブ */
+.type-tabs {
+  display: flex;
+  gap: 6px;
+  padding: 0 16px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+.type-tab {
+  flex: 1;
+  padding: 8px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0.5px solid var(--border-strong);
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+.type-tab.active {
+  background: var(--actual-color);
+  color: white;
+  border-color: var(--actual-color);
+  font-weight: 600;
+}
+.type-tab .icon {
+  font-size: 14px;
+}
+
+/* 計画/実績ヘッダー */
+.split-headers {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0 16px 6px;
+  flex-shrink: 0;
+}
+.split-h {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 0;
+  border-bottom: 2px solid;
+}
+.split-h.plan {
+  color: var(--plan-color);
+  border-bottom-color: var(--plan-color);
+}
+.split-h.actual {
+  color: var(--actual-color);
+  border-bottom-color: var(--actual-color);
+}
+
+/* 年表エリア */
+.events-area {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px calc(env(safe-area-inset-bottom) + 80px);
+  min-height: 0;
+}
+
+.event-card {
+  background: var(--bg-card);
+  border-radius: 12px;
+  margin-bottom: 6px;
+  border: 0.5px solid var(--border);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: stretch;
+  position: relative;
+  overflow: hidden;
+}
+
+.event-side {
+  padding: 10px 12px;
+  min-height: 70px;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s;
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  margin: -1px;
+}
+.event-side.selected {
+  background: var(--select-bg);
+  border-color: var(--select-border);
+}
+
+.event-divider {
+  width: 0.5px;
+  background: var(--border);
+  position: relative;
+}
+.event-divider .center-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid;
+  background: var(--bg-card);
+}
+.event-divider .center-dot.filled-plan {
+  background: var(--plan-color);
+  border-color: var(--plan-color);
+}
+.event-divider .center-dot.filled-actual {
+  background: var(--actual-color);
+  border-color: var(--actual-color);
+}
+.event-divider .center-dot.expense {
+  background: var(--expense-color);
+  border-color: var(--expense-color);
+}
+
+.event-year {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 2px;
+}
+.event-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1px;
+  line-height: 1.3;
+}
+.event-detail {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+.event-amount {
+  font-size: 12px;
+  font-weight: 600;
+}
+.event-amount.pos { color: var(--actual-color); }
+.event-amount.neg { color: var(--expense-color); }
+.event-amount.plan-pos { color: var(--plan-color); }
+
+/* 未入力 */
+.event-empty {
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 2px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 8px;
+  margin: 8px;
+  cursor: pointer;
+  background: transparent;
+  min-height: 54px;
+  color: var(--text-secondary);
+}
+.event-empty .empty-icon {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text-tertiary);
+}
+.event-empty .empty-text {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* 下部固定編集ボタン */
+.bottom-action {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 10px 16px calc(env(safe-area-inset-bottom) + 10px);
+  background: linear-gradient(to top, var(--bg-primary) 70%, transparent);
+  z-index: 50;
+}
+.action-btn {
+  width: 100%;
+  background: var(--actual-color);
+  color: white;
+  border: none;
+  padding: 13px;
+  border-radius: 14px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: opacity 0.2s, background 0.2s;
+}
+.action-btn:disabled {
+  background: rgba(0,0,0,0.15);
+  color: var(--text-tertiary);
+  cursor: not-allowed;
+}
+
+/* ポップアップ */
+.popup-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+  display: none;
+  z-index: 90;
+}
+.popup-backdrop.show { display: block; }
+
+.popup {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 60vh;
+  background: var(--bg-primary);
+  border-radius: 20px 20px 0 0;
+  padding: 12px 20px calc(env(safe-area-inset-bottom) + 16px);
+  z-index: 100;
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+  display: flex;
+  flex-direction: column;
+}
+.popup.show { transform: translateY(0); }
+.popup.large { height: 80vh; }
+
+.popup-handle {
+  width: 36px;
+  height: 4px;
+  background: rgba(0,0,0,0.2);
+  border-radius: 2px;
+  margin: 0 auto 12px;
+  flex-shrink: 0;
+}
+.popup-title {
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+  flex-shrink: 0;
+}
+.popup-sub {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-bottom: 14px;
+  flex-shrink: 0;
+}
+
+.popup-body {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.field-label {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: 10px 0 4px;
+  display: block;
+}
+.field-input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 16px;
+  border: 0.5px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--bg-card);
+  font-family: inherit;
+  color: var(--text-primary);
+}
+
+.field-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.field-number .field-input { flex: 1; }
+.field-number .unit {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.unit-tabs {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+.unit-tab {
+  padding: 5px 12px;
+  font-size: 11px;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border-strong);
+  cursor: pointer;
+  font-family: inherit;
+}
+.unit-tab.active {
+  background: var(--plan-color);
+  color: white;
+  border-color: var(--plan-color);
+  font-weight: 500;
+}
+
+.popup-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-shrink: 0;
+}
+.btn-primary {
+  flex: 1;
+  padding: 12px;
+  background: var(--actual-color);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-secondary {
+  padding: 12px 18px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border-strong);
+  border-radius: 12px;
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* 棒グラフ（実績入力ポップアップ用） */
+.bar-chart-wrap {
+  background: var(--bg-card);
+  border-radius: 10px;
+  padding: 10px 12px;
+  border: 0.5px solid var(--border);
+  margin-bottom: 12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.bar-chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  min-width: 100%;
+  height: 100px;
+  padding-bottom: 16px;
+  position: relative;
+}
+.bar-month {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  width: 32px;
+  height: 100%;
+  position: relative;
+}
+.bar-pair {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 100%;
+  width: 100%;
+  justify-content: center;
+}
+.bar {
+  width: 10px;
+  border-radius: 2px 2px 0 0;
+  transition: height 0.3s, background 0.3s;
+}
+.bar.plan { background: var(--plan-color); opacity: 0.4; }
+.bar.actual { background: var(--actual-color); }
+.bar.actual.warn { background: var(--orange); }
+.bar.actual.over { background: var(--plan-color); }
+.bar-label {
+  font-size: 9px;
+  color: var(--text-tertiary);
+  position: absolute;
+  bottom: 0;
+}
+.bar-status {
+  position: absolute;
+  top: 4px;
+  right: 8px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--warn-text);
+  background: var(--warn-bg);
+  padding: 2px 8px;
+  border-radius: 12px;
+}
+
+/* 月別入力リスト */
+.monthly-list {
+  background: var(--bg-card);
+  border-radius: 10px;
+  border: 0.5px solid var(--border);
+  overflow: hidden;
+}
+.monthly-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 12px;
+  border-bottom: 0.5px solid var(--border);
+  gap: 10px;
+  transition: background 0.2s;
+}
+.monthly-row:last-child { border-bottom: none; }
+.monthly-row.warn { background: rgba(239, 159, 39, 0.06); }
+.monthly-month {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  width: 38px;
+  flex-shrink: 0;
+}
+.monthly-plan {
+  font-size: 10px;
+  color: var(--text-tertiary);
+  flex: 1;
+}
+.monthly-status {
+  font-size: 10px;
+  color: var(--warn-text);
+  flex-shrink: 0;
+  margin-right: 4px;
+  font-weight: 500;
+}
+.monthly-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.ctrl-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 0.5px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ctrl-btn:active { background: var(--bg-primary); }
+.monthly-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 50px;
+  text-align: center;
+}
+.monthly-value .unit {
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 400;
+  margin-left: 1px;
+}
+
+/* スライダー風入力（積立計画） */
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 6px;
+}
+.slider-row .slider-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 0.5px solid var(--border-strong);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  font-size: 18px;
+  cursor: pointer;
+  font-family: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.slider-row .slider-value {
+  flex: 1;
+  text-align: center;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.slider-row .slider-value .unit {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  margin-left: 4px;
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ヘッダー -->
+  <div class="hdr">
+    <button class="back-btn">‹ 使いみち</button>
+    <div class="hdr-row">
+      <div class="hdr-left">
+        <div class="pj-name">教育資金</div>
+        <div class="pj-timing">2044年 大学入学まで</div>
+      </div>
+      <div class="hdr-right">
+        <div class="amt-label">現在の積み立て</div>
+        <div class="amt-value">430<span class="unit">万円</span></div>
+        <div class="amt-sub">目標 500万円・計画通り</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- グラフカード -->
+  <div class="graph-card" id="graph-card">
+    <div class="graph-top">
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dash"></div>計画</div>
+        <div class="legend-item"><div class="legend-line"></div>実績</div>
+        <div class="legend-item"><div class="legend-dot"></div>支出</div>
+        <span class="legend-unit">単位:万円</span>
+      </div>
+      <div class="range-tabs">
+        <button class="range-tab active">生涯</button>
+        <button class="range-tab">5年</button>
+        <button class="range-tab">1年</button>
+      </div>
+    </div>
+    <div class="graph-svg-wrap">
+      <svg viewBox="0 0 360 160" id="chart-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+    </div>
+  </div>
+
+  <!-- 積立/支出タブ -->
+  <div class="type-tabs">
+    <button class="type-tab active" id="tab-saving"><span class="icon">📈</span>積立</button>
+    <button class="type-tab" id="tab-expense"><span class="icon">💸</span>支出</button>
+  </div>
+
+  <!-- 計画/実績ヘッダー -->
+  <div class="split-headers">
+    <div class="split-h plan">計画</div>
+    <div class="split-h actual">実績</div>
+  </div>
+
+  <!-- 年表（積立） -->
+  <div class="events-area" id="events-saving">
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="ps-1" data-type="plan-saving" data-year-idx="0">
+        <div class="event-year">2025年〜</div>
+        <div class="event-name">月3万円 積立</div>
+        <div class="event-detail">教育資金の積立スタート</div>
+        <div class="event-amount plan-pos">+3万円/月</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot filled-actual"></div>
+      </div>
+      <div class="event-side" data-card-id="as-1" data-type="actual-saving" data-year="2025">
+        <div class="event-year">2025年</div>
+        <div class="event-name">記録済み</div>
+        <div class="event-detail">12ヶ月分の積立を記録</div>
+        <div class="event-amount pos">+33万円/年</div>
+      </div>
+    </div>
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="ps-2" data-type="plan-saving" data-year-idx="2">
+        <div class="event-year">2030年〜</div>
+        <div class="event-name">月5万円に増額</div>
+        <div class="event-detail">教育費ピークに備える</div>
+        <div class="event-amount plan-pos">+5万円/月</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot"></div>
+      </div>
+      <div class="event-side" data-card-id="as-2" data-type="actual-saving" data-year="2030">
+        <div class="event-empty">
+          <span class="empty-icon">+</span>
+          <span class="empty-text">記録する</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="ps-3" data-type="plan-saving" data-year-idx="9">
+        <div class="event-year">2044年〜</div>
+        <div class="event-name">積立停止</div>
+        <div class="event-detail">大学入学・取り崩し開始</div>
+        <div class="event-amount" style="color:var(--text-tertiary);">+0万円/月</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot"></div>
+      </div>
+      <div class="event-side" data-card-id="as-3" data-type="actual-saving" data-year="2044">
+        <div class="event-empty">
+          <span class="empty-icon">+</span>
+          <span class="empty-text">記録する</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 年表（支出） -->
+  <div class="events-area" id="events-expense" style="display:none;">
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="pe-1" data-type="plan-expense" data-year-idx="2">
+        <div class="event-year">2027年〜</div>
+        <div class="event-name">保育園費用</div>
+        <div class="event-detail">月6万円 × 12ヶ月</div>
+        <div class="event-amount neg">-72万円/年</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot expense"></div>
+      </div>
+      <div class="event-side" data-card-id="ae-1" data-type="actual-expense" data-year="2027">
+        <div class="event-empty">
+          <span class="empty-icon">+</span>
+          <span class="empty-text">記録する</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="pe-2" data-type="plan-expense" data-year-idx="4">
+        <div class="event-year">2033年〜</div>
+        <div class="event-name">小学校</div>
+        <div class="event-detail">教育費が軽減</div>
+        <div class="event-amount neg">-31万円/年</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot expense"></div>
+      </div>
+      <div class="event-side" data-card-id="ae-2" data-type="actual-expense" data-year="2033">
+        <div class="event-empty">
+          <span class="empty-icon">+</span>
+          <span class="empty-text">記録する</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="event-card">
+      <div class="event-side" data-card-id="pe-3" data-type="plan-expense" data-year-idx="9">
+        <div class="event-year">2044年</div>
+        <div class="event-name">大学入学</div>
+        <div class="event-detail">入学金・初年度学費</div>
+        <div class="event-amount neg">-100万円</div>
+      </div>
+      <div class="event-divider">
+        <div class="center-dot expense"></div>
+      </div>
+      <div class="event-side" data-card-id="ae-3" data-type="actual-expense" data-year="2044">
+        <div class="event-empty">
+          <span class="empty-icon">+</span>
+          <span class="empty-text">記録する</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 下部固定編集ボタン -->
+  <div class="bottom-action">
+    <button class="action-btn" id="edit-btn" disabled>
+      <span id="edit-btn-text">カードを選んで編集</span>
+    </button>
+  </div>
+
+</div>
+
+<!-- ポップアップ：積立 計画 -->
+<div class="popup-backdrop" id="backdrop"></div>
+
+<div class="popup" id="popup-plan-saving">
+  <div class="popup-handle"></div>
+  <div class="popup-title">いくら積み立てる？</div>
+  <div class="popup-sub">計画 ・ <span id="ps-event">2030年〜</span></div>
+
+  <div class="popup-body">
+    <label class="field-label">適用開始</label>
+    <div class="field-number">
+      <input type="number" class="field-input" id="ps-year" value="2030">
+      <span class="unit">年〜</span>
+    </div>
+
+    <label class="field-label">月の積立額</label>
+    <div class="slider-row">
+      <button class="slider-btn" id="ps-minus">−</button>
+      <div class="slider-value"><span id="ps-amount">5</span><span class="unit">万円/月</span></div>
+      <button class="slider-btn" id="ps-plus">+</button>
+    </div>
+  </div>
+
+  <div class="popup-actions">
+    <button class="btn-secondary" data-close>閉じる</button>
+    <button class="btn-primary" data-close>保存する</button>
+  </div>
+</div>
+
+<!-- ポップアップ：支出 計画 -->
+<div class="popup" id="popup-plan-expense">
+  <div class="popup-handle"></div>
+  <div class="popup-title">いつ、いくら使う予定？</div>
+  <div class="popup-sub">計画 ・ <span id="pe-event">保育園費用</span></div>
+
+  <div class="popup-body">
+    <label class="field-label">時期</label>
+    <div class="field-number">
+      <input type="number" class="field-input" id="pe-year" value="2027">
+      <span class="unit">年〜</span>
+    </div>
+
+    <label class="field-label">単位</label>
+    <div class="unit-tabs">
+      <button class="unit-tab active" data-unit-pe="year">年単位</button>
+      <button class="unit-tab" data-unit-pe="month">月単位</button>
+    </div>
+
+    <label class="field-label">金額</label>
+    <div class="slider-row">
+      <button class="slider-btn" id="pe-minus">−</button>
+      <div class="slider-value"><span id="pe-amount">72</span><span class="unit" id="pe-unit-label">万円/年</span></div>
+      <button class="slider-btn" id="pe-plus">+</button>
+    </div>
+  </div>
+
+  <div class="popup-actions">
+    <button class="btn-secondary" data-close>閉じる</button>
+    <button class="btn-primary" data-close>保存する</button>
+  </div>
+</div>
+
+<!-- ポップアップ：積立 実績（大きい・棒グラフ＋月別入力） -->
+<div class="popup large" id="popup-actual-saving">
+  <div class="popup-handle"></div>
+  <div class="popup-title">積立を記録する</div>
+  <div class="popup-sub">実績 ・ <span id="as-event">2025年</span></div>
+
+  <div class="popup-body">
+    <label class="field-label">月別の予定 vs 実績</label>
+    <div class="bar-chart-wrap">
+      <div class="bar-chart" id="bar-chart-as"></div>
+    </div>
+
+    <label class="field-label">月別の積立金額</label>
+    <div class="monthly-list" id="monthly-list-as"></div>
+  </div>
+
+  <div class="popup-actions">
+    <button class="btn-secondary" data-close>閉じる</button>
+    <button class="btn-primary" data-close>保存する</button>
+  </div>
+</div>
+
+<!-- ポップアップ：支出 実績（積立実績と統一UI） -->
+<div class="popup large" id="popup-actual-expense">
+  <div class="popup-handle"></div>
+  <div class="popup-title">支出を記録する</div>
+  <div class="popup-sub">実績 ・ <span id="ae-event">保育園費用</span></div>
+
+  <div class="popup-body">
+    <label class="field-label">月別の予定 vs 実績</label>
+    <div class="bar-chart-wrap">
+      <div class="bar-chart" id="bar-chart-ae"></div>
+    </div>
+
+    <label class="field-label">月別の支出金額</label>
+    <div class="monthly-list" id="monthly-list-ae"></div>
+  </div>
+
+  <div class="popup-actions">
+    <button class="btn-secondary" data-close>閉じる</button>
+    <button class="btn-primary" data-close>保存する</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // ---- データ ----
+  var chartData = {
+    years: ["'25","'27","'29","'31","'33","'35","'37","'39","'41","'43","'45","'47"],
+    plan: [30, 65, 101, 138, 176, 215, 255, 310, 370, 400, 300, 200],
+    actual: [30, 62, 98, 134, 170, null, null, null, null, null, null, null],
+    events: [
+      {idx:0, type:'milestone', color:'#185FA5'},
+      {idx:2, type:'milestone', color:'#EF9F27'},
+      {idx:4, type:'milestone', color:'#1D9E75'},
+      {idx:9, type:'expense', color:'#E24B4A'},
+      {idx:11, type:'expense', color:'#E24B4A'}
+    ]
+  };
+
+  // 編集中のリアルタイム更新用：計画の傾きを動かす
+  var editState = {
+    monthlyPlanSaving: 5, // 月の積立額（万円）
+    yearStartIdx: 2,      // 適用開始のインデックス
+    expenseAmount: 72     // 支出計画額
+  };
+
+  function makeSvgEl(tag, attrs) {
+    var el = document.createElementNS(SVG_NS, tag);
+    if (attrs) for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  // ---- 折れ線グラフ描画 ----
+  var highlightYearIdx = null; // ハイライトする位置
+
+  function drawChart() {
+    var W = 360, H = 160;
+    var PL = 28, PR = 12, PT = 12, PB = 22;
+    var gW = W - PL - PR, gH = H - PT - PB;
+    var n = chartData.years.length;
+    var maxVal = 400;
+
+    function xi(i) { return PL + i * (gW / (n - 1)); }
+    function yv(v) { return PT + gH - (v / maxVal) * gH; }
+
+    var svg = document.getElementById('chart-svg');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Y軸グリッド（数字だけ）
+    var yTicks = [0, 100, 200, 300, 400];
+    yTicks.forEach(function(v) {
+      var y = yv(v);
+      svg.appendChild(makeSvgEl('line', {
+        x1: PL, y1: y, x2: W - PR, y2: y,
+        stroke: 'rgba(0,0,0,0.06)', 'stroke-width': 0.5
+      }));
+      var label = makeSvgEl('text', {
+        x: PL - 4, y: y + 3, 'text-anchor': 'end',
+        'font-size': 8, fill: '#9c9a92'
+      });
+      label.textContent = v;
+      svg.appendChild(label);
+    });
+
+    [0, 3, 6, 9, 11].forEach(function(i) {
+      var label = makeSvgEl('text', {
+        x: xi(i), y: H - 6, 'text-anchor': 'middle',
+        'font-size': 8, fill: '#9c9a92'
+      });
+      label.textContent = chartData.years[i];
+      svg.appendChild(label);
+    });
+
+    // ハイライト（ほわほわ光る）
+    if (highlightYearIdx !== null) {
+      var hx = xi(highlightYearIdx);
+      var hy = yv(chartData.plan[highlightYearIdx]);
+      var glow = makeSvgEl('circle', {
+        cx: hx, cy: hy, r: 12, fill: '#185FA5', opacity: 0.15
+      });
+      glow.setAttribute('class', 'highlight-glow');
+      svg.appendChild(glow);
+      var glow2 = makeSvgEl('circle', {
+        cx: hx, cy: hy, r: 7, fill: '#185FA5', opacity: 0.3
+      });
+      svg.appendChild(glow2);
+    }
+
+    // 計画ライン
+    var planPts = chartData.plan.map(function(v, i) { return xi(i) + ',' + yv(v); }).join(' ');
+    svg.appendChild(makeSvgEl('polyline', {
+      points: planPts, fill: 'none',
+      stroke: '#185FA5', 'stroke-width': 1.5,
+      'stroke-dasharray': '4 3', opacity: 0.7
+    }));
+
+    // 実績ライン
+    var actualIdx = [];
+    chartData.actual.forEach(function(v, i) { if (v !== null) actualIdx.push(i); });
+    if (actualIdx.length > 1) {
+      var actualPts = actualIdx.map(function(i) { return xi(i) + ',' + yv(chartData.actual[i]); }).join(' ');
+      svg.appendChild(makeSvgEl('polyline', {
+        points: actualPts, fill: 'none',
+        stroke: '#1D9E75', 'stroke-width': 2,
+        'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+      }));
+    }
+
+    // イベントマーカー
+    chartData.events.forEach(function(ev) {
+      var cx = xi(ev.idx), cy = yv(chartData.plan[ev.idx]);
+      if (ev.type === 'expense') {
+        svg.appendChild(makeSvgEl('line', {
+          x1: cx, y1: PT, x2: cx, y2: PT + gH,
+          stroke: '#E24B4A', 'stroke-width': 0.5,
+          'stroke-dasharray': '3 2', opacity: 0.3
+        }));
+        svg.appendChild(makeSvgEl('circle', {
+          cx: cx, cy: cy, r: 5, fill: ev.color
+        }));
+      } else {
+        svg.appendChild(makeSvgEl('circle', {
+          cx: cx, cy: cy, r: 4, fill: ev.color,
+          stroke: '#fff', 'stroke-width': 1.5
+        }));
+      }
+    });
+
+    actualIdx.forEach(function(i) {
+      svg.appendChild(makeSvgEl('circle', {
+        cx: xi(i), cy: yv(chartData.actual[i]), r: 2.5, fill: '#1D9E75'
+      }));
+    });
+
+    if (actualIdx.length > 0) {
+      var li = actualIdx[actualIdx.length - 1];
+      svg.appendChild(makeSvgEl('circle', {
+        cx: xi(li), cy: yv(chartData.actual[li]),
+        r: 6, fill: '#1D9E75', opacity: 0.25
+      }));
+    }
+  }
+
+  // 脈動アニメ
+  var pulseInterval;
+  function startPulse() {
+    stopPulse();
+    var phase = 0;
+    pulseInterval = setInterval(function() {
+      var glows = document.querySelectorAll('.highlight-glow');
+      phase = (phase + 0.05) % (Math.PI * 2);
+      glows.forEach(function(g) {
+        g.setAttribute('opacity', 0.1 + Math.sin(phase) * 0.1);
+      });
+    }, 50);
+  }
+  function stopPulse() {
+    if (pulseInterval) {
+      clearInterval(pulseInterval);
+      pulseInterval = null;
+    }
+  }
+
+  drawChart();
+
+  // ---- カード選択管理 ----
+  var selectedCard = null;
+  var editBtn = document.getElementById('edit-btn');
+  var editBtnText = document.getElementById('edit-btn-text');
+
+  function selectCard(cardEl) {
+    // 既存の選択を解除
+    document.querySelectorAll('.event-side.selected').forEach(function(el) {
+      el.classList.remove('selected');
+    });
+    
+    if (cardEl === selectedCard) {
+      // 同じカードを再タップ：選択解除
+      selectedCard = null;
+      highlightYearIdx = null;
+      editBtn.disabled = true;
+      editBtnText.textContent = 'カードを選んで編集';
+      drawChart();
+      stopPulse();
+      return;
+    }
+    
+    selectedCard = cardEl;
+    cardEl.classList.add('selected');
+    
+    // ハイライト位置を取得
+    var yearIdx = cardEl.getAttribute('data-year-idx');
+    if (yearIdx !== null && yearIdx !== undefined) {
+      highlightYearIdx = parseInt(yearIdx);
+    } else {
+      // 実績カードの場合、年から逆引き
+      var year = cardEl.getAttribute('data-year');
+      if (year) {
+        var yearStr = "'" + year.substring(2);
+        highlightYearIdx = chartData.years.indexOf(yearStr);
+        if (highlightYearIdx === -1) highlightYearIdx = null;
+      }
+    }
+    
+    drawChart();
+    if (highlightYearIdx !== null) startPulse();
+    
+    editBtn.disabled = false;
+    var type = cardEl.getAttribute('data-type');
+    var labelMap = {
+      'plan-saving': '積立計画を編集',
+      'actual-saving': '積立実績を記録',
+      'plan-expense': '支出計画を編集',
+      'actual-expense': '支出実績を記録'
+    };
+    editBtnText.textContent = labelMap[type] || '編集する';
+  }
+
+  document.querySelectorAll('.event-side[data-card-id]').forEach(function(el) {
+    el.addEventListener('click', function() {
+      selectCard(el);
+    });
+  });
+
+  // ---- 編集ボタン ----
+  editBtn.addEventListener('click', function() {
+    if (!selectedCard) return;
+    var type = selectedCard.getAttribute('data-type');
+    var eventNameEl = selectedCard.querySelector('.event-name');
+    var eventName = eventNameEl ? eventNameEl.textContent : '記録';
+    
+    if (type === 'plan-saving') {
+      document.getElementById('ps-event').textContent = selectedCard.querySelector('.event-year').textContent;
+      openPopup('popup-plan-saving');
+    } else if (type === 'plan-expense') {
+      document.getElementById('pe-event').textContent = eventName;
+      openPopup('popup-plan-expense');
+    } else if (type === 'actual-saving') {
+      var year = selectedCard.getAttribute('data-year');
+      document.getElementById('as-event').textContent = year + '年';
+      renderActualSaving();
+      openPopup('popup-actual-saving');
+    } else if (type === 'actual-expense') {
+      var year = selectedCard.getAttribute('data-year');
+      document.getElementById('ae-event').textContent = (eventName !== '記録する' ? eventName + ' ' : '') + year + '年';
+      renderActualExpense();
+      openPopup('popup-actual-expense');
+    }
+  });
+
+  // ---- ポップアップ制御 ----
+  var backdrop = document.getElementById('backdrop');
+  var popups = ['popup-plan-saving', 'popup-plan-expense', 'popup-actual-saving', 'popup-actual-expense'];
+
+  function openPopup(id) {
+    backdrop.classList.add('show');
+    document.getElementById(id).classList.add('show');
+  }
+
+  function closeAllPopups() {
+    backdrop.classList.remove('show');
+    popups.forEach(function(id) {
+      document.getElementById(id).classList.remove('show');
+    });
+  }
+
+  backdrop.addEventListener('click', closeAllPopups);
+  document.querySelectorAll('[data-close]').forEach(function(el) {
+    el.addEventListener('click', closeAllPopups);
+  });
+
+  // ---- 積立/支出タブ切替 ----
+  var tabSaving = document.getElementById('tab-saving');
+  var tabExpense = document.getElementById('tab-expense');
+  var eventsSaving = document.getElementById('events-saving');
+  var eventsExpense = document.getElementById('events-expense');
+
+  function clearSelection() {
+    document.querySelectorAll('.event-side.selected').forEach(function(el) {
+      el.classList.remove('selected');
+    });
+    selectedCard = null;
+    highlightYearIdx = null;
+    editBtn.disabled = true;
+    editBtnText.textContent = 'カードを選んで編集';
+    drawChart();
+    stopPulse();
+  }
+
+  tabSaving.addEventListener('click', function() {
+    tabSaving.classList.add('active');
+    tabExpense.classList.remove('active');
+    eventsSaving.style.display = '';
+    eventsExpense.style.display = 'none';
+    clearSelection();
+  });
+  tabExpense.addEventListener('click', function() {
+    tabExpense.classList.add('active');
+    tabSaving.classList.remove('active');
+    eventsExpense.style.display = '';
+    eventsSaving.style.display = 'none';
+    clearSelection();
+  });
+
+  // ---- 積立計画ポップアップ：±とリアルタイム反映 ----
+  var psAmount = 5;
+  function updatePsDisplay() {
+    document.getElementById('ps-amount').textContent = psAmount;
+    // リアルタイムで折れ線グラフを更新
+    updateChartFromPlan();
+  }
+
+  function updateChartFromPlan() {
+    // 簡易デモ：月の積立額に基づいて、計画の傾きを変える
+    var startIdx = 2; // 2030年から
+    var newPlan = chartData.plan.slice();
+    for (var i = startIdx; i < newPlan.length; i++) {
+      // 元の計画値からの変化を反映
+      var monthlyAmount = psAmount;
+      var prevValue = i > 0 ? newPlan[i-1] : 0;
+      var yearsGap = i > 0 ? 2 : 0; // years配列は2年刻み
+      newPlan[i] = prevValue + monthlyAmount * 12 * yearsGap;
+    }
+    chartData.plan = newPlan;
+    drawChart();
+    if (highlightYearIdx !== null) startPulse();
+  }
+
+  document.getElementById('ps-minus').addEventListener('click', function() {
+    if (psAmount > 0) { psAmount--; updatePsDisplay(); }
+  });
+  document.getElementById('ps-plus').addEventListener('click', function() {
+    psAmount++; updatePsDisplay();
+  });
+
+  // ---- 支出計画ポップアップ：±とリアルタイム反映 ----
+  var peAmount = 72;
+  function updatePeDisplay() {
+    document.getElementById('pe-amount').textContent = peAmount;
+    // 計画グラフのイベント部分を更新
+    updateChartFromExpense();
+  }
+
+  function updateChartFromExpense() {
+    // 簡易デモ：支出額の大きさに応じてグラフの該当点が動く
+    drawChart();
+    if (highlightYearIdx !== null) startPulse();
+  }
+
+  document.getElementById('pe-minus').addEventListener('click', function() {
+    if (peAmount > 1) { peAmount--; updatePeDisplay(); }
+  });
+  document.getElementById('pe-plus').addEventListener('click', function() {
+    peAmount++; updatePeDisplay();
+  });
+
+  // 支出計画 単位切替
+  document.querySelectorAll('[data-unit-pe]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      btn.parentElement.querySelectorAll('.unit-tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      var unit = btn.getAttribute('data-unit-pe');
+      document.getElementById('pe-unit-label').textContent = unit === 'year' ? '万円/年' : '万円/月';
+    });
+  });
+
+  // ---- 積立実績：棒グラフ＋月別入力 ----
+  var savingMonthData = [
+    {month: '1月', plan: 3, actual: 3},
+    {month: '2月', plan: 3, actual: 3},
+    {month: '3月', plan: 3, actual: 3},
+    {month: '4月', plan: 3, actual: 3},
+    {month: '5月', plan: 3, actual: 3},
+    {month: '6月', plan: 3, actual: 3},
+    {month: '7月', plan: 3, actual: 3},
+    {month: '8月', plan: 3, actual: 0},  // ⚠ 不足
+    {month: '9月', plan: 3, actual: 3},
+    {month: '10月', plan: 3, actual: 3},
+    {month: '11月', plan: 3, actual: 3},
+    {month: '12月', plan: 3, actual: 3}
+  ];
+
+  function getActualClass(plan, actual) {
+    if (actual < plan) return 'warn';      // オレンジ（不足）
+    if (actual > plan) return 'over';      // 青（余剰）
+    return '';                              // 緑（予定通り）
+  }
+
+  function getStatusLabel(plan, actual) {
+    if (actual < plan) return '⚠ ' + (plan - actual) + '万円不足';
+    if (actual > plan) return '✓ ' + (actual - plan) + '万円多め';
+    return '';
+  }
+
+  function renderActualSaving() {
+    var chart = document.getElementById('bar-chart-as');
+    var list = document.getElementById('monthly-list-as');
+    chart.innerHTML = '';
+    list.innerHTML = '';
+    var maxVal = Math.max(5, Math.max.apply(null, savingMonthData.map(function(m) { return Math.max(m.plan, m.actual); })) + 1);
+
+    savingMonthData.forEach(function(m, i) {
+      var actualCls = getActualClass(m.plan, m.actual);
+      // 棒グラフ
+      var col = document.createElement('div');
+      col.className = 'bar-month';
+      col.innerHTML = 
+        '<div class="bar-pair">' +
+          '<div class="bar plan" style="height:' + (m.plan / maxVal * 80) + 'px;"></div>' +
+          '<div class="bar actual ' + actualCls + '" style="height:' + (m.actual / maxVal * 80) + 'px;"></div>' +
+        '</div>' +
+        '<div class="bar-label">' + m.month + '</div>';
+      chart.appendChild(col);
+      
+      // リスト
+      var statusLabel = getStatusLabel(m.plan, m.actual);
+      var rowCls = m.actual < m.plan ? 'warn' : '';
+      var row = document.createElement('div');
+      row.className = 'monthly-row ' + rowCls;
+      row.innerHTML = 
+        '<div class="monthly-month">' + m.month + '</div>' +
+        '<div class="monthly-plan">予定 ' + m.plan + '万円</div>' +
+        (statusLabel ? '<div class="monthly-status">' + statusLabel + '</div>' : '') +
+        '<div class="monthly-controls">' +
+          '<button class="ctrl-btn" data-as-i="' + i + '" data-d="-1">−</button>' +
+          '<div class="monthly-value"><span class="val">' + m.actual + '</span><span class="unit">万円</span></div>' +
+          '<button class="ctrl-btn" data-as-i="' + i + '" data-d="1">+</button>' +
+        '</div>';
+      list.appendChild(row);
+    });
+    
+    list.querySelectorAll('[data-as-i]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var i = parseInt(btn.getAttribute('data-as-i'));
+        var d = parseInt(btn.getAttribute('data-d'));
+        savingMonthData[i].actual = Math.max(0, savingMonthData[i].actual + d);
+        renderActualSaving();
+        // メイン折れ線グラフも動くよう、実績合計を反映
+        updateMainChartFromActualSaving();
+      });
+    });
+  }
+
+  function updateMainChartFromActualSaving() {
+    // 2025年の実績を更新（簡易デモ）
+    var total2025 = savingMonthData.reduce(function(s, m) { return s + m.actual; }, 0);
+    chartData.actual[0] = total2025;
+    drawChart();
+    if (highlightYearIdx !== null) startPulse();
+  }
+
+  // ---- 支出実績：積立実績と同じUI ----
+  var expenseMonthData = [
+    {month: '1月', plan: 6, actual: 6},
+    {month: '2月', plan: 6, actual: 6},
+    {month: '3月', plan: 6, actual: 6},
+    {month: '4月', plan: 6, actual: 0},
+    {month: '5月', plan: 6, actual: 0},
+    {month: '6月', plan: 6, actual: 0},
+    {month: '7月', plan: 6, actual: 0},
+    {month: '8月', plan: 6, actual: 0},
+    {month: '9月', plan: 6, actual: 0},
+    {month: '10月', plan: 6, actual: 0},
+    {month: '11月', plan: 6, actual: 0},
+    {month: '12月', plan: 6, actual: 0}
+  ];
+
+  function renderActualExpense() {
+    var chart = document.getElementById('bar-chart-ae');
+    var list = document.getElementById('monthly-list-ae');
+    chart.innerHTML = '';
+    list.innerHTML = '';
+    var maxVal = Math.max(8, Math.max.apply(null, expenseMonthData.map(function(m) { return Math.max(m.plan, m.actual); })) + 2);
+
+    expenseMonthData.forEach(function(m, i) {
+      var actualCls = m.actual > m.plan ? 'warn' : '';  // 支出は多いほうが警告
+      // 棒グラフ
+      var col = document.createElement('div');
+      col.className = 'bar-month';
+      col.innerHTML = 
+        '<div class="bar-pair">' +
+          '<div class="bar plan" style="height:' + (m.plan / maxVal * 80) + 'px;"></div>' +
+          '<div class="bar actual ' + actualCls + '" style="height:' + (m.actual / maxVal * 80) + 'px;"></div>' +
+        '</div>' +
+        '<div class="bar-label">' + m.month + '</div>';
+      chart.appendChild(col);
+      
+      // リスト
+      var statusLabel = '';
+      if (m.actual > m.plan) statusLabel = '⚠ ' + (m.actual - m.plan) + '万円超過';
+      else if (m.actual < m.plan && m.actual > 0) statusLabel = '✓ ' + (m.plan - m.actual) + '万円少なめ';
+      var rowCls = m.actual > m.plan ? 'warn' : '';
+      var row = document.createElement('div');
+      row.className = 'monthly-row ' + rowCls;
+      row.innerHTML = 
+        '<div class="monthly-month">' + m.month + '</div>' +
+        '<div class="monthly-plan">予定 ' + m.plan + '万円</div>' +
+        (statusLabel ? '<div class="monthly-status">' + statusLabel + '</div>' : '') +
+        '<div class="monthly-controls">' +
+          '<button class="ctrl-btn" data-ae-i="' + i + '" data-d="-1">−</button>' +
+          '<div class="monthly-value"><span class="val">' + m.actual + '</span><span class="unit">万円</span></div>' +
+          '<button class="ctrl-btn" data-ae-i="' + i + '" data-d="1">+</button>' +
+        '</div>';
+      list.appendChild(row);
+    });
+    
+    list.querySelectorAll('[data-ae-i]').forEach(function(btn) {
+      btn.addEventListener('click', function() {
+        var i = parseInt(btn.getAttribute('data-ae-i'));
+        var d = parseInt(btn.getAttribute('data-d'));
+        expenseMonthData[i].actual = Math.max(0, expenseMonthData[i].actual + d);
+        renderActualExpense();
+        // メイン折れ線グラフも動く
+        drawChart();
+        if (highlightYearIdx !== null) startPulse();
+      });
+    });
+  }
+
+})();
+</script>
+
+</body>
+</html>
