@@ -1,4 +1,5 @@
 # Welcome to your Expo app 👋
+V2　プロトデザイン左右　プロト表示　版
 
 This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
 
