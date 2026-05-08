@@ -1,12 +1,12 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import {
   View, Text, ScrollView, Pressable, StyleSheet,
-  useWindowDimensions, TextInput, StatusBar,
+  useWindowDimensions, TextInput, StatusBar, Animated,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path, G, Line as SvgLine, Text as SvgText } from 'react-native-svg';
-import { PF_ITEMS, type FinancialItem } from '@/constants/data';
+import { type FinancialItem } from '@/constants/data';
 import { useStore } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { assignPoolColors } from '@/constants/colors';
@@ -121,7 +121,7 @@ function StackedAreaChart({
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
         <SvgText key={i} x={xi(i)} y={chartH - 4} textAnchor="middle" fontSize={fontSizes.textSm} fill={colors.textLight}>
-          {(NOW_YEAR + i) % 100}
+          {`'${String(NOW_YEAR + i).slice(-2)}`}
         </SvgText>
       ))}
       {stacks.map((stack, si) => {
@@ -171,7 +171,7 @@ function MultiLineChart({
       ))}
       {[...xLabels].sort((a, b) => a - b).map(i => (
         <SvgText key={i} x={xi(i)} y={chartH - 4} textAnchor="middle" fontSize={fontSizes.textSm} fill={colors.textLight}>
-          {(NOW_YEAR + i) % 100}
+          {`'${String(NOW_YEAR + i).slice(-2)}`}
         </SvgText>
       ))}
       {stacks.map((stack, si) => {
@@ -204,13 +204,20 @@ function BalanceRow({ item, onSave, onLiveChange }: { item: PoolItem; onSave: (i
     setEditing(false);
   };
 
+  const monthlyMan = Math.round(item.monthly / 10_000);
+  const rateStr = (item.rate * 100).toFixed(1);
+
   return (
     <View style={bl.row}>
       <View style={[bl.bar, { backgroundColor: item.color }]} />
       <View style={{ flex: 1, justifyContent: 'center' }}>
         <Text style={bl.name}>{item.name}</Text>
+        <View style={bl.metaSep} />
+        <Text style={bl.meta}>
+          月積立 <Text style={bl.metaNum}>{monthlyMan}万円</Text>　複利 <Text style={bl.metaNum}>{rateStr}%</Text>
+        </Text>
       </View>
-      <View style={{ alignItems: 'flex-end', alignSelf: 'stretch', justifyContent: 'center' }}>
+      <View style={{ alignItems: 'flex-end', alignSelf: 'flex-start', justifyContent: 'center', paddingTop: 2 }}>
         {editing ? (
           <View style={bl.editRow}>
             <TextInput
@@ -253,6 +260,12 @@ const bl = StyleSheet.create({
   },
   bar: { width: 4, alignSelf: 'stretch', borderRadius: 2, flexShrink: 0 },
   name: { fontSize: fontSizes.textMd, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  metaSep: {
+    marginTop: 6, marginBottom: 4,
+    borderTopWidth: 1, borderTopColor: '#ecedef', borderStyle: 'dashed',
+  },
+  meta: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
+  metaNum: { fontSize: 11, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
   amtPressable: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   amtDisplay: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   amtNum: { fontSize: fontSizes.textLg, fontWeight: '700', color: colors.chart2, fontFamily: typography.display },
@@ -580,7 +593,7 @@ const sh = StyleSheet.create({
 export default function PoolScreen() {
   const insets = useSafeAreaInsets();
   const { width: screenWidth } = useWindowDimensions();
-  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers, updateBalance, poolItems } = useStore();
+  const { balances, savingsAllocation, saveSavingsAllocation, familyMembers, updateBalance, poolItems, pfItems } = useStore();
 
   const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1990;
   const yearCount = Math.max(10, (selfBirthYear + 100) - NOW_YEAR);
@@ -609,19 +622,33 @@ export default function PoolScreen() {
     return items.map(i => ({ ...i, color: colorMap.get(i.projectId!) ?? i.color }));
   }, [balances, savingsAllocation, poolItems]);
 
-  const totalBalance = enrichedPoolItems.reduce((sum, i) => sum + i.balance, 0);
-
   const [liveBalances, setLiveBalances] = useState<Record<string, number>>({});
   const liveTotalBalance = enrichedPoolItems.reduce((sum, i) => {
     const live = liveBalances[i.projectId!];
     return sum + (live !== undefined ? live : i.balance);
   }, 0);
-  const pfTotal = useMemo(
-    () => PF_ITEMS.reduce((sum, i) => sum + (i.projectId ? (balances[i.projectId] ?? i.amount) : i.amount), 0),
-    [balances]
+  const totalMonthly = enrichedPoolItems.reduce((sum, i) => sum + i.monthly, 0);
+  const totalMonthlyMan = Math.round(totalMonthly / 10_000);
+  const pfTotal = useMemo(() =>
+    pfItems.reduce((sum, i) => sum + (i.projectId ? (balances[i.projectId] ?? i.amount) : i.amount), 0),
+    [pfItems, balances]
   );
-  const diff = liveTotalBalance - pfTotal;
-  const diffColor = diff === 0 ? colors.sage : diff > 0 ? '#2E6FB8' : '#DC2626';
+  const diffMan = Math.round((liveTotalBalance - pfTotal) / 10_000);
+  const isAligned = diffMan === 0;
+
+  const diffColorAnim = useRef(new Animated.Value(isAligned ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.timing(diffColorAnim, {
+      toValue: isAligned ? 1 : 0,
+      duration: 300,
+      useNativeDriver: false,
+    }).start();
+  }, [isAligned]);
+  const animDiffColor = diffColorAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [colors.honey, colors.sage],
+  });
+
   const handleLiveChange = (id: string, val: number | null) => {
     setLiveBalances(prev => {
       if (val === null) { const next = { ...prev }; delete next[id]; return next; }
@@ -699,22 +726,19 @@ export default function PoolScreen() {
 
       {/* ヘッダー */}
       <View style={ps.header}>
-        <View style={ps.headerRow}>
+        <View style={ps.headerMainRow}>
           <Text style={ps.pageTitle}>プール金</Text>
-          <View style={ps.rightBlock}>
-            <View style={ps.amtGroup}>
-              <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
-              <Text style={ps.mainUnit}>万円</Text>
-            </View>
-            <Text style={[ps.diffLine, { color: diffColor }]}>
-              {diff === 0
-                ? '(使いみちと一致 ✓)'
-                : diff > 0
-                  ? `(使いみちより +${toMan(diff)}万円)`
-                  : `(使いみちより −${toMan(Math.abs(diff))}万円)`}
-            </Text>
+          <View style={ps.amtInline}>
+            <Text style={ps.mainAmt}>{toMan(liveTotalBalance)}</Text>
+            <Text style={ps.mainUnit}>万円</Text>
           </View>
         </View>
+        <Animated.Text style={[ps.diffRow, { color: animDiffColor }]}>
+          {isAligned
+            ? '(使いみちと一致 ✓)'
+            : `(使いみちより ${diffMan > 0 ? '+' : '−'}${Math.abs(diffMan)}万円)`}
+        </Animated.Text>
+        <Text style={ps.monthlySub}>月+{totalMonthlyMan}万円 積立中</Text>
       </View>
 
       {/* 積み上げ面積グラフ */}
@@ -771,13 +795,15 @@ const ps = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  headerRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  headerMainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+  amtInline: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
-  rightBlock: { alignItems: 'flex-end' },
-  amtGroup: { flexDirection: 'row', alignItems: 'baseline' },
-  mainAmt: { fontSize: fontSizes.pageTitle, fontFamily: typography.displaySemiBold, color: colors.text, letterSpacing: -0.5, lineHeight: fontSizes.pageTitle * 1.1 },
-  mainUnit: { fontSize: 16, color: colors.textMid, fontFamily: typography.display, marginLeft: 2 },
-  diffLine: { fontSize: fontSizes.textLg, fontFamily: typography.display, fontWeight: '500', marginTop: 3, textAlign: 'right' },
+  mainAmt: { fontSize: 26, fontWeight: '500', color: colors.text, letterSpacing: -0.5, fontFamily: typography.display },
+  mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display },
+  diffRow: { fontSize: 13, fontWeight: '500', marginTop: 3, fontFamily: typography.display },
+  diffWarn: { color: colors.honey },
+  diffOk: { color: colors.sage },
+  monthlySub: { fontSize: 11, color: colors.sage, fontWeight: '500', marginTop: 2, fontFamily: typography.display },
 
   chartCard: {
     marginHorizontal: spacing.lg, marginBottom: spacing.sm,

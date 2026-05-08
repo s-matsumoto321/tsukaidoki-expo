@@ -1,9 +1,12 @@
+import { useState } from 'react';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, Alert } from 'react-native';
+import { ScrollView, View, Text, Pressable, StyleSheet, StatusBar, Alert, TextInput } from 'react-native';
 import { router } from 'expo-router';
-import { useStore } from '@/store/useStore';
+import { useStore, type FamilyMember } from '@/store/useStore';
 import { colors, typography, fontSizes, spacing, radius, shadows } from '@/constants/theme';
 import { semantic } from '@/constants/colors';
+
+const NOW_YEAR = new Date().getFullYear();
 
 type MenuItemProps = {
   label: string;
@@ -26,8 +29,152 @@ function MenuItem({ label, sub, onPress, accent = colors.sage, showArrow = true 
   );
 }
 
+// ── 家族構成エディター ─────────────────────────────────────────
+
+const ROLE_LABELS: Record<string, string> = {
+  self: 'あなた', partner: 'パートナー', child: '子ども', pet: 'ペット', other: 'その他',
+};
+const ROLE_COLORS: Record<string, string> = {
+  self: colors.sage, partner: colors.chart2, child: colors.honey, pet: colors.textMid, other: colors.textMid,
+};
+
+function FamilyEditor({ members, onChange }: { members: FamilyMember[]; onChange: (m: FamilyMember[]) => void }) {
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editBirth, setEditBirth] = useState('');
+
+  const startEdit = (m: FamilyMember) => {
+    setEditingId(m.id);
+    setEditName(m.name);
+    setEditBirth(String(m.birthYear));
+  };
+
+  const commit = (id: string) => {
+    const birth = parseInt(editBirth, 10);
+    if (isNaN(birth) || birth < 1920 || birth > NOW_YEAR) return;
+    onChange(members.map(m => m.id === id ? { ...m, name: editName.trim() || m.name, birthYear: birth } : m));
+    setEditingId(null);
+  };
+
+  const addChild = () => {
+    const newMember: FamilyMember = {
+      id: `child-${Date.now()}`, name: '子ども', role: 'child',
+      birthYear: NOW_YEAR,
+    };
+    onChange([...members, newMember]);
+    startEdit(newMember);
+  };
+
+  const removeMember = (id: string) => {
+    const m = members.find(m => m.id === id);
+    if (m?.role === 'self') return; // can't remove self
+    onChange(members.filter(m => m.id !== id));
+    if (editingId === id) setEditingId(null);
+  };
+
+  return (
+    <View style={fm.card}>
+      {members.map((m, i) => {
+        const age = NOW_YEAR - m.birthYear;
+        const color = ROLE_COLORS[m.role] ?? colors.textMid;
+        const isEditing = editingId === m.id;
+        return (
+          <View key={m.id}>
+            {i > 0 && <View style={s.divider} />}
+            <Pressable style={fm.row} onPress={() => isEditing ? commit(m.id) : startEdit(m)}>
+              <View style={[fm.dot, { backgroundColor: color }]} />
+              <View style={{ flex: 1 }}>
+                {isEditing ? (
+                  <View style={fm.editRow}>
+                    <TextInput
+                      style={fm.nameInput}
+                      value={editName}
+                      onChangeText={setEditName}
+                      placeholder="名前"
+                      returnKeyType="next"
+                      autoFocus
+                    />
+                    <TextInput
+                      style={fm.birthInput}
+                      value={editBirth}
+                      onChangeText={setEditBirth}
+                      keyboardType="number-pad"
+                      placeholder="生まれ年"
+                      onSubmitEditing={() => commit(m.id)}
+                      onBlur={() => commit(m.id)}
+                    />
+                    <Text style={fm.birthSuffix}>年生まれ</Text>
+                  </View>
+                ) : (
+                  <View style={fm.displayRow}>
+                    <Text style={fm.name}>{m.name}</Text>
+                    <Text style={fm.roleLabel}>{ROLE_LABELS[m.role] ?? m.role}</Text>
+                    <Text style={fm.age}>{m.birthYear}年生（{age}歳）</Text>
+                  </View>
+                )}
+              </View>
+              {!isEditing && m.role !== 'self' && (
+                <Pressable style={fm.removeBtn} hitSlop={8} onPress={() => removeMember(m.id)}>
+                  <Text style={fm.removeTxt}>✕</Text>
+                </Pressable>
+              )}
+              {!isEditing && <Text style={fm.editIcon}>✎</Text>}
+            </Pressable>
+          </View>
+        );
+      })}
+      <View style={s.divider} />
+      <Pressable style={fm.addRow} onPress={addChild}>
+        <Text style={fm.addTxt}>+ 子どもを追加</Text>
+      </Pressable>
+    </View>
+  );
+}
+
+const fm = StyleSheet.create({
+  card: {
+    backgroundColor: colors.card, borderRadius: radius.lg,
+    overflow: 'hidden', ...shadows.card,
+  },
+  row: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingVertical: 12, paddingHorizontal: 14, gap: 10,
+  },
+  dot: { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
+  displayRow: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, flexWrap: 'wrap' },
+  name: { fontSize: 15, fontWeight: '600', color: colors.text, fontFamily: typography.display },
+  roleLabel: {
+    fontSize: 11, color: colors.textMid, backgroundColor: colors.bg,
+    borderRadius: 6, paddingHorizontal: 6, paddingVertical: 1,
+    fontFamily: typography.display,
+  },
+  age: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
+  editIcon: { fontSize: 13, color: colors.textLight },
+  removeBtn: { padding: 4 },
+  removeTxt: { fontSize: 13, color: colors.textLight },
+  editRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  nameInput: {
+    fontSize: 14, fontWeight: '600', color: colors.text,
+    borderBottomWidth: 1.5, borderBottomColor: colors.sage,
+    paddingVertical: 2, minWidth: 60, fontFamily: typography.display,
+  },
+  birthInput: {
+    fontSize: 14, color: colors.text,
+    borderBottomWidth: 1.5, borderBottomColor: colors.sage,
+    paddingVertical: 2, minWidth: 56, textAlign: 'center',
+    fontFamily: typography.display,
+  },
+  birthSuffix: { fontSize: 12, color: colors.textMid, fontFamily: typography.display },
+  addRow: {
+    paddingVertical: 12, paddingHorizontal: 14, alignItems: 'center',
+  },
+  addTxt: { fontSize: 14, color: colors.sage, fontWeight: '600', fontFamily: typography.display },
+});
+
+// ── メイン画面 ───────────────────────────────────────────────────
+
 export default function SettingsScreen() {
-  const { setOnboardingDone, isPremium, resetToDefaults } = useStore();
+  const { setOnboardingDone, isPremium, resetToDefaults, familyMembers, setFamilyMembers } = useStore();
 
   const handleResetAllData = () => {
     Alert.alert(
@@ -38,9 +185,7 @@ export default function SettingsScreen() {
         {
           text: 'リセットする',
           style: 'destructive',
-          onPress: () => {
-            resetToDefaults();
-          },
+          onPress: () => { resetToDefaults(); },
         },
       ],
     );
@@ -67,9 +212,8 @@ export default function SettingsScreen() {
     <SafeAreaView style={s.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={colors.bg} />
 
-      <ScrollView style={s.scroll} contentContainerStyle={s.content}>
+      <ScrollView style={s.scroll} contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
 
-        {/* ページタイトル */}
         <Text style={s.pageTitle}>設定</Text>
 
         <View style={s.section}>
@@ -92,21 +236,9 @@ export default function SettingsScreen() {
         </View>
 
         <View style={s.section}>
-          <Text style={s.sectionTitle}>プロフィール</Text>
-          <View style={s.menuCard}>
-            <MenuItem
-              label="プロフィール編集"
-              sub="名前・家族構成"
-              accent={colors.chart2}
-              onPress={() => {}}
-            />
-            <View style={s.divider} />
-            <MenuItem
-              label="通知設定"
-              accent={colors.chart2}
-              onPress={() => {}}
-            />
-          </View>
+          <Text style={s.sectionTitle}>家族構成</Text>
+          <Text style={s.sectionHint}>使いみちの「積立調整」年齢軸に反映されます</Text>
+          <FamilyEditor members={familyMembers} onChange={setFamilyMembers} />
         </View>
 
         <View style={s.section}>
@@ -114,7 +246,7 @@ export default function SettingsScreen() {
           <View style={s.menuCard}>
             <MenuItem
               label="銀行・証券口座連携"
-              sub="自動残高取得"
+              sub="自動残高取得（準備中）"
               accent={colors.honey}
               onPress={() => {}}
             />
@@ -170,23 +302,11 @@ export default function SettingsScreen() {
         <View style={s.section}>
           <Text style={s.sectionTitle}>サポート</Text>
           <View style={s.menuCard}>
-            <MenuItem
-              label="ヘルプ・お問い合わせ"
-              accent={colors.textLight}
-              onPress={() => {}}
-            />
+            <MenuItem label="ヘルプ・お問い合わせ" accent={colors.textLight} onPress={() => {}} />
             <View style={s.divider} />
-            <MenuItem
-              label="利用規約"
-              accent={colors.textLight}
-              onPress={() => {}}
-            />
+            <MenuItem label="利用規約" accent={colors.textLight} onPress={() => {}} />
             <View style={s.divider} />
-            <MenuItem
-              label="プライバシーポリシー"
-              accent={colors.textLight}
-              onPress={() => {}}
-            />
+            <MenuItem label="プライバシーポリシー" accent={colors.textLight} onPress={() => {}} />
           </View>
         </View>
 
@@ -203,32 +323,23 @@ const s = StyleSheet.create({
   content: { paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: 100 },
 
   pageTitle: {
-    fontSize: fontSizes.pageTitle,
-    fontFamily: typography.bodyBold,
-    color: colors.text,
-    lineHeight: fontSizes.pageTitle * 1.1,
-    marginBottom: spacing.xxl,
+    fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold,
+    color: colors.text, lineHeight: fontSizes.pageTitle * 1.1, marginBottom: spacing.xxl,
   },
 
   section: { marginBottom: spacing.xl },
   sectionTitle: {
-    fontSize: 12, color: colors.textMid, marginBottom: spacing.sm,
+    fontSize: 12, color: colors.textMid, marginBottom: 4,
     paddingHorizontal: 4, letterSpacing: 0.5, textTransform: 'uppercase',
     fontFamily: typography.display,
   },
+  sectionHint: {
+    fontSize: 11, color: colors.textLight, marginBottom: spacing.sm,
+    paddingHorizontal: 4, fontFamily: typography.display,
+  },
 
-  menuCard: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    overflow: 'hidden',
-    ...shadows.card,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    paddingHorizontal: 14,
-  },
+  menuCard: { backgroundColor: colors.card, borderRadius: radius.lg, overflow: 'hidden', ...shadows.card },
+  menuItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, paddingHorizontal: 14 },
   menuAccent: { width: 4, height: 36, borderRadius: 2, marginRight: 12 },
   menuBody: { flex: 1 },
   menuLabel: { fontSize: 16, fontWeight: '600', color: colors.text, fontFamily: typography.display },

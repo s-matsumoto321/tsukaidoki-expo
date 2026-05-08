@@ -27,7 +27,6 @@ export type Project = {
   timing: string;
   now: number;
   goalLabel: string;
-  statusTxt: string;
   color: string;
   ai: string;
   years: string[];
@@ -48,7 +47,7 @@ export const PROJECTS: Record<string, Project> = {
   edu: {
     id: 'edu', kind: 'project',
     name: '教育資金', timing: '2044年 大学入学まで',
-    now: 3_000_000, goalLabel: '目標 ¥500万', statusTxt: '計画通り', color: usePalette.jewels[0],
+    now: 3_000_000, goalLabel: '目標 ¥500万', color: usePalette.jewels[0],
     ai: '教育費ピークの2044年大学入学までに、計画通り積み上がっています。あと8年で目標達成見込み。',
     years: ["'25","'27","'29","'31","'33","'35","'37","'39","'41","'43","'45","'47"],
     plan:   [300,650,1010,1380,1760,2150,2550,3100,3700,4000,3000,2000],
@@ -70,7 +69,7 @@ export const PROJECTS: Record<string, Project> = {
   ret: {
     id: 'ret', kind: 'project',
     name: '老後資金', timing: '2050年 定年まで',
-    now: 2_500_000, goalLabel: '目標 ¥3,000万', statusTxt: '要注意', color: usePalette.jewels[1],
+    now: 2_500_000, goalLabel: '目標 ¥3,000万', color: usePalette.jewels[1],
     ai: 'このペースでは2058年達成見込み（8年遅れ）。月+¥15,000の増額で計画通りになります。',
     years: ["'25","'28","'31","'34","'37","'40","'43","'46","'49","'52","'55","'58"],
     plan:   [250, 530, 870,1280,1780,2390,3130,4020,5000,4200,3400,2600],
@@ -88,7 +87,7 @@ export const PROJECTS: Record<string, Project> = {
   car: {
     id: 'car', kind: 'project',
     name: '車資金', timing: '2028年 買い替え予定',
-    now: 1_000_000, goalLabel: '目標 ¥200万', statusTxt: '順調', color: usePalette.jewels[2],
+    now: 1_000_000, goalLabel: '目標 ¥200万', color: usePalette.jewels[2],
     ai: 'このペースなら2027年12月に達成見込みです。2028年の買い替えに余裕で間に合います。',
     years: ["'25","'26","'27","'28"],
     plan:   [100,148,196,200],
@@ -105,7 +104,7 @@ export const PROJECTS: Record<string, Project> = {
   trip: {
     id: 'trip', kind: 'project',
     name: '旅行資金', timing: '年1回国内旅行・2031年TDL・2037年豪州',
-    now: 500_000, goalLabel: '旅行コース充実', statusTxt: '順調', color: usePalette.jewels[3],
+    now: 500_000, goalLabel: '旅行コース充実', color: usePalette.jewels[3],
     ai: '年1回の国内旅行を楽しみながら積み上げています。2031年の東京ディズニーランドと2037年のオーストラリア旅行に向けて順調です。',
     years: ["'25","'26","'27","'28","'29","'30","'31","'32","'33","'34","'35","'36","'37"],
     plan:   [50, 71, 92, 113, 134, 155, 161, 182, 203, 224, 245, 266, 222],
@@ -134,7 +133,7 @@ export const PROJECTS: Record<string, Project> = {
   'pool-shoken': {
     id: 'pool-shoken', kind: 'account',
     name: '証券口座', timing: 'SBI証券 · 投資信託・株式',
-    now: 3_000_000, goalLabel: '運用残高', statusTxt: '運用中', color: poolPalette.tones[0],
+    now: 3_000_000, goalLabel: '運用残高', color: poolPalette.tones[0],
     ai: '計画通り増加中。配当金も順調に入金されています。次回のリバランスは2025年10月を目安に。',
     years: ["'24/4","'24/7","'24/10","'25/1","'25/4"],
     plan:   [250, 265, 278, 290, 300],
@@ -153,7 +152,7 @@ export const PROJECTS: Record<string, Project> = {
   'pool-teiki': {
     id: 'pool-teiki', kind: 'account',
     name: '定期預金', timing: '〇〇銀行 · 1年定期',
-    now: 2_500_000, goalLabel: '預入残高', statusTxt: '自動更新中', color: poolPalette.tones[1],
+    now: 2_500_000, goalLabel: '預入残高', color: poolPalette.tones[1],
     ai: '1年定期を自動更新中。現在の金利で年約¥5,000の利息収入。満期時に一部を証券口座へ移す検討も。',
     years: ["'23","'24","'25","'26","'27"],
     plan:   [250,250,250,250,250],
@@ -172,7 +171,7 @@ export const PROJECTS: Record<string, Project> = {
   'pool-nisa': {
     id: 'pool-nisa', kind: 'account',
     name: '積立NISA', timing: 'SBI証券 · 月¥33,000 積立中',
-    now: 1_000_000, goalLabel: '評価残高', statusTxt: '積立中', color: poolPalette.tones[2],
+    now: 1_000_000, goalLabel: '評価残高', color: poolPalette.tones[2],
     ai: '月¥33,000の積立で計画通り増加中。評価益も出ており非課税枠を最大限活用できています。',
     years: ["'23/1","'23/7","'24/1","'24/7","'25/1","'25/7"],
     plan:   [20, 40, 60, 80,100,120],
@@ -191,7 +190,7 @@ export const PROJECTS: Record<string, Project> = {
   'pool-main': {
     id: 'pool-main', kind: 'account',
     name: 'メイン銀行', timing: '普通預金 · 給与振込口座',
-    now: 800_000, goalLabel: '現在残高', statusTxt: '安定', color: poolPalette.tones[3],
+    now: 800_000, goalLabel: '現在残高', color: poolPalette.tones[3],
     ai: '月次の収支は安定しています。ボーナス時の余剰資金は証券口座や積立NISAへの振替を推奨します。',
     years: ['4月','6月','8月','10月','12月','2月','4月'],
     plan:   [80, 82, 80, 83, 80, 79, 80],
@@ -210,7 +209,7 @@ export const PROJECTS: Record<string, Project> = {
   'pool-sub': {
     id: 'pool-sub', kind: 'account',
     name: 'サブ銀行', timing: '普通預金 · 生活費',
-    now: 450_000, goalLabel: '現在残高', statusTxt: '安定', color: poolPalette.tones[4],
+    now: 450_000, goalLabel: '現在残高', color: poolPalette.tones[4],
     ai: '生活費口座として適切な残高水準です。冷蔵庫購入で一時減少しましたが翌月回復しています。',
     years: ['4月','6月','8月','10月','12月','2月'],
     plan:   [45, 47, 44, 47, 45, 43],

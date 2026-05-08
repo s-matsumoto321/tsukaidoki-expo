@@ -35,19 +35,22 @@ type Props = {
 export function BalanceSheet({ visible, projectId, currentAmount, label, onClose }: Props) {
   const insets = useSafeAreaInsets();
   const { updateBalance } = useStore();
-  const [amtText, setAmtText] = useState('');
+  const [manText, setManText] = useState('');
   const [note, setNote] = useState('');
+
+  const currentMan = Math.floor(currentAmount / 10_000);
 
   useEffect(() => {
     if (visible) {
-      setAmtText(String(currentAmount));
+      setManText(String(currentMan));
       setNote('');
     }
   }, [visible, currentAmount]);
 
-  const newAmount = parseInt(amtText, 10) || 0;
-  const diff = newAmount - currentAmount;
-  const canSave = amtText.length > 0 && newAmount > 0 && newAmount !== currentAmount;
+  const newMan = parseInt(manText, 10) || 0;
+  const newAmount = newMan * 10_000;
+  const diffMan = newMan - currentMan;
+  const canSave = manText.length > 0 && newMan > 0 && newAmount !== currentAmount;
 
   const handleSave = () => {
     if (!canSave) return;
@@ -64,26 +67,26 @@ export function BalanceSheet({ visible, projectId, currentAmount, label, onClose
 
           <Text style={s.title}>{label}　残高を修正</Text>
           <Text style={s.currentLabel}>
-            現在　¥{currentAmount.toLocaleString('ja-JP')}
+            現在　{currentMan}万円
           </Text>
 
-          <Text style={s.fieldLabel}>新しい残高</Text>
+          <Text style={s.fieldLabel}>新しい残高（万円）</Text>
           <View style={s.amtRow}>
-            <Text style={s.yen}>¥</Text>
             <TextInput
               style={s.amtInput}
-              value={amtText}
-              onChangeText={v => setAmtText(v.replace(/[^0-9]/g, ''))}
+              value={manText}
+              onChangeText={v => setManText(v.replace(/[^0-9]/g, ''))}
               keyboardType="number-pad"
               placeholder="0"
               selectTextOnFocus
               autoFocus
             />
+            <Text style={s.unit}>万円</Text>
           </View>
 
-          {amtText.length > 0 && newAmount !== currentAmount && (
-            <Text style={[s.diff, diff >= 0 ? s.diffPos : s.diffNeg]}>
-              差額　{diff >= 0 ? '+' : ''}¥{diff.toLocaleString('ja-JP')}
+          {manText.length > 0 && newAmount !== currentAmount && (
+            <Text style={[s.diff, diffMan >= 0 ? s.diffPos : s.diffNeg]}>
+              差額　{diffMan >= 0 ? '+' : ''}{diffMan}万円
             </Text>
           )}
 
@@ -143,7 +146,6 @@ const s = StyleSheet.create({
     marginBottom: 6,
     backgroundColor: C.bg,
   },
-  yen: { fontSize: 18, color: C.textSecondary, marginRight: 4 },
   amtInput: {
     flex: 1,
     fontSize: 22,
@@ -151,6 +153,7 @@ const s = StyleSheet.create({
     color: C.textPrimary,
     paddingVertical: 12,
   },
+  unit: { fontSize: 16, color: C.textSecondary, marginLeft: 4 },
   diff: { fontSize: 12, fontWeight: '500', marginBottom: 16, marginLeft: 2 },
   diffPos: { color: C.green },
   diffNeg: { color: C.red },

@@ -6,15 +6,14 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Line as SvgLine, Polyline, Circle, Text as SvgText, G } from 'react-native-svg';
-import { type Project } from '@/constants/projects';
+import { type Project, type ProjectEvent } from '@/constants/projects';
 import { useStore } from '@/store/useStore';
 import { BalanceSheet } from '@/components/balance-sheet';
 
 // ── カラー定数
-const PLAN_C    = '#185FA5';
-const ACTUAL_C  = '#1D9E75';
+const TRIAL_C   = '#1D9E75';
 const EXPENSE_C = '#E24B4A';
-const ORANGE_C  = '#EF9F27';
+const DREAM_C   = '#EF9F27';
 const BG        = '#f5f4ee';
 const CARD      = '#ffffff';
 const TXT_PRI   = '#2c2c2a';
@@ -22,15 +21,14 @@ const TXT_SEC   = '#73726c';
 const TXT_TER   = '#9c9a92';
 const BORDER    = 'rgba(0,0,0,0.08)';
 const BORDER_MD = 'rgba(0,0,0,0.18)';
-const WARN_TXT  = '#9c5800';
 
 // ── 型
 type Period   = '生涯' | '5年' | '1年';
 type TabType  = 'saving' | 'expense';
-type CardType = 'plan-saving' | 'actual-saving' | 'plan-expense' | 'actual-expense';
 
-type MonthEntry = { month: string; plan: number; actual: number };
-const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月'];
+const NOW_YEAR = new Date().getFullYear();
+const SVG_H = 150;
+const PL = 38, PR = 10, PT = 12, PB = 22;
 
 // ── ヘルパー
 function parseYear(s: string): number {
@@ -58,20 +56,62 @@ function yearToIdx(years: string[], year: number): number {
   });
   return closest;
 }
-function makeMonthData(planPerMonth: number): MonthEntry[] {
-  return MONTHS.map(m => ({ month: m, plan: planPerMonth, actual: planPerMonth }));
-}
 
-const NOW_YEAR = new Date().getFullYear();
-const SVG_H = 150;
-const PL = 38, PR = 10, PT = 12, PB = 22;
+// ── 教育費テンプレートデータ
+type EduCategory = '幼稚園' | '小学校' | '中学校' | '高校' | '大学' | '習い事';
+type EduSubtype = string;
+
+const EDU_TEMPLATE: Record<EduCategory, { subtype: EduSubtype; annualMan: number }[]> = {
+  '幼稚園': [
+    { subtype: '公立', annualMan: 72 },
+    { subtype: '私立', annualMan: 158 },
+  ],
+  '小学校': [
+    { subtype: '公立', annualMan: 31 },
+    { subtype: '私立', annualMan: 152 },
+  ],
+  '中学校': [
+    { subtype: '公立', annualMan: 49 },
+    { subtype: '私立', annualMan: 140 },
+  ],
+  '高校': [
+    { subtype: '公立', annualMan: 46 },
+    { subtype: '私立', annualMan: 97 },
+  ],
+  '大学': [
+    { subtype: '国公立', annualMan: 67 },
+    { subtype: '私立文系', annualMan: 110 },
+    { subtype: '私立理系', annualMan: 150 },
+    { subtype: '私立医歯薬', annualMan: 350 },
+  ],
+  '習い事': [],
+};
+
+const SCHOOL_AGES: Record<EduCategory, { startAge: number; duration: number }> = {
+  '幼稚園': { startAge: 3, duration: 3 },
+  '小学校': { startAge: 6, duration: 6 },
+  '中学校': { startAge: 12, duration: 3 },
+  '高校': { startAge: 15, duration: 3 },
+  '大学': { startAge: 18, duration: 4 },
+  '習い事': { startAge: 0, duration: 1 },
+};
+
+const EDU_CATEGORIES: EduCategory[] = ['幼稚園', '小学校', '中学校', '高校', '大学', '習い事'];
+const CATEGORY_EMOJI: Record<EduCategory, string> = {
+  '幼稚園': '🌸',
+  '小学校': '📚',
+  '中学校': '🎒',
+  '高校': '🏫',
+  '大学': '🎓',
+  '習い事': '🎵',
+};
 
 // ══════════════════════════════════════════════
-// グラフ
+// グラフ（試算ライン1本）
 // ══════════════════════════════════════════════
-function PlanActualChart({
+function TrialChart({
   project, chartPlan, svgW, period, lifetimeYears,
-  highlightYearIdx, pulseOpacity, selectedCardType,
+  highlightYearIdx, pulseOpacity,
 }: {
   project: Project | undefined;
   chartPlan: number[];
@@ -80,7 +120,6 @@ function PlanActualChart({
   lifetimeYears: number;
   highlightYearIdx: number | null;
   pulseOpacity: number;
-  selectedCardType: CardType | null;
 }) {
   if (!project) return null;
   const limitMap: Record<Period, number> = { '生涯': lifetimeYears, '5年': 5, '1年': 1 };
@@ -90,11 +129,9 @@ function PlanActualChart({
   const endN   = cutIdx === -1 ? project.years.length : Math.max(2, cutIdx);
   const years  = project.years.slice(0, endN);
   const plan   = chartPlan.slice(0, endN);
-  const actual = project.actual.slice(0, endN);
   const gW = svgW - PL - PR, gH = SVG_H - PT - PB, n = years.length;
 
-  const allVals = [...plan, ...actual.filter((v): v is number => v !== null)];
-  const rawMax  = Math.max(...allVals, 1);
+  const rawMax  = Math.max(...plan, 1);
   const step    = niceTickStep(rawMax, 4);
   const maxVal  = Math.ceil(rawMax / step) * step;
   const xi = (i: number) => PL + (n === 1 ? gW / 2 : i * (gW / (n - 1)));
@@ -103,22 +140,8 @@ function PlanActualChart({
   for (let v = 0; v <= maxVal; v += step) ticks.push(v);
   const xStep = Math.max(1, Math.ceil(n / 5));
   const planPts = plan.map((v, i) => `${xi(i)},${yv(v)}`).join(' ');
-  const actIdxs: number[] = [];
-  actual.forEach((v, i) => { if (v !== null) actIdxs.push(i); });
-  const actPts = actIdxs.map(i => `${xi(i)},${yv(actual[i]!)}`).join(' ');
   const expEvs  = project.events.filter(ev => ev.type === 'spend' && ev.idx < endN);
   const mileEvs = project.events.filter(ev => ev.type !== 'spend' && ev.idx < endN);
-
-  const isActCard = selectedCardType === 'actual-saving' || selectedCardType === 'actual-expense';
-  const hlColor   = isActCard ? ACTUAL_C : PLAN_C;
-  let hlPos: { x: number; y: number } | null = null;
-  if (highlightYearIdx !== null && highlightYearIdx < endN) {
-    if (isActCard && actual[highlightYearIdx] !== null) {
-      hlPos = { x: xi(highlightYearIdx), y: yv(actual[highlightYearIdx]!) };
-    } else {
-      hlPos = { x: xi(highlightYearIdx), y: yv(plan[highlightYearIdx]) };
-    }
-  }
 
   return (
     <Svg width={svgW} height={SVG_H}>
@@ -137,24 +160,17 @@ function PlanActualChart({
         <SvgLine key={`vl${ev.idx}`} x1={xi(ev.idx)} y1={PT} x2={xi(ev.idx)} y2={PT + gH}
           stroke={EXPENSE_C} strokeWidth={0.5} strokeDasharray="3 2" opacity={0.3} />
       ))}
-      <Polyline points={planPts} fill="none" stroke={PLAN_C} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.7} />
-      {actIdxs.length > 1 && (
-        <Polyline points={actPts} fill="none" stroke={ACTUAL_C} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
-      )}
-      {mileEvs.map(ev => {
-        const c = ev.type === 'start' ? ACTUAL_C : ev.type === 'in' ? ORANGE_C : PLAN_C;
-        return <Circle key={`ms${ev.idx}`} cx={xi(ev.idx)} cy={yv(plan[ev.idx])} r={4} fill={c} stroke="#fff" strokeWidth={1.5} />;
-      })}
+      <Polyline points={planPts} fill="none" stroke={TRIAL_C} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
+      {mileEvs.map(ev => (
+        <Circle key={`ms${ev.idx}`} cx={xi(ev.idx)} cy={yv(plan[ev.idx])} r={4} fill={DREAM_C} stroke="#fff" strokeWidth={1.5} />
+      ))}
       {expEvs.map(ev => (
         <Circle key={`ep${ev.idx}`} cx={xi(ev.idx)} cy={yv(plan[ev.idx])} r={5} fill={EXPENSE_C} />
       ))}
-      {actIdxs.map(i => (
-        <Circle key={`ad${i}`} cx={xi(i)} cy={yv(actual[i]!)} r={2.5} fill={ACTUAL_C} />
-      ))}
-      {hlPos && (
+      {highlightYearIdx !== null && highlightYearIdx < endN && (
         <G>
-          <Circle cx={hlPos.x} cy={hlPos.y} r={12} fill={hlColor} opacity={pulseOpacity} />
-          <Circle cx={hlPos.x} cy={hlPos.y} r={7}  fill={hlColor} opacity={Math.min(0.45, pulseOpacity * 2)} />
+          <Circle cx={xi(highlightYearIdx)} cy={yv(plan[highlightYearIdx])} r={12} fill={TRIAL_C} opacity={pulseOpacity} />
+          <Circle cx={xi(highlightYearIdx)} cy={yv(plan[highlightYearIdx])} r={7} fill={TRIAL_C} opacity={Math.min(0.45, pulseOpacity * 2)} />
         </G>
       )}
     </Svg>
@@ -220,8 +236,17 @@ function PlanExpensePopup({
   const [amt, setAmt] = useState(initAmt);
   const [unit, setUnit] = useState<'year' | 'month'>('year');
   useEffect(() => { if (visible) setAmt(initAmt); }, [visible, initAmt]);
-  const minus = () => { const n = Math.max(1, amt - 1); setAmt(n); onAmountChange(n); };
-  const plus  = () => { const n = amt + 1; setAmt(n); onAmountChange(n); };
+  const displayAmt = unit === 'month' ? Math.round(amt / 12) : amt;
+  const minus = () => {
+    const n = Math.max(1, displayAmt - 1);
+    const newAmt = unit === 'month' ? n * 12 : n;
+    setAmt(newAmt); onAmountChange(newAmt);
+  };
+  const plus = () => {
+    const n = displayAmt + 1;
+    const newAmt = unit === 'month' ? n * 12 : n;
+    setAmt(newAmt); onAmountChange(newAmt);
+  };
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
@@ -242,7 +267,7 @@ function PlanExpensePopup({
             <Text style={pop.fieldLabel}>金額</Text>
             <View style={pop.sliderRow}>
               <Pressable style={pop.sliderBtn} onPress={minus}><Text style={pop.sliderBtnTxt}>−</Text></Pressable>
-              <Text style={pop.sliderVal}>{amt}<Text style={pop.sliderUnit}> {unit === 'year' ? '万円/年' : '万円/月'}</Text></Text>
+              <Text style={pop.sliderVal}>{displayAmt}<Text style={pop.sliderUnit}> {unit === 'year' ? '万円/年' : '万円/月'}</Text></Text>
               <Pressable style={pop.sliderBtn} onPress={plus}><Text style={pop.sliderBtnTxt}>+</Text></Pressable>
             </View>
           </ScrollView>
@@ -259,110 +284,92 @@ function PlanExpensePopup({
 }
 
 // ══════════════════════════════════════════════
-// 実績入力ポップアップ（積立・支出 共通UI）
+// 教育費テンプレート選択モーダル
 // ══════════════════════════════════════════════
-function ActualRecordPopup({
-  visible, title, sub, isExpense,
-  monthData, onDataChange, onClose, onSave,
+function ExpenseTemplatePicker({
+  visible, onClose, onSelect,
 }: {
-  visible: boolean; title: string; sub: string; isExpense: boolean;
-  monthData: MonthEntry[];
-  onDataChange: (idx: number, delta: number) => void;
+  visible: boolean;
   onClose: () => void;
-  onSave: () => void;
+  onSelect: (category: EduCategory, subtype: string, annualMan: number) => void;
 }) {
-  const { height: H } = useWindowDimensions();
-  const maxVal = Math.max(5, ...monthData.map(m => Math.max(m.plan, m.actual))) + 1;
-  const BAR_H = 80;
+  const [selectedCategory, setSelectedCategory] = useState<EduCategory | null>(null);
+  const [hobbyMonthlyMan, setHobbyMonthlyMan] = useState('3');
 
-  function getActualColor(plan: number, actual: number): string {
-    if (isExpense) {
-      if (actual > plan) return ORANGE_C;
-      if (actual < plan) return PLAN_C;
-      return ACTUAL_C;
-    } else {
-      if (actual < plan) return ORANGE_C;
-      if (actual > plan) return PLAN_C;
-      return ACTUAL_C;
-    }
-  }
-  function getStatusLabel(plan: number, actual: number): string {
-    if (isExpense) {
-      if (actual > plan) return `⚠ ${actual - plan}万円超過`;
-      if (actual < plan && actual > 0) return `✓ ${plan - actual}万円少なめ`;
-      return '';
-    } else {
-      if (actual < plan) return `⚠ ${plan - actual}万円不足`;
-      if (actual > plan) return `✓ ${actual - plan}万円多め`;
-      return '';
-    }
-  }
-  function isWarnRow(plan: number, actual: number): boolean {
-    return isExpense ? actual > plan : actual < plan;
-  }
+  const resetAndClose = () => {
+    setSelectedCategory(null);
+    setHobbyMonthlyMan('3');
+    onClose();
+  };
 
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
+    <Modal transparent visible={visible} animationType="slide" onRequestClose={resetAndClose}>
       <View style={{ flex: 1, justifyContent: 'flex-end' }}>
-        <Pressable style={pop.backdrop} onPress={onClose} />
-        <View style={[pop.sheet, { height: H * 0.8 }]}>
+        <Pressable style={pop.backdrop} onPress={resetAndClose} />
+        <View style={[pop.sheet, { paddingBottom: 24 }]}>
           <View style={pop.handle} />
-          <Text style={pop.title}>{title}</Text>
-          <Text style={pop.sub}>{sub}</Text>
-          <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingHorizontal: 4 }}>
-            <Text style={pop.fieldLabel}>月別の予定 vs 実績</Text>
-            {/* 棒グラフ */}
-            <View style={bar.wrap}>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-                <View style={bar.chart}>
-                  {monthData.map((m, i) => {
-                    const planH = Math.max(2, (m.plan / maxVal) * BAR_H);
-                    const actH  = Math.max(0, (m.actual / maxVal) * BAR_H);
-                    const actC  = getActualColor(m.plan, m.actual);
-                    return (
-                      <View key={i} style={bar.col}>
-                        <View style={bar.pair}>
-                          <View style={[bar.barBase, { height: planH, opacity: 0.4, backgroundColor: PLAN_C }]} />
-                          <View style={[bar.barBase, { height: actH, backgroundColor: actC }]} />
-                        </View>
-                        <Text style={bar.label}>{m.month.replace('月', '')}</Text>
-                      </View>
-                    );
-                  })}
-                </View>
-              </ScrollView>
-            </View>
-
-            <Text style={[pop.fieldLabel, { marginTop: 12 }]}>{isExpense ? '月別の支出金額' : '月別の積立金額'}</Text>
-            <View style={bar.listWrap}>
-              {monthData.map((m, i) => {
-                const status = getStatusLabel(m.plan, m.actual);
-                const warn   = isWarnRow(m.plan, m.actual);
-                return (
-                  <View key={i} style={[bar.row, warn && bar.rowWarn]}>
-                    <Text style={bar.month}>{m.month}</Text>
-                    <Text style={bar.planLbl}>予定 {m.plan}万円</Text>
-                    {status ? <Text style={bar.statusLbl}>{status}</Text> : null}
-                    <View style={bar.ctrl}>
-                      <Pressable style={bar.ctrlBtn} onPress={() => onDataChange(i, -1)}>
-                        <Text style={bar.ctrlBtnTxt}>−</Text>
-                      </Pressable>
-                      <Text style={bar.ctrlVal}>{m.actual}<Text style={bar.ctrlUnit}>万円</Text></Text>
-                      <Pressable style={bar.ctrlBtn} onPress={() => onDataChange(i, 1)}>
-                        <Text style={bar.ctrlBtnTxt}>+</Text>
-                      </Pressable>
-                    </View>
+          <Text style={pop.title}>支出を追加</Text>
+          {selectedCategory === null ? (
+            <>
+              <Text style={[pop.sub, { marginBottom: 16 }]}>カテゴリを選んでください</Text>
+              <View style={tpl.grid}>
+                {EDU_CATEGORIES.map(cat => (
+                  <Pressable key={cat} style={tpl.cell} onPress={() => setSelectedCategory(cat)}>
+                    <Text style={tpl.emoji}>{CATEGORY_EMOJI[cat]}</Text>
+                    <Text style={tpl.cellTxt}>{cat}</Text>
+                  </Pressable>
+                ))}
+              </View>
+            </>
+          ) : selectedCategory === '習い事' ? (
+            <>
+              <Text style={[pop.sub, { marginBottom: 8 }]}>習い事 · 月謝を入力</Text>
+              <Text style={pop.fieldLabel}>月謝（万円/月）</Text>
+              <View style={pop.sliderRow}>
+                <Pressable style={pop.sliderBtn} onPress={() => setHobbyMonthlyMan(String(Math.max(1, parseInt(hobbyMonthlyMan || '0', 10) - 1)))}>
+                  <Text style={pop.sliderBtnTxt}>−</Text>
+                </Pressable>
+                <Text style={pop.sliderVal}>{hobbyMonthlyMan}<Text style={pop.sliderUnit}> 万円/月</Text></Text>
+                <Pressable style={pop.sliderBtn} onPress={() => setHobbyMonthlyMan(String(parseInt(hobbyMonthlyMan || '0', 10) + 1))}>
+                  <Text style={pop.sliderBtnTxt}>+</Text>
+                </Pressable>
+              </View>
+              <View style={pop.actions}>
+                <Pressable style={pop.btnSec} onPress={() => setSelectedCategory(null)}>
+                  <Text style={pop.btnSecTxt}>‹ 戻る</Text>
+                </Pressable>
+                <Pressable style={pop.btnPri} onPress={() => {
+                  const monthly = parseInt(hobbyMonthlyMan || '0', 10);
+                  onSelect('習い事', '習い事', monthly * 12);
+                  setSelectedCategory(null);
+                  setHobbyMonthlyMan('3');
+                  onClose();
+                }}>
+                  <Text style={pop.btnPriTxt}>追加する</Text>
+                </Pressable>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text style={[pop.sub, { marginBottom: 16 }]}>{selectedCategory} · 区分を選んでください</Text>
+              {EDU_TEMPLATE[selectedCategory].map(item => (
+                <Pressable key={item.subtype} style={tpl.subtypeRow} onPress={() => {
+                  onSelect(selectedCategory, item.subtype, item.annualMan);
+                  setSelectedCategory(null);
+                  onClose();
+                }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={tpl.subtypeName}>{item.subtype}</Text>
+                    <Text style={tpl.subtypeAmt}>年額 ¥{item.annualMan}万円（参考値）</Text>
                   </View>
-                );
-              })}
-            </View>
-          </ScrollView>
-          <View style={pop.actions}>
-            <Pressable style={pop.btnSec} onPress={onClose}><Text style={pop.btnSecTxt}>閉じる</Text></Pressable>
-            <Pressable style={pop.btnPri} onPress={() => { onSave(); onClose(); }}>
-              <Text style={pop.btnPriTxt}>保存する</Text>
-            </Pressable>
-          </View>
+                  <Text style={tpl.subtypeArrow}>›</Text>
+                </Pressable>
+              ))}
+              <Pressable style={tpl.backBtn} onPress={() => setSelectedCategory(null)}>
+                <Text style={tpl.backBtnTxt}>‹ カテゴリに戻る</Text>
+              </Pressable>
+            </>
+          )}
         </View>
       </View>
     </Modal>
@@ -370,65 +377,27 @@ function ActualRecordPopup({
 }
 
 // ══════════════════════════════════════════════
-// 年表カード（計画 | 実績 の2カラム）
+// 年表カード（計画のみ・1カラム）
 // ══════════════════════════════════════════════
-type SideInfo =
-  | { empty: false; yearLabel: string; name: string; detail?: string; amtLabel: string; amtPos: boolean }
-  | { empty: true; yearLabel?: string };
-
-function EventCard({
-  planSide, actualSide, planCardId, actualCardId,
-  planCardType, actualCardType, planYearIdx, actualYearIdx,
-  dotFilled, dotExpense, selectedCardId,
-  onSelect,
+function PlanCard({
+  yearLabel, name, detail, amtLabel, amtPos,
+  isSelected, onPress,
 }: {
-  planSide: SideInfo; actualSide: SideInfo;
-  planCardId: string; actualCardId: string;
-  planCardType: CardType; actualCardType: CardType;
-  planYearIdx: number; actualYearIdx: number;
-  dotFilled: boolean; dotExpense: boolean;
-  selectedCardId: string | null;
-  onSelect: (cid: string, type: CardType, yIdx: number) => void;
+  yearLabel: string; name: string; detail?: string;
+  amtLabel: string; amtPos: boolean;
+  isSelected: boolean;
+  onPress: () => void;
 }) {
-  const planSel   = selectedCardId === planCardId;
-  const actualSel = selectedCardId === actualCardId;
   return (
-    <View style={ec.card}>
-      {/* 計画側 */}
-      <Pressable style={[ec.side, planSel && ec.sideSel]} onPress={() => onSelect(planCardId, planCardType, planYearIdx)}>
-        {!planSide.empty && (
-          <>
-            <Text style={ec.year}>{planSide.yearLabel}</Text>
-            <Text style={ec.name}>{planSide.name}</Text>
-            {planSide.detail ? <Text style={ec.detail}>{planSide.detail}</Text> : null}
-            <Text style={[ec.amt, planSide.amtPos ? ec.amtPos : ec.amtNeg]}>{planSide.amtLabel}</Text>
-          </>
-        )}
-      </Pressable>
-      {/* 中央 */}
-      <View style={ec.div}>
-        <View style={[ec.dot,
-          dotExpense && ec.dotExp,
-          dotFilled && !dotExpense && ec.dotFill,
-        ]} />
+    <Pressable style={[pc.card, isSelected && pc.cardSel]} onPress={onPress}>
+      <View style={pc.dot} />
+      <View style={{ flex: 1, paddingLeft: 12 }}>
+        <Text style={pc.year}>{yearLabel}</Text>
+        <Text style={pc.name}>{name}</Text>
+        {detail ? <Text style={pc.detail}>{detail}</Text> : null}
+        <Text style={[pc.amt, amtPos ? pc.amtPos : pc.amtNeg]}>{amtLabel}</Text>
       </View>
-      {/* 実績側 */}
-      <Pressable style={[ec.side, actualSel && ec.sideSel]} onPress={() => onSelect(actualCardId, actualCardType, actualYearIdx)}>
-        {actualSide.empty ? (
-          <View style={ec.emptyBox}>
-            <Text style={ec.emptyIcon}>+</Text>
-            <Text style={ec.emptyTxt}>記録する</Text>
-          </View>
-        ) : (
-          <>
-            {actualSide.yearLabel ? <Text style={ec.year}>{actualSide.yearLabel}</Text> : null}
-            <Text style={ec.name}>{actualSide.name}</Text>
-            {actualSide.detail ? <Text style={ec.detail}>{actualSide.detail}</Text> : null}
-            <Text style={[ec.amt, actualSide.amtPos ? ec.amtPos : ec.amtNeg]}>{actualSide.amtLabel}</Text>
-          </>
-        )}
-      </Pressable>
-    </View>
+    </Pressable>
   );
 }
 
@@ -437,7 +406,7 @@ function EventCard({
 // ══════════════════════════════════════════════
 export default function ProjectDetailScreen() {
   const { id, from } = useLocalSearchParams<{ id: string; from?: string }>();
-  const { balances, savingsAllocation, saveSavingsAllocation, aiInsights, familyMembers, projects } = useStore();
+  const { balances, savingsAllocation, saveSavingsAllocation, aiInsights, familyMembers, projects, updateProject } = useStore();
   const project = projects[id ?? ''];
   const isAccount = project?.kind === 'account';
   const insets = useSafeAreaInsets();
@@ -452,21 +421,17 @@ export default function ProjectDetailScreen() {
   const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1990;
   const lifeYears = (selfBirthYear + 100) - NOW_YEAR;
 
-  // ── state
   const [period, setPeriod] = useState<Period>('生涯');
   const [activeTab, setActiveTab] = useState<TabType>('saving');
   const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
-  const [selectedCardType, setSelectedCardType] = useState<CardType | null>(null);
   const [highlightYearIdx, setHighlightYearIdx] = useState<number | null>(null);
   const [pulseOpacity, setPulseOpacity] = useState(0.15);
-  const [activePopup, setActivePopup] = useState<CardType | null>(null);
+  const [activePopup, setActivePopup] = useState<'plan-saving' | 'plan-expense' | 'add-expense' | null>(null);
   const [sheetVisible, setSheetVisible] = useState(false);
 
-  // ── グラフデータ（ローカルコピー、リアルタイム更新用）
   const [chartPlan, setChartPlan] = useState<number[]>(project?.plan ?? []);
   useEffect(() => { if (project) setChartPlan([...project.plan]); }, [id]);
 
-  // ── 脈動アニメ
   const pulseRef = useRef<ReturnType<typeof setInterval> | null>(null);
   useEffect(() => {
     if (highlightYearIdx !== null) {
@@ -482,13 +447,10 @@ export default function ProjectDetailScreen() {
     return () => { if (pulseRef.current) clearInterval(pulseRef.current); };
   }, [highlightYearIdx]);
 
-  // ── 月別データ（ポップアップ用）
-  const [savingMonthData, setSavingMonthData] = useState<MonthEntry[]>(makeMonthData(3));
-  const [expenseMonthData, setExpenseMonthData] = useState<MonthEntry[]>(makeMonthData(6));
   const [popupContext, setPopupContext] = useState<{ label: string; name: string; amtMan: number }>({ label: '', name: '', amtMan: 0 });
 
   // ── 積立タブ カードデータ
-  const savingPlanCards = useMemo(() => {
+  const savingCards = useMemo(() => {
     const rawEntries = savingsAllocation.entries.length > 0
       ? [...savingsAllocation.entries].sort((a, b) => a.fromYear - b.fromYear)
       : [{ fromYear: NOW_YEAR, monthlyAmounts: { [id ?? '']: 30000 } }];
@@ -498,7 +460,7 @@ export default function ProjectDetailScreen() {
       const yr     = e.fromYear;
       const yIdx   = project ? yearToIdx(project.years, yr) : 0;
       return {
-        cardId: `ps-${i}`, cardType: 'plan-saving' as CardType,
+        cardId: `ps-${i}`,
         yearLabel: `${yr}年〜`, yearIdx: yIdx,
         monthlyAmtMan: amtMan,
         name: i === 0 ? `月${amtMan}万円 積立` : `月${amtMan}万円に増額`,
@@ -509,26 +471,8 @@ export default function ProjectDetailScreen() {
     });
   }, [savingsAllocation, id, project]);
 
-  const savingActualCards = useMemo(() => {
-    if (!project) return [];
-    return savingPlanCards.map((pc, i) => {
-      const actual = project.actuals?.[pc.yearIdx];
-      const done   = actual !== undefined && actual !== null;
-      const yr     = parseYear(project.years[pc.yearIdx] ?? project.years[0]);
-      return {
-        cardId: `as-${i}`, cardType: 'actual-saving' as CardType,
-        yearLabel: `${yr}年`, yearIdx: pc.yearIdx,
-        empty: !done,
-        name: done ? (actual?.name ?? '記録済み') : '',
-        detail: done ? (actual?.detail ?? '') : '',
-        amtLabel: done ? (actual?.amt ?? '') : '',
-        amtPos: done ? (actual?.pos ?? true) : true,
-      };
-    });
-  }, [savingPlanCards, project]);
-
   // ── 支出タブ カードデータ
-  const expensePlanCards = useMemo(() => {
+  const expenseCards = useMemo(() => {
     if (!project) return [];
     return project.events
       .filter(ev => !ev.pos)
@@ -536,7 +480,7 @@ export default function ProjectDetailScreen() {
         const amtStr = ev.amt.replace(/[^0-9]/g, '');
         const amtMan = Math.round(parseInt(amtStr, 10) / 10000) || 1;
         return {
-          cardId: `pe-${i}`, cardType: 'plan-expense' as CardType,
+          cardId: `pe-${i}`,
           yearLabel: `${ev.year}年`, yearIdx: ev.idx,
           name: ev.name, detail: ev.detail,
           amtLabel: ev.amt, amtMan,
@@ -544,98 +488,48 @@ export default function ProjectDetailScreen() {
       });
   }, [project]);
 
-  const expenseActualCards = useMemo(() => {
-    if (!project) return [];
-    return expensePlanCards.map((pc, i) => {
-      const actual = project.actuals?.[pc.yearIdx];
-      const done   = actual !== undefined && actual !== null;
-      const yr     = parseYear(project.events.filter(ev => !ev.pos)[i]?.year ?? "'25");
-      return {
-        cardId: `ae-${i}`, cardType: 'actual-expense' as CardType,
-        yearLabel: `${yr}年`, yearIdx: pc.yearIdx,
-        empty: !done,
-        name: done ? (actual?.name ?? '記録済み') : '',
-        detail: done ? (actual?.detail ?? '') : '',
-        amtLabel: done ? (actual?.amt ?? '') : '',
-        amtPos: done ? (actual?.pos ?? false) : false,
-      };
-    });
-  }, [expensePlanCards, project]);
+  const planCards = activeTab === 'saving' ? savingCards : expenseCards;
 
-  // ── カード選択
-  function handleCardSelect(cid: string, type: CardType, yIdx: number) {
+  function handleCardSelect(cid: string, yIdx: number) {
     if (cid === selectedCardId) {
       setSelectedCardId(null);
-      setSelectedCardType(null);
       setHighlightYearIdx(null);
       return;
     }
     setSelectedCardId(cid);
-    setSelectedCardType(type);
     setHighlightYearIdx(yIdx);
   }
 
-  function clearSelection() {
+  function switchTab(tab: TabType) {
+    setActiveTab(tab);
     setSelectedCardId(null);
-    setSelectedCardType(null);
     setHighlightYearIdx(null);
   }
 
-  // ── タブ切替
-  function switchTab(tab: TabType) {
-    setActiveTab(tab);
-    clearSelection();
-  }
-
-  // ── 下部ボタン
-  const LABEL_MAP: Record<CardType, string> = {
-    'plan-saving':   '積立計画を編集',
-    'actual-saving': '積立実績を記録',
-    'plan-expense':  '支出計画を編集',
-    'actual-expense':'支出実績を記録',
-  };
-  const editBtnLabel   = selectedCardType ? LABEL_MAP[selectedCardType] : 'カードを選んで編集';
   const editBtnEnabled = selectedCardId !== null;
+  const editBtnLabel = activeTab === 'saving' ? '積立計画を編集' : '支出計画を編集';
 
   function handleEditPress() {
-    if (!selectedCardType || !selectedCardId) return;
-
-    // ポップアップ用コンテキストを設定
-    if (selectedCardType === 'plan-saving') {
+    if (!selectedCardId) return;
+    if (activeTab === 'saving') {
       const idx = parseInt(selectedCardId.split('-')[1]);
-      const pc  = savingPlanCards[idx];
-      if (pc) setPopupContext({ label: pc.yearLabel, name: pc.name, amtMan: pc.monthlyAmtMan });
-    } else if (selectedCardType === 'actual-saving') {
+      const card = savingCards[idx];
+      if (card) setPopupContext({ label: card.yearLabel, name: card.name, amtMan: card.monthlyAmtMan });
+      setActivePopup('plan-saving');
+    } else {
       const idx = parseInt(selectedCardId.split('-')[1]);
-      const pc  = savingPlanCards[idx];
-      const ac  = savingActualCards[idx];
-      if (pc && ac) {
-        setPopupContext({ label: ac.yearLabel, name: pc.name, amtMan: pc.monthlyAmtMan });
-        setSavingMonthData(makeMonthData(pc.monthlyAmtMan));
-      }
-    } else if (selectedCardType === 'plan-expense') {
-      const idx = parseInt(selectedCardId.split('-')[1]);
-      const pc  = expensePlanCards[idx];
-      if (pc) setPopupContext({ label: pc.yearLabel, name: pc.name, amtMan: pc.amtMan });
-    } else if (selectedCardType === 'actual-expense') {
-      const idx = parseInt(selectedCardId.split('-')[1]);
-      const pc  = expensePlanCards[idx];
-      const ac  = expenseActualCards[idx];
-      if (pc && ac) {
-        setPopupContext({ label: ac.yearLabel, name: pc.name, amtMan: pc.amtMan });
-        setExpenseMonthData(makeMonthData(Math.max(1, Math.round(pc.amtMan / 12))));
-      }
+      const card = expenseCards[idx];
+      if (card) setPopupContext({ label: card.yearLabel, name: card.name, amtMan: card.amtMan });
+      setActivePopup('plan-expense');
     }
-    setActivePopup(selectedCardType);
   }
 
-  // ── リアルタイムグラフ更新（積立計画）
   function handlePlanSavingAmountChange(monthlyAmt: number) {
     if (!project) return;
     const idx = parseInt((selectedCardId ?? 'ps-0').split('-')[1]);
-    const pc  = savingPlanCards[idx];
-    if (!pc) return;
-    const startIdx = pc.yearIdx;
+    const card = savingCards[idx];
+    if (!card) return;
+    const startIdx = card.yearIdx;
     const newPlan  = [...chartPlan];
     for (let i = startIdx; i < newPlan.length; i++) {
       const prev = i > 0 ? newPlan[i - 1] : 0;
@@ -645,14 +539,13 @@ export default function ProjectDetailScreen() {
     setChartPlan(newPlan);
   }
 
-  // ── リアルタイムグラフ更新（支出計画）
   function handlePlanExpenseAmountChange(annualAmt: number) {
     if (!project) return;
     const idx = parseInt((selectedCardId ?? 'pe-0').split('-')[1]);
-    const pc  = expensePlanCards[idx];
-    if (!pc) return;
-    const eventIdx = pc.yearIdx;
-    const origAmt  = pc.amtMan;
+    const card = expenseCards[idx];
+    if (!card) return;
+    const eventIdx = card.yearIdx;
+    const origAmt  = card.amtMan;
     const diff     = annualAmt - origAmt;
     const newPlan  = [...project.plan];
     for (let i = eventIdx; i < newPlan.length; i++) {
@@ -661,22 +554,80 @@ export default function ProjectDetailScreen() {
     setChartPlan(newPlan);
   }
 
-  // ── 保存
   function handleSavePlanSaving(amt: number) {
     const idx = parseInt((selectedCardId ?? 'ps-0').split('-')[1]);
-    const pc  = savingPlanCards[idx];
-    if (!pc) return;
+    const card = savingCards[idx];
+    if (!card) return;
     const newEntries = [...savingsAllocation.entries];
-    const entryIdx   = newEntries.findIndex(e => e.fromYear === pc.fromYear);
+    const entryIdx   = newEntries.findIndex(e => e.fromYear === card.fromYear);
     if (entryIdx >= 0) {
       newEntries[entryIdx] = {
         ...newEntries[entryIdx],
         monthlyAmounts: { ...newEntries[entryIdx].monthlyAmounts, [id ?? '']: amt * 10000 },
       };
     } else {
-      newEntries.push({ fromYear: pc.fromYear, monthlyAmounts: { [id ?? '']: amt * 10000 } });
+      newEntries.push({ fromYear: card.fromYear, monthlyAmounts: { [id ?? '']: amt * 10000 } });
     }
     saveSavingsAllocation({ entries: newEntries });
+  }
+
+  function handleSavePlanExpense(annualAmtMan: number) {
+    if (!project) return;
+    const idx = parseInt((selectedCardId ?? 'pe-0').split('-')[1]);
+    const expenseEvents = project.events.filter(ev => !ev.pos);
+    const event = expenseEvents[idx];
+    if (!event) return;
+    const newAmt = `-¥${(annualAmtMan * 10_000).toLocaleString('ja-JP')}/年`;
+    const newEvents = project.events.map(ev =>
+      ev === event ? { ...ev, amt: newAmt } : ev
+    );
+    updateProject(project.id, p => ({
+      ...p,
+      plan: chartPlan,
+      events: newEvents,
+    }));
+  }
+
+  function handleTemplateSelect(cat: EduCategory, subtype: string, annualMan: number) {
+    if (!project || annualMan === 0) return;
+    const { startAge, duration } = SCHOOL_AGES[cat];
+    const childBirthYear = familyMembers.find(m => m.role === 'child')?.birthYear ?? NOW_YEAR;
+    const startYear = cat === '習い事' ? NOW_YEAR : childBirthYear + startAge;
+
+    const startIdx = project.years.findIndex(y => parseYear(y) >= startYear);
+    const safeIdx = startIdx === -1 ? project.years.length - 1 : startIdx;
+
+    const endYear = startYear + duration - 1;
+    const totalMan = annualMan * duration;
+    const newPlan = [...chartPlan];
+    for (let i = safeIdx; i < newPlan.length; i++) {
+      newPlan[i] = Math.max(0, newPlan[i] - totalMan);
+    }
+    setChartPlan(newPlan);
+
+    const eventName = cat === '習い事'
+      ? `習い事（月${Math.round(annualMan / 12)}万円）`
+      : `${cat}${subtype !== cat ? `（${subtype}）` : ''}入学`;
+    const eventDetail = cat === '習い事'
+      ? `${startYear}年〜・月${Math.round(annualMan / 12)}万円`
+      : `${startYear}〜${endYear}年・年${annualMan}万円`;
+
+    const newEvent: ProjectEvent = {
+      idx: safeIdx,
+      type: 'spend',
+      dot: EXPENSE_C,
+      year: String(startYear),
+      name: eventName,
+      detail: eventDetail,
+      amt: `-¥${(annualMan * 10_000).toLocaleString('ja-JP')}/年`,
+      pos: false,
+    };
+
+    updateProject(project.id, p => ({
+      ...p,
+      plan: newPlan,
+      events: [...p.events, newEvent].sort((a, b) => a.idx - b.idx),
+    }));
   }
 
   if (!project) {
@@ -686,9 +637,6 @@ export default function ProjectDetailScreen() {
       </View>
     );
   }
-
-  const planCards   = activeTab === 'saving' ? savingPlanCards   : expensePlanCards;
-  const actualCards = activeTab === 'saving' ? savingActualCards : expenseActualCards;
 
   return (
     <View style={{ flex: 1, backgroundColor: BG }}>
@@ -706,7 +654,7 @@ export default function ProjectDetailScreen() {
           <Pressable onPress={() => setSheetVisible(true)} style={{ alignItems: 'flex-end' }}>
             <Text style={s.amtLabel}>{isAccount ? '現在の残高' : '現在の積み立て'}</Text>
             <Text style={s.amt}>{Math.round(currentAmount / 10000)}<Text style={s.amtUnit}>万円</Text></Text>
-            <Text style={s.amtSub}>{project.goalLabel} · {project.statusTxt}</Text>
+            <Text style={s.amtSub}>{project.goalLabel}</Text>
           </Pressable>
         </View>
       </View>
@@ -735,9 +683,9 @@ export default function ProjectDetailScreen() {
         <View style={s.graphTop}>
           {/* 凡例 */}
           <View style={s.legend}>
-            <View style={s.legendItem}><View style={s.legendDash} /><Text style={s.legendTxt}>計画</Text></View>
-            <View style={s.legendItem}><View style={s.legendLine} /><Text style={s.legendTxt}>実績</Text></View>
-            <View style={s.legendItem}><View style={s.legendDot} /><Text style={s.legendTxt}>支出</Text></View>
+            <View style={s.legendItem}><View style={s.legendLine} /><Text style={s.legendTxt}>試算</Text></View>
+            <View style={s.legendItem}><View style={s.legendDot} /><Text style={s.legendTxt}>夢★</Text></View>
+            <View style={s.legendItem}><View style={s.legendDotExp} /><Text style={s.legendTxt}>支出</Text></View>
             <Text style={s.legendUnit}>単位:万円</Text>
           </View>
           {/* 期間タブ */}
@@ -749,11 +697,10 @@ export default function ProjectDetailScreen() {
             ))}
           </View>
         </View>
-        <PlanActualChart
+        <TrialChart
           project={project} chartPlan={chartPlan} svgW={svgW}
           period={period} lifetimeYears={lifeYears}
           highlightYearIdx={highlightYearIdx} pulseOpacity={pulseOpacity}
-          selectedCardType={selectedCardType}
         />
       </View>
 
@@ -767,57 +714,29 @@ export default function ProjectDetailScreen() {
         ))}
       </View>
 
-      {/* 計画/実績ヘッダー */}
-      <View style={s.splitHdr}>
-        <View style={[s.splitH, { borderBottomColor: PLAN_C }]}>
-          <Text style={[s.splitHTxt, { color: PLAN_C }]}>計画</Text>
-        </View>
-        <View style={[s.splitH, { borderBottomColor: ACTUAL_C }]}>
-          <Text style={[s.splitHTxt, { color: ACTUAL_C }]}>実績</Text>
-        </View>
-      </View>
-
-      {/* 年表エリア */}
+      {/* 年表エリア（計画のみ1カラム） */}
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={[s.eventsContent, { paddingBottom: insets.bottom + 90 }]}
         showsVerticalScrollIndicator={false}
       >
-        {planCards.map((pc, i) => {
-          const ac = actualCards[i];
-          if (!ac) return null;
-          const isExp = activeTab === 'expense';
-          const dotFilled  = !ac.empty && !isExp;
-          const dotExpense = isExp;
-          const planSide: SideInfo = {
-            empty: false,
-            yearLabel: pc.yearLabel,
-            name: pc.name,
-            detail: 'detail' in pc ? pc.detail : undefined,
-            amtLabel: pc.amtLabel,
-            amtPos: !isExp,
-          };
-          const actualSide: SideInfo = ac.empty
-            ? { empty: true }
-            : { empty: false, yearLabel: ac.yearLabel, name: ac.name, detail: ac.detail || undefined, amtLabel: ac.amtLabel, amtPos: ac.amtPos };
-          return (
-            <EventCard
-              key={pc.cardId}
-              planSide={planSide}
-              actualSide={actualSide}
-              planCardId={pc.cardId}
-              actualCardId={ac.cardId}
-              planCardType={pc.cardType}
-              actualCardType={ac.cardType}
-              planYearIdx={pc.yearIdx}
-              actualYearIdx={ac.yearIdx}
-              dotFilled={dotFilled}
-              dotExpense={dotExpense}
-              selectedCardId={selectedCardId}
-              onSelect={handleCardSelect}
-            />
-          );
-        })}
+        {planCards.map(card => (
+          <PlanCard
+            key={card.cardId}
+            yearLabel={card.yearLabel}
+            name={card.name}
+            detail={'detail' in card ? card.detail : undefined}
+            amtLabel={card.amtLabel}
+            amtPos={activeTab === 'saving'}
+            isSelected={selectedCardId === card.cardId}
+            onPress={() => handleCardSelect(card.cardId, card.yearIdx)}
+          />
+        ))}
+        {activeTab === 'expense' && (
+          <Pressable style={s.addBtn} onPress={() => setActivePopup('add-expense')}>
+            <Text style={s.addBtnTxt}>+ 支出を追加</Text>
+          </Pressable>
+        )}
       </ScrollView>
 
       {/* 下部固定ボタン */}
@@ -841,7 +760,7 @@ export default function ProjectDetailScreen() {
         onClose={() => setSheetVisible(false)}
       />
 
-      {/* ── ポップアップ */}
+      {/* 積立計画ポップアップ */}
       <PlanSavingPopup
         visible={activePopup === 'plan-saving'}
         yearLabel={popupContext.label}
@@ -852,6 +771,7 @@ export default function ProjectDetailScreen() {
         onSave={handleSavePlanSaving}
       />
 
+      {/* 支出計画ポップアップ */}
       <PlanExpensePopup
         visible={activePopup === 'plan-expense'}
         eventName={popupContext.name}
@@ -859,41 +779,14 @@ export default function ProjectDetailScreen() {
         modalHeight={graphCardBottom > 0 ? screenHeight - graphCardBottom : screenHeight * 0.6}
         onClose={() => { setActivePopup(null); if (project) setChartPlan([...project.plan]); }}
         onAmountChange={handlePlanExpenseAmountChange}
-        onSave={() => {}}
+        onSave={handleSavePlanExpense}
       />
 
-      <ActualRecordPopup
-        visible={activePopup === 'actual-saving'}
-        title="積立を記録する"
-        sub={`実績 ・ ${popupContext.label}`}
-        isExpense={false}
-        monthData={savingMonthData}
-        onDataChange={(idx, delta) => {
-          setSavingMonthData(prev => {
-            const next = [...prev];
-            next[idx] = { ...next[idx], actual: Math.max(0, next[idx].actual + delta) };
-            return next;
-          });
-        }}
+      {/* 教育費テンプレート選択モーダル */}
+      <ExpenseTemplatePicker
+        visible={activePopup === 'add-expense'}
         onClose={() => setActivePopup(null)}
-        onSave={() => {}}
-      />
-
-      <ActualRecordPopup
-        visible={activePopup === 'actual-expense'}
-        title="支出を記録する"
-        sub={`実績 ・ ${popupContext.label}`}
-        isExpense={true}
-        monthData={expenseMonthData}
-        onDataChange={(idx, delta) => {
-          setExpenseMonthData(prev => {
-            const next = [...prev];
-            next[idx] = { ...next[idx], actual: Math.max(0, next[idx].actual + delta) };
-            return next;
-          });
-        }}
-        onClose={() => setActivePopup(null)}
-        onSave={() => {}}
+        onSelect={handleTemplateSelect}
       />
     </View>
   );
@@ -905,7 +798,7 @@ export default function ProjectDetailScreen() {
 
 const s = StyleSheet.create({
   hdr: { backgroundColor: BG, paddingHorizontal: 16, paddingBottom: 10 },
-  back: { fontSize: 16, color: ACTUAL_C, fontWeight: '500', marginBottom: 6 },
+  back: { fontSize: 16, color: TRIAL_C, fontWeight: '500', marginBottom: 6 },
   hdrRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 },
   projName: { fontSize: 20, fontWeight: '600', color: TXT_PRI, letterSpacing: -0.3, lineHeight: 24 },
   timing: { fontSize: 11, color: TXT_TER, marginTop: 2 },
@@ -919,9 +812,9 @@ const s = StyleSheet.create({
     backgroundColor: '#EAF3DE', borderRadius: 12, padding: 9,
     flexDirection: 'row', alignItems: 'flex-start', gap: 8,
   },
-  aiIcon: { fontSize: 14, color: ACTUAL_C, lineHeight: 22 },
-  aiLabel: { fontSize: 11, color: ACTUAL_C, fontWeight: '500', marginBottom: 1 },
-  aiTxt: { fontSize: 12, color: ACTUAL_C, lineHeight: 16 },
+  aiIcon: { fontSize: 14, color: TRIAL_C, lineHeight: 22 },
+  aiLabel: { fontSize: 11, color: TRIAL_C, fontWeight: '500', marginBottom: 1 },
+  aiTxt: { fontSize: 12, color: TRIAL_C, lineHeight: 16 },
 
   graphCard: {
     backgroundColor: CARD, borderRadius: 12,
@@ -932,9 +825,9 @@ const s = StyleSheet.create({
   graphTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, flexWrap: 'wrap', gap: 8 },
   legend: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  legendDash: { width: 14, height: 0, borderTopWidth: 2, borderTopColor: PLAN_C, borderStyle: 'dashed' },
-  legendLine: { width: 14, height: 2, backgroundColor: ACTUAL_C, borderRadius: 1 },
-  legendDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: EXPENSE_C },
+  legendLine: { width: 14, height: 2.5, backgroundColor: TRIAL_C, borderRadius: 1 },
+  legendDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: DREAM_C },
+  legendDotExp: { width: 8, height: 8, borderRadius: 4, backgroundColor: EXPENSE_C },
   legendTxt: { fontSize: 10, color: TXT_SEC },
   legendUnit: { fontSize: 9, color: TXT_TER, marginLeft: 4 },
   periodRow: { flexDirection: 'row', gap: 4 },
@@ -942,7 +835,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 9, paddingVertical: 3, borderRadius: 14,
     borderWidth: 0.5, borderColor: BORDER_MD,
   },
-  periodBtnActive: { backgroundColor: PLAN_C, borderColor: PLAN_C },
+  periodBtnActive: { backgroundColor: TRIAL_C, borderColor: TRIAL_C },
   periodTxt: { fontSize: 10, color: TXT_SEC },
   periodTxtActive: { color: '#fff', fontWeight: '500' },
 
@@ -952,16 +845,19 @@ const s = StyleSheet.create({
     gap: 5, paddingVertical: 8, borderRadius: 10,
     borderWidth: 0.5, borderColor: BORDER_MD,
   },
-  typeTabActive: { backgroundColor: ACTUAL_C, borderColor: ACTUAL_C },
+  typeTabActive: { backgroundColor: TRIAL_C, borderColor: TRIAL_C },
   typeTabIcon: { fontSize: 14 },
   typeTabTxt: { fontSize: 13, fontWeight: '500', color: TXT_SEC },
   typeTabTxtActive: { color: '#fff', fontWeight: '600' },
 
-  splitHdr: { flexDirection: 'row', marginHorizontal: 16, marginBottom: 6 },
-  splitH: { flex: 1, alignItems: 'center', paddingVertical: 5, borderBottomWidth: 2 },
-  splitHTxt: { fontSize: 12, fontWeight: '600' },
-
   eventsContent: { paddingHorizontal: 16 },
+
+  addBtn: {
+    marginTop: 8, padding: 16,
+    borderWidth: 1, borderColor: BORDER_MD, borderStyle: 'dashed',
+    borderRadius: 12, alignItems: 'center',
+  },
+  addBtnTxt: { fontSize: 14, color: TXT_SEC, fontWeight: '500' },
 
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
@@ -969,7 +865,7 @@ const s = StyleSheet.create({
     backgroundColor: BG,
   },
   editBtn: {
-    backgroundColor: ACTUAL_C, borderRadius: 14,
+    backgroundColor: TRIAL_C, borderRadius: 14,
     paddingVertical: 13, alignItems: 'center',
   },
   editBtnDisabled: { backgroundColor: 'rgba(0,0,0,0.15)' },
@@ -977,38 +873,26 @@ const s = StyleSheet.create({
   editBtnTxtDisabled: { color: TXT_TER },
 });
 
-const ec = StyleSheet.create({
+const pc = StyleSheet.create({
   card: {
     backgroundColor: CARD, borderRadius: 12, marginBottom: 6,
     borderWidth: 0.5, borderColor: BORDER,
-    flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden',
+    flexDirection: 'row', alignItems: 'flex-start',
+    paddingVertical: 12, paddingHorizontal: 14,
+    overflow: 'hidden',
   },
-  side: {
-    flex: 1, padding: 10, minHeight: 70,
-    borderWidth: 1.5, borderColor: 'transparent', borderRadius: 10, margin: -1,
-  },
-  sideSel: { backgroundColor: '#E6F1FB', borderColor: '#185FA5' },
-  div: { width: 1, backgroundColor: BORDER, justifyContent: 'center', alignItems: 'center' },
+  cardSel: { backgroundColor: '#E6F6F1', borderColor: TRIAL_C, borderWidth: 1.5 },
   dot: {
     width: 10, height: 10, borderRadius: 5,
-    borderWidth: 1.5, borderColor: BORDER_MD, backgroundColor: CARD,
-    position: 'absolute',
+    backgroundColor: TRIAL_C, marginTop: 3,
+    flexShrink: 0,
   },
-  dotFill: { backgroundColor: ACTUAL_C, borderColor: ACTUAL_C },
-  dotExp: { backgroundColor: EXPENSE_C, borderColor: EXPENSE_C },
   year: { fontSize: 11, color: TXT_SEC, marginBottom: 2 },
-  name: { fontSize: 12, fontWeight: '600', color: TXT_PRI, lineHeight: 16, marginBottom: 1 },
+  name: { fontSize: 13, fontWeight: '600', color: TXT_PRI, lineHeight: 16, marginBottom: 1 },
   detail: { fontSize: 10, color: TXT_TER, lineHeight: 14, marginBottom: 2 },
   amt: { fontSize: 12, fontWeight: '600' },
-  amtPos: { color: PLAN_C },
+  amtPos: { color: TRIAL_C },
   amtNeg: { color: EXPENSE_C },
-  emptyBox: {
-    flex: 1, margin: 8, borderWidth: 1, borderColor: BORDER_MD,
-    borderStyle: 'dashed', borderRadius: 8,
-    justifyContent: 'center', alignItems: 'center', gap: 2, minHeight: 54,
-  },
-  emptyIcon: { fontSize: 14, color: TXT_TER },
-  emptyTxt: { fontSize: 11, fontWeight: '500', color: TXT_SEC },
 });
 
 const pop = StyleSheet.create({
@@ -1039,7 +923,7 @@ const pop = StyleSheet.create({
     paddingHorizontal: 12, paddingVertical: 5, borderRadius: 14,
     borderWidth: 0.5, borderColor: BORDER_MD,
   },
-  unitTabActive: { backgroundColor: PLAN_C, borderColor: PLAN_C },
+  unitTabActive: { backgroundColor: TRIAL_C, borderColor: TRIAL_C },
   unitTabTxt: { fontSize: 11, color: TXT_SEC },
   unitTabTxtActive: { color: '#fff', fontWeight: '500' },
   actions: { flexDirection: 'row', gap: 8, marginTop: 16 },
@@ -1048,37 +932,28 @@ const pop = StyleSheet.create({
     borderWidth: 0.5, borderColor: BORDER_MD, borderRadius: 12,
   },
   btnSecTxt: { fontSize: 14, color: TXT_SEC },
-  btnPri: { flex: 1, backgroundColor: ACTUAL_C, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
+  btnPri: { flex: 1, backgroundColor: TRIAL_C, borderRadius: 12, paddingVertical: 12, alignItems: 'center' },
   btnPriTxt: { fontSize: 14, fontWeight: '600', color: '#fff' },
 });
 
-const bar = StyleSheet.create({
-  wrap: {
-    backgroundColor: CARD, borderRadius: 10,
-    padding: 10, borderWidth: 0.5, borderColor: BORDER,
-    marginBottom: 12,
+const tpl = StyleSheet.create({
+  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  cell: {
+    width: '30%', backgroundColor: CARD,
+    borderRadius: 12, padding: 12,
+    alignItems: 'center', gap: 4,
+    borderWidth: 0.5, borderColor: BORDER,
   },
-  chart: { flexDirection: 'row', alignItems: 'flex-end', height: 100, paddingBottom: 16 },
-  col: { width: 32, alignItems: 'center', marginHorizontal: 2 },
-  pair: { flexDirection: 'row', alignItems: 'flex-end', gap: 2, height: 80, justifyContent: 'center' },
-  barBase: { width: 10, borderRadius: 2 },
-  label: { fontSize: 9, color: TXT_TER, marginTop: 2 },
-  listWrap: { backgroundColor: CARD, borderRadius: 10, borderWidth: 0.5, borderColor: BORDER, overflow: 'hidden' },
-  row: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12,
-    borderBottomWidth: 0.5, borderBottomColor: BORDER, gap: 8,
+  emoji: { fontSize: 24 },
+  cellTxt: { fontSize: 12, fontWeight: '600', color: TXT_PRI, textAlign: 'center' },
+  subtypeRow: {
+    flexDirection: 'row', alignItems: 'center',
+    backgroundColor: CARD, borderRadius: 12, padding: 14,
+    marginBottom: 8, borderWidth: 0.5, borderColor: BORDER,
   },
-  rowWarn: { backgroundColor: 'rgba(239,159,39,0.06)' },
-  month: { fontSize: 12, color: TXT_SEC, fontWeight: '500', width: 38 },
-  planLbl: { flex: 1, fontSize: 10, color: TXT_TER },
-  statusLbl: { fontSize: 10, color: WARN_TXT, fontWeight: '500', marginRight: 4 },
-  ctrl: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  ctrlBtn: {
-    width: 28, height: 28, borderRadius: 14,
-    borderWidth: 0.5, borderColor: BORDER_MD, backgroundColor: CARD,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  ctrlBtnTxt: { fontSize: 14, color: TXT_PRI },
-  ctrlVal: { fontSize: 13, fontWeight: '600', color: TXT_PRI, minWidth: 50, textAlign: 'center' },
-  ctrlUnit: { fontSize: 10, color: TXT_SEC, fontWeight: '400' },
+  subtypeName: { fontSize: 15, fontWeight: '600', color: TXT_PRI },
+  subtypeAmt: { fontSize: 12, color: TXT_SEC, marginTop: 2 },
+  subtypeArrow: { fontSize: 22, color: TXT_SEC },
+  backBtn: { marginTop: 8, padding: 12, alignItems: 'center' },
+  backBtnTxt: { fontSize: 14, color: TRIAL_C, fontWeight: '500' },
 });

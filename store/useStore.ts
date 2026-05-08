@@ -141,6 +141,7 @@ type Actions = {
   setPremium: (val: boolean) => void;
   setPayday: (day: number, amount: number) => void;
   resetToDefaults: () => void;
+  updateProject: (id: string, updater: (p: Project) => Project) => void;
 };
 
 function dateLabel(): string {
@@ -445,6 +446,12 @@ export const useStore = create<State & Actions>()(
         scenariosData: {},
         aiInsights: {},
       }),
+
+      updateProject: (id, updater) =>
+        set(s => {
+          if (!s.projects[id]) return s;
+          return { projects: { ...s.projects, [id]: updater(s.projects[id]) } };
+        }),
     }),
     {
       name: 'tsukaidoki-store',
