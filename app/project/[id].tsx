@@ -165,24 +165,23 @@ function PlanActualChart({
 // 積立計画ポップアップ
 // ══════════════════════════════════════════════
 function PlanSavingPopup({
-  visible, yearLabel, initAmt,
+  visible, yearLabel, initAmt, modalHeight,
   onClose, onAmountChange, onSave,
 }: {
-  visible: boolean; yearLabel: string; initAmt: number;
+  visible: boolean; yearLabel: string; initAmt: number; modalHeight: number;
   onClose: () => void;
   onAmountChange: (amt: number) => void;
   onSave: (amt: number) => void;
 }) {
-  const { height: H } = useWindowDimensions();
   const [amt, setAmt] = useState(initAmt);
   useEffect(() => { if (visible) setAmt(initAmt); }, [visible, initAmt]);
   const minus = () => { const n = Math.max(0, amt - 1); setAmt(n); onAmountChange(n); };
   const plus  = () => { const n = amt + 1; setAmt(n); onAmountChange(n); };
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={pop.backdrop} onPress={onClose} />
-        <View style={[pop.sheet, { height: H * 0.6 }]}>
+        <View style={[pop.sheet, { height: modalHeight }]}>
           <View style={pop.handle} />
           <Text style={pop.title}>いくら積み立てる？</Text>
           <Text style={pop.sub}>計画 ・ {yearLabel}</Text>
@@ -210,15 +209,14 @@ function PlanSavingPopup({
 // 支出計画ポップアップ
 // ══════════════════════════════════════════════
 function PlanExpensePopup({
-  visible, eventName, initAmt,
+  visible, eventName, initAmt, modalHeight,
   onClose, onAmountChange, onSave,
 }: {
-  visible: boolean; eventName: string; initAmt: number;
+  visible: boolean; eventName: string; initAmt: number; modalHeight: number;
   onClose: () => void;
   onAmountChange: (amt: number) => void;
   onSave: (amt: number) => void;
 }) {
-  const { height: H } = useWindowDimensions();
   const [amt, setAmt] = useState(initAmt);
   const [unit, setUnit] = useState<'year' | 'month'>('year');
   useEffect(() => { if (visible) setAmt(initAmt); }, [visible, initAmt]);
@@ -226,9 +224,9 @@ function PlanExpensePopup({
   const plus  = () => { const n = amt + 1; setAmt(n); onAmountChange(n); };
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={pop.backdrop} onPress={onClose} />
-        <View style={[pop.sheet, { height: H * 0.6 }]}>
+        <View style={[pop.sheet, { height: modalHeight }]}>
           <View style={pop.handle} />
           <Text style={pop.title}>いつ、いくら使う予定？</Text>
           <Text style={pop.sub}>計画 ・ {eventName}</Text>
@@ -305,7 +303,7 @@ function ActualRecordPopup({
 
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={{ flex: 1 }}>
+      <View style={{ flex: 1, justifyContent: 'flex-end' }}>
         <Pressable style={pop.backdrop} onPress={onClose} />
         <View style={[pop.sheet, { height: H * 0.8 }]}>
           <View style={pop.handle} />
@@ -443,8 +441,10 @@ export default function ProjectDetailScreen() {
   const project = projects[id ?? ''];
   const isAccount = project?.kind === 'account';
   const insets = useSafeAreaInsets();
-  const { width: screenWidth } = useWindowDimensions();
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   const svgW = screenWidth - 52;
+  const graphCardRef = useRef<View>(null);
+  const [graphCardBottom, setGraphCardBottom] = useState(0);
 
   const currentAmount = balances[id ?? ''] ?? project?.now ?? 0;
   const aiText = aiInsights[id ?? ''] ?? project?.ai ?? '';
@@ -645,6 +645,22 @@ export default function ProjectDetailScreen() {
     setChartPlan(newPlan);
   }
 
+  // ── リアルタイムグラフ更新（支出計画）
+  function handlePlanExpenseAmountChange(annualAmt: number) {
+    if (!project) return;
+    const idx = parseInt((selectedCardId ?? 'pe-0').split('-')[1]);
+    const pc  = expensePlanCards[idx];
+    if (!pc) return;
+    const eventIdx = pc.yearIdx;
+    const origAmt  = pc.amtMan;
+    const diff     = annualAmt - origAmt;
+    const newPlan  = [...project.plan];
+    for (let i = eventIdx; i < newPlan.length; i++) {
+      newPlan[i] = Math.max(0, project.plan[i] - diff);
+    }
+    setChartPlan(newPlan);
+  }
+
   // ── 保存
   function handleSavePlanSaving(amt: number) {
     const idx = parseInt((selectedCardId ?? 'ps-0').split('-')[1]);
@@ -707,7 +723,15 @@ export default function ProjectDetailScreen() {
       ) : null}
 
       {/* グラフカード */}
-      <View style={s.graphCard}>
+      <View
+        ref={graphCardRef}
+        style={s.graphCard}
+        onLayout={() => {
+          graphCardRef.current?.measure((_x, _y, _w, h, _px, py) => {
+            setGraphCardBottom(py + h);
+          });
+        }}
+      >
         <View style={s.graphTop}>
           {/* 凡例 */}
           <View style={s.legend}>
@@ -822,7 +846,8 @@ export default function ProjectDetailScreen() {
         visible={activePopup === 'plan-saving'}
         yearLabel={popupContext.label}
         initAmt={popupContext.amtMan}
-        onClose={() => setActivePopup(null)}
+        modalHeight={graphCardBottom > 0 ? screenHeight - graphCardBottom : screenHeight * 0.6}
+        onClose={() => { setActivePopup(null); if (project) setChartPlan([...project.plan]); }}
         onAmountChange={handlePlanSavingAmountChange}
         onSave={handleSavePlanSaving}
       />
@@ -831,8 +856,9 @@ export default function ProjectDetailScreen() {
         visible={activePopup === 'plan-expense'}
         eventName={popupContext.name}
         initAmt={popupContext.amtMan}
-        onClose={() => setActivePopup(null)}
-        onAmountChange={() => {}}
+        modalHeight={graphCardBottom > 0 ? screenHeight - graphCardBottom : screenHeight * 0.6}
+        onClose={() => { setActivePopup(null); if (project) setChartPlan([...project.plan]); }}
+        onAmountChange={handlePlanExpenseAmountChange}
         onSave={() => {}}
       />
 
@@ -940,7 +966,7 @@ const s = StyleSheet.create({
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     paddingHorizontal: 16, paddingTop: 10,
-    backgroundColor: 'transparent',
+    backgroundColor: BG,
   },
   editBtn: {
     backgroundColor: ACTUAL_C, borderRadius: 14,
