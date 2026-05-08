@@ -35,10 +35,6 @@ const GOAL_NAMES: Record<GoalId, string> = {
 const GOAL_TARGETS: Record<GoalId, number> = {
   edu: 5_000_000, ret: 30_000_000, car: 2_000_000, trip: 2_660_000,
 };
-const GOAL_TARGET_YEARS: Record<GoalId, number> = {
-  edu: 2044, ret: 2050, car: 2028, trip: 2037,
-};
-
 const RED = '#C74545';
 const RED_BG = 'rgba(199, 69, 69, 0.08)';
 const GREEN_BG_ALPHA = 'rgba(90, 130, 102, 0.10)';
@@ -131,10 +127,6 @@ function detectDeficit(series: BalanceSeries) {
     minBalance: Math.min(...defPts.map(p => p.balance)),
     minYear: defPts.reduce((a, b) => a.balance < b.balance ? a : b).year,
   };
-}
-
-function getRemainingAllocation(allocs: Record<string, number>): number {
-  return MAX_MONTHLY_POOL - Object.values(allocs).reduce((a, b) => a + b, 0);
 }
 
 // ─── 使いみち推移グラフ ────────────────────────────────────────────────────
@@ -458,13 +450,11 @@ const sl = StyleSheet.create({
 const SC_PL = 22, SC_PR = 8, SC_PT = 20, SC_PB = 10, SC_H = 140;
 
 function StackedAllocationChart({
-  entries, svgW, draftFromYear, draftToYear, maxMonthly, draftAllocations, draftPeriod, chartToYear,
+  entries, svgW, draftFromYear, draftToYear, maxMonthly, chartToYear,
 }: {
   entries: AllocationEntry[]; svgW: number;
   draftFromYear: number; draftToYear: number;
   maxMonthly: number;
-  draftAllocations: Record<string, number>;
-  draftPeriod: { from: number; to: number };
   chartToYear?: number;
 }) {
   const fromYear = Math.min(...entries.map(e => e.fromYear), NOW_YEAR);
@@ -488,7 +478,7 @@ function StackedAllocationChart({
 
   const goalOrder: GoalId[] = ['edu', 'ret', 'car', 'trip'];
 
-  function buildAreaPath(goalId: GoalId, prevStack: number[], curStack: number[]) {
+  function buildAreaPath(prevStack: number[], curStack: number[]) {
     if (!periods.length) return null;
     const pathParts: string[] = [];
     // top edge (left to right)
@@ -524,7 +514,7 @@ function StackedAllocationChart({
   });
   const prevStacks: number[][] = periods.map(p => {
     let cum = 0;
-    return goalOrder.map((gid, gi) => {
+    return goalOrder.map((_, gi) => {
       if (gi === 0) return 0;
       cum += p.allocs[goalOrder[gi - 1]] ?? 0;
       return cum;
@@ -550,7 +540,7 @@ function StackedAllocationChart({
       {goalOrder.map((gid, gi) => {
         const curStack = stacks.map(s => s[gi]);
         const prevStack = prevStacks.map(s => s[gi]);
-        const d = buildAreaPath(gid, prevStack, curStack);
+        const d = buildAreaPath(prevStack, curStack);
         if (!d) return null;
         return <Path key={gid} d={d} fill={GOAL_COLORS[gid]} opacity={0.85} />;
       })}
@@ -637,8 +627,6 @@ function PeriodPicker({
             draftFromYear={draftFromYear}
             draftToYear={draftToYear}
             maxMonthly={MAX_MONTHLY_POOL}
-            draftAllocations={draftAllocations}
-            draftPeriod={{ from: draftFromYear, to: draftToYear }}
             chartToYear={chartToYear}
           />
           <AgeAxis
@@ -857,11 +845,11 @@ function AdjustmentModal({
   useEffect(() => {
     if (visible) {
       Animated.spring(slideY, {
-        toValue: 0, useNativeDriver: true, speed: 16, bounciness: 0,
+        toValue: 0, useNativeDriver: false, speed: 16, bounciness: 0,
       }).start();
     } else {
       Animated.spring(slideY, {
-        toValue: screenH, useNativeDriver: true, speed: 20, bounciness: 0,
+        toValue: screenH, useNativeDriver: false, speed: 20, bounciness: 0,
       }).start();
     }
   }, [visible]);
