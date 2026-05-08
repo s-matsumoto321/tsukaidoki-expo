@@ -795,10 +795,10 @@ const ps = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  headerMainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12 },
+  headerMainRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12 },
   amtInline: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
-  mainAmt: { fontSize: 26, fontWeight: '500', color: colors.text, letterSpacing: -0.5, fontFamily: typography.display },
+  mainAmt: { fontSize: fontSizes.pageTitle, fontWeight: '500', color: colors.text, letterSpacing: -0.5, fontFamily: typography.display },
   mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display },
   diffRow: { fontSize: 13, fontWeight: '500', marginTop: 3, fontFamily: typography.display },
   diffWarn: { color: colors.honey },

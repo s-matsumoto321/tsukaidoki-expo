@@ -1032,61 +1032,6 @@ const ai = StyleSheet.create({
   txt: { fontSize: 12.5, color: colors.text, lineHeight: 1.7 * 12.5 },
 });
 
-// ─── 配分バー ─────────────────────────────────────────────────────────────────
-
-function AllocationBar({
-  goals, pfTotal, extras,
-}: {
-  goals: Array<{ id: GoalId; color: string; balance: number }>;
-  pfTotal: number;
-  extras?: Array<{ name: string; color: string; balance: number }>;
-}) {
-  const denominator = Math.max(pfTotal, 1);
-
-  return (
-    <View style={ab.card}>
-      <View style={ab.bar}>
-        {goals.map(g => (
-          <View key={g.id} style={{ flex: g.balance / denominator, backgroundColor: g.color, height: 10 }} />
-        ))}
-        {extras?.map((e, i) => (
-          <View key={`ex-${i}`} style={{ flex: e.balance / denominator, backgroundColor: e.color, height: 10 }} />
-        ))}
-      </View>
-      <View style={ab.legend}>
-        {goals.map(g => (
-          <View key={g.id} style={ab.lgItem}>
-            <View style={[ab.lgDot, { backgroundColor: g.color }]} />
-            <Text style={ab.lgTxt}>{GOAL_NAMES[g.id]} {Math.round(g.balance / denominator * 100)}%</Text>
-          </View>
-        ))}
-        {extras?.map((e, i) => (
-          <View key={`exl-${i}`} style={ab.lgItem}>
-            <View style={[ab.lgDot, { backgroundColor: e.color }]} />
-            <Text style={ab.lgTxt}>{e.name} {Math.round(e.balance / denominator * 100)}%</Text>
-          </View>
-        ))}
-      </View>
-    </View>
-  );
-}
-
-const ab = StyleSheet.create({
-  card: {
-    backgroundColor: colors.card, borderRadius: radius.md,
-    paddingHorizontal: 14, paddingVertical: 12,
-    marginBottom: 14, ...shadows.card,
-  },
-  bar: {
-    flexDirection: 'row', height: 10, borderRadius: 5,
-    overflow: 'hidden', marginBottom: 10, backgroundColor: '#ecedef',
-  },
-  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
-  lgItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  lgDot: { width: 8, height: 8, borderRadius: 4 },
-  lgTxt: { fontSize: 11, color: colors.textMid, fontFamily: typography.display },
-});
-
 // ─── PJカード（整合性表示・月積立額なし） ─────────────────────────────────
 
 type CardStatus = 'ok' | 'adj' | 'deficit';
@@ -1224,6 +1169,7 @@ export default function DreamsScreen() {
   const [draftFromYear, setDraftFromYear] = useState(NOW_YEAR);
   const [draftToYear, setDraftToYear] = useState(CHART_TO);
   const [liveGoalIds, setLiveGoalIds] = useState<Set<string>>(new Set());
+  const [chartOverlayHeight, setChartOverlayHeight] = useState(0);
 
   const selfBirthYear = familyMembers.find(m => m.id === 'self')?.birthYear ?? 1988;
   const partnerBirthYear = familyMembers.find(m => m.role === 'partner')?.birthYear ?? 1990;
@@ -1407,11 +1353,11 @@ export default function DreamsScreen() {
       <View style={s.header}>
         <View style={s.headerMainRow}>
           <Text style={s.pageTitle}>使いみち</Text>
+          {modalOpen && <Text style={s.previewBadge}>プレビュー中</Text>}
           <View style={s.amtInline}>
             <Text style={s.mainAmt}>{Math.floor(pfTotalForHeader / 10_000)}</Text>
             <Text style={s.mainUnit}>万円</Text>
           </View>
-          {modalOpen && <Text style={s.previewBadge}>プレビュー中</Text>}
         </View>
         <Animated.Text style={[s.diffRow, { color: animDiffColor }]}>
           {isHeaderAligned
@@ -1420,62 +1366,57 @@ export default function DreamsScreen() {
         </Animated.Text>
       </View>
 
-      {/* スクロール領域 */}
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={[s.content, { paddingBottom: insets.bottom + 160 }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* 推移グラフ（モーダル中も鮮明に表示） */}
-        <UsageTrendChart
-          seriesMap={displaySeries}
-          svgW={svgW}
-          isPreview={modalOpen}
-          seriesMapOrig={modalOpen ? seriesMapOrig : undefined}
-        />
+      {/* スクロール領域 ＋ 折れ線グラフ固定オーバーレイ */}
+      <View style={{ flex: 1 }}>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={[s.content, { paddingTop: chartOverlayHeight, paddingBottom: insets.bottom + 160 }]}
+          showsVerticalScrollIndicator={false}
+        >
+          {/* AIインサイト＋使いみちカード（モーダル中は薄く） */}
+          <View style={{ opacity: modalOpen ? 0.35 : 1 }} pointerEvents={modalOpen ? 'none' : 'auto'}>
+            <AiInsightCard text={aiText} />
 
-        {/* AIインサイト＋使いみちカード（モーダル中は薄く） */}
-        <View style={{ opacity: modalOpen ? 0.35 : 1 }} pointerEvents={modalOpen ? 'none' : 'auto'}>
-          <AllocationBar
-            goals={GOAL_IDS.map(id => ({
-              id,
-              color: GOAL_COLORS[id],
-              balance: balances[id] ?? pfItems.find(i => i.projectId === id)?.amount ?? 0,
-            }))}
-            pfTotal={pfTotalForHeader}
-            extras={(() => {
-              const surplus = pfItems.find(i => !i.projectId);
-              return surplus ? [{ name: '余剰', color: surplus.color, balance: surplus.amount }] : [];
-            })()}
+            {GOAL_IDS.map(goalId => {
+              const item = pfItems.find(i => i.projectId === goalId);
+              if (!item) return null;
+              const balance = balances[goalId] ?? item.amount;
+              const isDeficit = deficitGoals.includes(goalId);
+              return (
+                <PjCard
+                  key={goalId}
+                  color={GOAL_COLORS[goalId]}
+                  name={item.name}
+                  amount={balance}
+                  status={item.status}
+                  projectId={goalId}
+                  isDeficit={isDeficit}
+                  deficitAmt={minBalances[goalId]}
+                  progress={Math.min(1, balance / GOAL_TARGETS[goalId])}
+                  onLiveBalance={handlePjLiveChange}
+                  onCommit={handlePjBalanceSave}
+                />
+              );
+            })}
+          </View>
+        </ScrollView>
+
+        {/* 折れ線グラフ（固定表示・カードはこの下に潜る） */}
+        <View
+          style={s.chartOverlay}
+          onLayout={(e) => setChartOverlayHeight(e.nativeEvent.layout.height)}
+        >
+          <UsageTrendChart
+            seriesMap={displaySeries}
+            svgW={svgW}
+            isPreview={modalOpen}
+            seriesMapOrig={modalOpen ? seriesMapOrig : undefined}
           />
-          <AiInsightCard text={aiText} />
-
-          {GOAL_IDS.map(goalId => {
-            const item = pfItems.find(i => i.projectId === goalId);
-            if (!item) return null;
-            const balance = balances[goalId] ?? item.amount;
-            const isDeficit = deficitGoals.includes(goalId);
-            return (
-              <PjCard
-                key={goalId}
-                color={GOAL_COLORS[goalId]}
-                name={item.name}
-                amount={balance}
-                status={item.status}
-                projectId={goalId}
-                isDeficit={isDeficit}
-                deficitAmt={minBalances[goalId]}
-                progress={Math.min(1, balance / GOAL_TARGETS[goalId])}
-                onLiveBalance={handlePjLiveChange}
-                onCommit={handlePjBalanceSave}
-              />
-            );
-          })}
         </View>
-      </ScrollView>
+      </View>
 
       {/* 積立調整ボタン */}
-      <View style={[s.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN + BUTTON_BAR_BOTTOM_GAP }]}>
+      <View style={[s.bottomBar, { bottom: insets.bottom + TAB_BAR_HEIGHT + TAB_BAR_MARGIN }]}>
         <Pressable style={s.allocBtn} onPress={openModal}>
           <Text style={s.allocBtnTxt}>積立を調整する</Text>
         </Pressable>
@@ -1511,19 +1452,25 @@ const s = StyleSheet.create({
   header: {
     paddingHorizontal: spacing.xl, paddingTop: spacing.lg, paddingBottom: spacing.sm,
   },
-  headerMainRow: { flexDirection: 'row', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' },
+  headerMainRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' },
   amtInline: { flexDirection: 'row', alignItems: 'baseline', gap: 2 },
   pageTitle: { fontSize: fontSizes.pageTitle, fontFamily: typography.bodyBold, color: colors.text, lineHeight: fontSizes.pageTitle * 1.1 },
-  mainAmt: { fontSize: 26, fontWeight: '500', color: colors.text, letterSpacing: -0.5, fontFamily: typography.display },
+  mainAmt: { fontSize: fontSizes.pageTitle, fontWeight: '500', color: colors.text, letterSpacing: -0.5, fontFamily: typography.display },
   mainUnit: { fontSize: 14, color: colors.textMid, fontFamily: typography.display },
   diffRow: { fontSize: 13, fontWeight: '500', marginTop: 3, fontFamily: typography.display },
   diffWarn: { color: colors.honey },
   diffOk: { color: colors.sage },
   previewBadge: { fontSize: 12, color: SAGE, fontWeight: '700', marginLeft: 8 },
   content: { paddingHorizontal: spacing.lg, paddingTop: 4 },
+  chartOverlay: {
+    position: 'absolute', top: 0, left: 0, right: 0,
+    paddingHorizontal: spacing.lg, paddingTop: 4,
+    backgroundColor: colors.bg,
+    zIndex: 10,
+  },
   bottomBar: {
     position: 'absolute', left: 0, right: 0,
-    paddingHorizontal: spacing.lg, paddingTop: 10, paddingBottom: 10,
+    paddingHorizontal: spacing.lg, paddingTop: 10, paddingBottom: 10 + BUTTON_BAR_BOTTOM_GAP,
     backgroundColor: colors.bg,
     borderTopWidth: 1, borderTopColor: colors.divider,
     zIndex: 10,
