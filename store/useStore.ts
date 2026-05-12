@@ -656,6 +656,22 @@ export const useStore = create<State & Actions>()(
       name: 'tsukaidoki-store',
       version: 2,
       storage: createJSONStorage(() => AsyncStorage),
+      // v1 → v2：v3 エンティティのフィールドを欠落していたら初期値で補完する。
+      // 既存のシナリオ/残高/userEvents 等は保持する。
+      migrate: (persistedState, version) => {
+        if (version < 2 && persistedState && typeof persistedState === 'object') {
+          const ps = persistedState as Record<string, unknown>;
+          return {
+            ...ps,
+            accounts: ps.accounts ?? DEFAULT_ACCOUNTS,
+            accountSavingPlans: ps.accountSavingPlans ?? DEFAULT_ACCOUNT_SAVING_PLANS,
+            projectEntities: ps.projectEntities ?? DEFAULT_PROJECT_ENTITIES,
+            projectSavingPlans: ps.projectSavingPlans ?? DEFAULT_PROJECT_SAVING_PLANS,
+            expenses: ps.expenses ?? DEFAULT_EXPENSES,
+          };
+        }
+        return persistedState;
+      },
     },
   ),
 );
