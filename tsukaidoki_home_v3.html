@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ツカイドキ ホーム</title>
+<style>
+:root {
+  --bg-primary: #f5f4ee;
+  --bg-card: #ffffff;
+  --text-primary: #2c2c2a;
+  --text-secondary: #73726c;
+  --text-tertiary: #9c9a92;
+  --border: rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.18);
+  --pool-color: #185FA5;
+  --usage-color: #1D9E75;
+  --expense-color: #E24B4A;
+  --warn: #9c5800;
+  --warn-bg: #FAEEDA;
+  --ok: #27500A;
+  --ai-bg: #EAF3DE;
+  --ai-color: #1D9E75;
+  --tab-active-bg: rgba(29, 158, 117, 0.12);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; width: 100%; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Sans", "Yu Gothic", Meiryo, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  -webkit-tap-highlight-color: transparent;
+}
+
+.app {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ヘッダー */
+.hdr {
+  padding: max(env(safe-area-inset-top), 12px) 20px 12px;
+  flex-shrink: 0;
+}
+.hdr-title {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  letter-spacing: -0.5px;
+  margin-bottom: 10px;
+}
+.scenario-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  background: var(--ai-bg);
+  border-radius: 20px;
+  font-size: 13px;
+  color: var(--ai-color);
+  font-weight: 500;
+  cursor: pointer;
+}
+.scenario-pill .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ai-color);
+}
+.scenario-pill .chev {
+  font-size: 11px;
+  margin-left: 2px;
+}
+
+/* メインスクロールエリア */
+.main {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0 16px calc(env(safe-area-inset-bottom) + 80px);
+}
+
+/* 総資産カード */
+.total-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 12px;
+  border: 0.5px solid var(--border);
+}
+.total-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.total-amount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.total-value {
+  font-size: 36px;
+  font-weight: 600;
+  color: var(--text-primary);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+.total-unit {
+  font-size: 16px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.total-status {
+  font-size: 12px;
+  color: var(--ok);
+  font-weight: 500;
+}
+.total-status.warn { color: var(--warn); }
+
+/* 残高推移グラフカード */
+.chart-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 14px 16px 10px;
+  margin-bottom: 12px;
+  border: 0.5px solid var(--border);
+}
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.chart-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.period-tabs {
+  display: flex;
+  gap: 4px;
+}
+.period-tab {
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 14px;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 0.5px solid var(--border-strong);
+  cursor: pointer;
+  font-family: inherit;
+}
+.period-tab.active {
+  background: var(--pool-color);
+  color: white;
+  border-color: var(--pool-color);
+  font-weight: 500;
+}
+
+.legend {
+  display: flex;
+  gap: 14px;
+  margin: 6px 0 2px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.legend-line {
+  width: 18px;
+  height: 2px;
+  border-radius: 1px;
+}
+.legend-line.pool { background: var(--pool-color); }
+.legend-line.usage { background: var(--usage-color); }
+.legend-unit {
+  margin-left: auto;
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+
+.chart-svg-wrap { width: 100%; }
+.chart-svg-wrap svg { display: block; width: 100%; height: auto; }
+
+/* AIインサイト */
+.ai-card {
+  background: var(--ai-bg);
+  border-radius: 14px;
+  padding: 14px 18px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.ai-icon {
+  font-size: 16px;
+  color: var(--ai-color);
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+.ai-body { flex: 1; }
+.ai-title {
+  font-size: 12px;
+  color: var(--ai-color);
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+.ai-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* 支出リスト */
+.expense-card {
+  background: var(--bg-card);
+  border-radius: 14px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  border: 0.5px solid var(--border);
+}
+.expense-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.expense-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.expense-year {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+.expense-list {
+  display: flex;
+  flex-direction: column;
+}
+.expense-row {
+  display: flex;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--border);
+  gap: 10px;
+  cursor: pointer;
+}
+.expense-row:last-of-type { border-bottom: none; }
+.expense-row.past { opacity: 0.5; }
+.expense-row.past .expense-amount { color: var(--text-tertiary); }
+.expense-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.expense-month {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  width: 36px;
+  flex-shrink: 0;
+}
+.expense-name {
+  font-size: 13px;
+  color: var(--text-primary);
+  flex: 1;
+}
+.expense-amount {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--expense-color);
+}
+.expense-amount .unit {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 1px;
+}
+
+.expense-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 0.5px solid var(--border-strong);
+}
+.expense-total-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+.expense-total-value {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--expense-color);
+}
+.expense-total-value .unit {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  margin-left: 1px;
+}
+
+/* タブバー */
+.tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(245, 244, 238, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  padding: 8px 8px calc(env(safe-area-inset-bottom) + 8px);
+  display: flex;
+  justify-content: space-around;
+  border-top: 0.5px solid var(--border);
+}
+.tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0;
+  cursor: pointer;
+  border-radius: 14px;
+  transition: background 0.2s;
+}
+.tab.active { background: var(--tab-active-bg); }
+.tab-icon {
+  font-size: 20px;
+  color: var(--text-tertiary);
+}
+.tab.active .tab-icon { color: var(--ai-color); }
+.tab-label {
+  font-size: 10px;
+  color: var(--text-tertiary);
+}
+.tab.active .tab-label { color: var(--ai-color); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <!-- ヘッダー -->
+  <div class="hdr">
+    <div class="hdr-title">ホーム</div>
+    <div class="scenario-pill">
+      <span class="dot"></span>
+      <span>プランA：メイン</span>
+      <span class="chev">▼</span>
+    </div>
+  </div>
+
+  <!-- メイン -->
+  <div class="main">
+
+    <!-- 総資産 -->
+    <div class="total-card">
+      <div class="total-label">総資産</div>
+      <div class="total-amount">
+        <span class="total-value">1,037</span>
+        <span class="total-unit">万円</span>
+      </div>
+      <div class="total-status">✓ プール金と使いみちが一致</div>
+    </div>
+
+    <!-- 残高推移グラフ -->
+    <div class="chart-card">
+      <div class="chart-header">
+        <div class="chart-title">残高推移</div>
+        <div class="period-tabs">
+          <button class="period-tab active" data-period="50">50年</button>
+          <button class="period-tab" data-period="10">10年</button>
+          <button class="period-tab" data-period="5">5年</button>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-line pool"></div>プール金</div>
+        <div class="legend-item"><div class="legend-line usage"></div>使いみち</div>
+        <span class="legend-unit">単位:万円</span>
+      </div>
+      <div class="chart-svg-wrap">
+        <svg viewBox="0 0 360 180" id="chart-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+      </div>
+    </div>
+
+    <!-- AIインサイト -->
+    <div class="ai-card">
+      <div class="ai-icon">✦</div>
+      <div class="ai-body">
+        <div class="ai-title">AIインサイト</div>
+        <div class="ai-text">2076年まで赤字なしで運用できる見込みです。教育費ピーク（2044年）も計画通り乗り越えられます。</div>
+      </div>
+    </div>
+
+    <!-- 今年の支出予定 -->
+    <div class="expense-card">
+      <div class="expense-header">
+        <div class="expense-title">今年の支出予定</div>
+        <div class="expense-year">2026年</div>
+      </div>
+      <div class="expense-list" id="expense-list">
+        <!-- JSで生成 -->
+      </div>
+      <div class="expense-total">
+        <span class="expense-total-label">合計</span>
+        <span class="expense-total-value">-48<span class="unit">万円</span></span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- タブバー -->
+  <div class="tabbar">
+    <div class="tab"><div class="tab-icon">📊</div><div class="tab-label">シナリオ</div></div>
+    <div class="tab"><div class="tab-icon">🏦</div><div class="tab-label">プール金</div></div>
+    <div class="tab active"><div class="tab-icon">🏠</div><div class="tab-label">ホーム</div></div>
+    <div class="tab"><div class="tab-icon">✨</div><div class="tab-label">使いみち</div></div>
+    <div class="tab"><div class="tab-icon">⚙️</div><div class="tab-label">設定</div></div>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  var SVG_NS = 'http://www.w3.org/2000/svg';
+
+  // データ（プール金と使いみちの推移）
+  // 年単位で50年分
+  // プール金は口座の利回り（平均5%程度の運用）
+  // 使いみちはPJの想定利回り（平均3%程度）
+  var startYear = 2026;
+  var chartDataset = {
+    50: {
+      years: Array.from({length: 11}, (_, i) => startYear + i * 5),
+      pool: [1037, 1450, 1980, 2700, 3680, 4760, 5980, 7200, 8400, 9300, 9800],
+      usage: [1037, 1380, 1820, 2380, 3050, 3750, 4480, 5180, 5850, 6320, 6500]
+    },
+    10: {
+      years: Array.from({length: 6}, (_, i) => startYear + i * 2),
+      pool: [1037, 1230, 1450, 1700, 1980, 2300],
+      usage: [1037, 1210, 1380, 1580, 1820, 2080]
+    },
+    5: {
+      years: Array.from({length: 6}, (_, i) => startYear + i),
+      pool: [1037, 1130, 1230, 1340, 1450, 1570],
+      usage: [1037, 1120, 1210, 1300, 1380, 1480]
+    }
+  };
+
+  var currentPeriod = 50;
+
+  function makeSvgEl(tag, attrs) {
+    var el = document.createElementNS(SVG_NS, tag);
+    if (attrs) for (var k in attrs) el.setAttribute(k, attrs[k]);
+    return el;
+  }
+
+  function drawChart() {
+    var W = 360, H = 180;
+    var PL = 36, PR = 12, PT = 14, PB = 22;
+    var gW = W - PL - PR, gH = H - PT - PB;
+    var data = chartDataset[currentPeriod];
+    var n = data.years.length;
+    var maxVal = Math.max.apply(null, data.pool.concat(data.usage));
+    // 100単位で切り上げ
+    maxVal = Math.ceil(maxVal / 1000) * 1000;
+    if (maxVal < 100) maxVal = 100;
+
+    function xi(i) { return PL + i * (gW / (n - 1)); }
+    function yv(v) { return PT + gH - (v / maxVal) * gH; }
+
+    var svg = document.getElementById('chart-svg');
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+    // Y軸
+    var tickCount = 4;
+    for (var i = 0; i <= tickCount; i++) {
+      var v = (maxVal / tickCount) * i;
+      var y = yv(v);
+      svg.appendChild(makeSvgEl('line', {
+        x1: PL, y1: y, x2: W - PR, y2: y,
+        stroke: 'rgba(0,0,0,0.06)', 'stroke-width': 0.5
+      }));
+      var label = makeSvgEl('text', {
+        x: PL - 6, y: y + 3, 'text-anchor': 'end',
+        'font-size': 9, fill: '#9c9a92'
+      });
+      label.textContent = v >= 1000 ? (v/1000) + '千' : v;
+      svg.appendChild(label);
+    }
+
+    // X軸ラベル（最初・中間・最後など3〜5箇所）
+    var labelIndices = [];
+    var labelCount = Math.min(5, n);
+    for (var i = 0; i < labelCount; i++) {
+      labelIndices.push(Math.round(i * (n - 1) / (labelCount - 1)));
+    }
+    labelIndices.forEach(function(i) {
+      var label = makeSvgEl('text', {
+        x: xi(i), y: H - 6, 'text-anchor': 'middle',
+        'font-size': 9, fill: '#9c9a92'
+      });
+      label.textContent = data.years[i];
+      svg.appendChild(label);
+    });
+
+    // プール金ライン（青実線）
+    var poolPts = data.pool.map(function(v, i) { return xi(i) + ',' + yv(v); }).join(' ');
+    svg.appendChild(makeSvgEl('polyline', {
+      points: poolPts, fill: 'none',
+      stroke: '#185FA5', 'stroke-width': 2,
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    }));
+
+    // 使いみちライン（緑実線）
+    var usagePts = data.usage.map(function(v, i) { return xi(i) + ',' + yv(v); }).join(' ');
+    svg.appendChild(makeSvgEl('polyline', {
+      points: usagePts, fill: 'none',
+      stroke: '#1D9E75', 'stroke-width': 2,
+      'stroke-linecap': 'round', 'stroke-linejoin': 'round'
+    }));
+
+    // 開始点のドット
+    svg.appendChild(makeSvgEl('circle', {
+      cx: xi(0), cy: yv(data.pool[0]), r: 3, fill: '#185FA5'
+    }));
+    svg.appendChild(makeSvgEl('circle', {
+      cx: xi(0), cy: yv(data.usage[0]), r: 3, fill: '#1D9E75'
+    }));
+    // 終端のドット
+    svg.appendChild(makeSvgEl('circle', {
+      cx: xi(n-1), cy: yv(data.pool[n-1]), r: 3, fill: '#185FA5'
+    }));
+    svg.appendChild(makeSvgEl('circle', {
+      cx: xi(n-1), cy: yv(data.usage[n-1]), r: 3, fill: '#1D9E75'
+    }));
+  }
+
+  drawChart();
+
+  // 期間タブ
+  document.querySelectorAll('.period-tab').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('.period-tab').forEach(function(b) { b.classList.remove('active'); });
+      btn.classList.add('active');
+      currentPeriod = parseInt(btn.getAttribute('data-period'));
+      drawChart();
+    });
+  });
+
+  // 支出リスト（2026年）
+  // 今が6月想定。5月以前は過去
+  var currentMonth = 6;
+  var expenses = [
+    {month: 2, name: '車検', amount: 8, color: '#EF9F27'},
+    {month: 5, name: '保育園入園金', amount: 10, color: '#185FA5'},
+    {month: 8, name: '家族旅行', amount: 30, color: '#534AB7'}
+  ];
+
+  var listEl = document.getElementById('expense-list');
+  expenses.forEach(function(e) {
+    var isPast = e.month < currentMonth;
+    var row = document.createElement('div');
+    row.className = 'expense-row' + (isPast ? ' past' : '');
+    row.innerHTML = 
+      '<div class="expense-dot" style="background:' + e.color + ';"></div>' +
+      '<div class="expense-month">' + e.month + '月</div>' +
+      '<div class="expense-name">' + e.name + '</div>' +
+      '<div class="expense-amount">-' + e.amount + '<span class="unit">万円</span></div>';
+    listEl.appendChild(row);
+  });
+})();
+</script>
+
+</body>
+</html>
