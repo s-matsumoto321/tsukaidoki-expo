@@ -3,7 +3,7 @@ import { persist, createJSONStorage } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { POOL_ITEMS as DEFAULT_POOL_ITEMS, PF_ITEMS as DEFAULT_PF_ITEMS, type FinancialItem } from '@/constants/data';
 import { PROJECTS as DEFAULT_PROJECTS, type Project } from '@/constants/projects';
-import { semantic } from '@/constants/colors';
+import { poolPalette, usePalette, semantic } from '@/constants/colors';
 
 export type UserEvent = {
   id: string;
@@ -51,6 +51,79 @@ export type Dream = {
   projectId: string;
 };
 
+export type FamilyMember = {
+  id: string;
+  name: string;
+  role: 'self' | 'partner' | 'child' | 'pet' | 'other';
+  birthYear: number;
+};
+
+// ─── Data Model v3 ─────────────────────────────────────────────────────────
+// tsukaidoki_data_model.md 準拠のエンティティ定義。
+// プール金（口座視点）と使いみち（PJ視点）を独立した試算視点として保持する。
+// 既存の FinancialItem / Project（表示モデル）と並走させ、UI 側の差し替えは後続で実施する。
+
+// ① 口座。シナリオ間で共通。
+export type Account = {
+  id: string;
+  name: string;
+  subName: string;
+  currentBalance: number;
+  annualRate: number;
+  color: string;
+};
+
+// ② 口座への積立計画。シナリオごと独立。endYear/endMonth 未指定で無期限。
+export type AccountSavingPlan = {
+  id: string;
+  accountId: string;
+  startYear: number;
+  startMonth: number;
+  endYear?: number;
+  endMonth?: number;
+  monthlyAmount: number;
+};
+
+// ④ プロジェクト（使いみち）。シナリオごと独立。
+// 既存の Project 型（constants/projects.ts）は表示用集計モデルのため、
+// データモデル側は ProjectEntity として別名で持つ。
+export type ProjectEntity = {
+  id: string;
+  name: string;
+  subName: string;
+  currentBalance: number;
+  assumedRate: number;
+  color: string;
+};
+
+// ⑤ PJへの積立計画。シナリオごと独立。任意の(Y,M)で ②合計 ≧ ⑤合計 の制約。
+export type ProjectSavingPlan = {
+  id: string;
+  projectId: string;
+  startYear: number;
+  startMonth: number;
+  endYear?: number;
+  endMonth?: number;
+  monthlyAmount: number;
+};
+
+export type ExpenseUnit = 'year' | 'month';
+
+// ③⑥ 支出イベント。1イベントで ③（口座から出る支出）と ⑥（PJ取り崩し）を同時に表す。
+export type Expense = {
+  id: string;
+  name: string;
+  projectId: string;
+  accountId: string;
+  year: number;
+  month?: number;
+  unit: ExpenseUnit;
+  amount: number;
+  isRecurring: boolean;
+  endYear?: number;
+  endMonth?: number;
+};
+
 export type ScenarioData = {
   balances: Record<string, number>;
   userEvents: Record<string, UserEvent[]>;
@@ -59,13 +132,11 @@ export type ScenarioData = {
   spendPlanOverrides: Record<string, Record<number, SpendPlanOverride>>;
   savingsAllocation: SavingsAllocation;
   dreams: Dream[];
-};
-
-export type FamilyMember = {
-  id: string;
-  name: string;
-  role: 'self' | 'partner' | 'child' | 'pet' | 'other';
-  birthYear: number;
+  // Data Model v3（シナリオごと独立）
+  accountSavingPlans: AccountSavingPlan[];
+  projectEntities: ProjectEntity[];
+  projectSavingPlans: ProjectSavingPlan[];
+  expenses: Expense[];
 };
 
 const DEFAULT_DREAMS: Dream[] = [
@@ -73,6 +144,47 @@ const DEFAULT_DREAMS: Dream[] = [
   { id: 'd2', year: 2028, title: '車の買い替え', projectId: 'car' },
   { id: 'd3', year: 2034, title: '子の大学入学', projectId: 'edu' },
   { id: 'd4', year: 2050, title: '定年退職', projectId: 'ret' },
+];
+
+// ─── Data Model v3 初期データ ──────────────────────────────────────────────
+// 既存の POOL_ITEMS / PF_ITEMS / savingsAllocation を新スキーマへ写像した初期値。
+// assumedRate のデフォルトは仕様書「想定利回りのデフォルト値（推奨）」に準拠。
+
+const DEFAULT_ACCOUNTS: Account[] = [
+  { id: 'acc-shoken', name: '証券口座',   subName: 'SBI証券・投資信託・株式', currentBalance: 3_000_000, annualRate: 5.0,   color: poolPalette.tones[0] },
+  { id: 'acc-teiki',  name: '定期預金',   subName: '〇〇銀行・1年定期',       currentBalance: 2_500_000, annualRate: 0.2,   color: poolPalette.tones[1] },
+  { id: 'acc-nisa',   name: '積立NISA',   subName: 'SBI証券・月¥33,000積立',  currentBalance: 1_000_000, annualRate: 3.0,   color: poolPalette.tones[2] },
+  { id: 'acc-main',   name: 'メイン銀行', subName: '普通預金・給与振込',      currentBalance:   800_000, annualRate: 0.001, color: poolPalette.tones[3] },
+  { id: 'acc-sub',    name: 'サブ銀行',   subName: '普通預金・生活費',        currentBalance:   450_000, annualRate: 0.001, color: poolPalette.tones[4] },
+];
+
+// ②合計 = 150,000円/月。⑤合計（=150,000）と等価で整合性ルール 4-2 を満たす。
+const DEFAULT_ACCOUNT_SAVING_PLANS: AccountSavingPlan[] = [
+  { id: 'asp-shoken', accountId: 'acc-shoken', startYear: 2025, startMonth: 1, monthlyAmount: 67_000 },
+  { id: 'asp-nisa',   accountId: 'acc-nisa',   startYear: 2025, startMonth: 1, monthlyAmount: 33_000 },
+  { id: 'asp-main',   accountId: 'acc-main',   startYear: 2025, startMonth: 1, monthlyAmount: 50_000 },
+];
+
+const DEFAULT_PROJECT_ENTITIES: ProjectEntity[] = [
+  { id: 'edu',     name: '教育資金', subName: '2044年 大学入学まで',                currentBalance: 3_000_000, assumedRate: 3.0, color: usePalette.jewels[0] },
+  { id: 'ret',     name: '老後資金', subName: '2050年 定年まで',                    currentBalance: 2_500_000, assumedRate: 5.0, color: usePalette.jewels[1] },
+  { id: 'car',     name: '車資金',   subName: '2028年 買い替え',                    currentBalance: 1_000_000, assumedRate: 0.5, color: usePalette.jewels[2] },
+  { id: 'trip',    name: '旅行資金', subName: '年1回国内・2031年TDL・2037年豪州',   currentBalance:   500_000, assumedRate: 0.5, color: usePalette.jewels[3] },
+  { id: 'surplus', name: '余剰資金', subName: '冠婚葬祭・家修繕などの予備枠',       currentBalance: 1_150_000, assumedRate: 3.0, color: usePalette.neutral   },
+];
+
+const DEFAULT_PROJECT_SAVING_PLANS: ProjectSavingPlan[] = [
+  { id: 'psp-edu',  projectId: 'edu',  startYear: 2025, startMonth: 1, monthlyAmount: 30_000 },
+  { id: 'psp-ret',  projectId: 'ret',  startYear: 2025, startMonth: 1, monthlyAmount: 50_000 },
+  { id: 'psp-car',  projectId: 'car',  startYear: 2025, startMonth: 1, monthlyAmount: 40_000 },
+  { id: 'psp-trip', projectId: 'trip', startYear: 2025, startMonth: 1, monthlyAmount: 30_000 },
+];
+
+// 2026年デモ用の支出イベント。仕様書「2-5 Expense」準拠で③⑥を1イベントで表す。
+const DEFAULT_EXPENSES: Expense[] = [
+  { id: 'exp-2026-shaken', name: '車検',              projectId: 'car',  accountId: 'acc-main', year: 2026, month: 2, unit: 'year', amount:  80_000, isRecurring: false },
+  { id: 'exp-2026-hoiku',  name: '保育園入園金',      projectId: 'edu',  accountId: 'acc-main', year: 2026, month: 5, unit: 'year', amount: 100_000, isRecurring: false },
+  { id: 'exp-2026-ryoko',  name: '家族旅行（国内）',  projectId: 'trip', accountId: 'acc-main', year: 2026, month: 8, unit: 'year', amount: 300_000, isRecurring: false },
 ];
 
 const DEFAULT_SCENARIO_DATA: ScenarioData = {
@@ -87,6 +199,10 @@ const DEFAULT_SCENARIO_DATA: ScenarioData = {
     ],
   },
   dreams: [],
+  accountSavingPlans: [],
+  projectEntities: [],
+  projectSavingPlans: [],
+  expenses: [],
 };
 
 const DEFAULT_FAMILY: FamilyMember[] = [
@@ -118,6 +234,15 @@ type State = {
   poolItems: FinancialItem[];
   pfItems: FinancialItem[];
   projects: Record<string, Project>;
+
+  // ─── Data Model v3 ───
+  // accounts はシナリオ間で共通（仕様書 5-1）。
+  accounts: Account[];
+  // 以下はアクティブシナリオのミラー。scenariosData[activeScenarioId] にも保持される。
+  accountSavingPlans: AccountSavingPlan[];
+  projectEntities: ProjectEntity[];
+  projectSavingPlans: ProjectSavingPlan[];
+  expenses: Expense[];
 };
 
 type Actions = {
@@ -142,6 +267,13 @@ type Actions = {
   setPayday: (day: number, amount: number) => void;
   resetToDefaults: () => void;
   updateProject: (id: string, updater: (p: Project) => Project) => void;
+
+  // ─── Data Model v3 ───
+  setAccounts: (accounts: Account[]) => void;
+  setAccountSavingPlans: (plans: AccountSavingPlan[]) => void;
+  setProjectEntities: (entities: ProjectEntity[]) => void;
+  setProjectSavingPlans: (plans: ProjectSavingPlan[]) => void;
+  setExpenses: (expenses: Expense[]) => void;
 };
 
 function dateLabel(): string {
@@ -163,6 +295,10 @@ function snapshotActiveData(s: State): ScenarioData {
     spendPlanOverrides: s.spendPlanOverrides,
     savingsAllocation: s.savingsAllocation,
     dreams: s.dreams,
+    accountSavingPlans: s.accountSavingPlans,
+    projectEntities: s.projectEntities,
+    projectSavingPlans: s.projectSavingPlans,
+    expenses: s.expenses,
   };
 }
 
@@ -195,6 +331,12 @@ export const useStore = create<State & Actions>()(
       poolItems: DEFAULT_POOL_ITEMS,
       pfItems: DEFAULT_PF_ITEMS,
       projects: DEFAULT_PROJECTS,
+
+      accounts: DEFAULT_ACCOUNTS,
+      accountSavingPlans: DEFAULT_ACCOUNT_SAVING_PLANS,
+      projectEntities: DEFAULT_PROJECT_ENTITIES,
+      projectSavingPlans: DEFAULT_PROJECT_SAVING_PLANS,
+      expenses: DEFAULT_EXPENSES,
 
       updateBalance: (projectId, prevAmount, newAmount, note) => {
         const diff = newAmount - prevAmount;
@@ -321,7 +463,13 @@ export const useStore = create<State & Actions>()(
       switchScenario: (id) => {
         const s = get();
         if (s.activeScenarioId === id) return;
-        const targetData = s.scenariosData[id] ?? { ...DEFAULT_SCENARIO_DATA, dreams: DEFAULT_DREAMS };
+        const targetData = s.scenariosData[id] ?? {
+          ...DEFAULT_SCENARIO_DATA,
+          dreams: DEFAULT_DREAMS,
+          accountSavingPlans: DEFAULT_ACCOUNT_SAVING_PLANS,
+          projectEntities: DEFAULT_PROJECT_ENTITIES,
+          projectSavingPlans: DEFAULT_PROJECT_SAVING_PLANS,
+        };
         set({
           activeScenarioId: id,
           scenariosData: {
@@ -335,6 +483,10 @@ export const useStore = create<State & Actions>()(
           spendPlanOverrides: targetData.spendPlanOverrides,
           savingsAllocation: targetData.savingsAllocation,
           dreams: targetData.dreams ?? DEFAULT_DREAMS,
+          accountSavingPlans: targetData.accountSavingPlans ?? [],
+          projectEntities: targetData.projectEntities ?? [],
+          projectSavingPlans: targetData.projectSavingPlans ?? [],
+          expenses: targetData.expenses ?? [],
         });
       },
 
@@ -380,6 +532,10 @@ export const useStore = create<State & Actions>()(
             spendPlanOverrides: targetData.spendPlanOverrides,
             savingsAllocation: targetData.savingsAllocation,
             dreams: targetData.dreams ?? DEFAULT_DREAMS,
+            accountSavingPlans: targetData.accountSavingPlans ?? [],
+            projectEntities: targetData.projectEntities ?? [],
+            projectSavingPlans: targetData.projectSavingPlans ?? [],
+            expenses: targetData.expenses ?? [],
           };
         }
         set({
@@ -445,6 +601,11 @@ export const useStore = create<State & Actions>()(
         activeScenarioId: 'plan-a',
         scenariosData: {},
         aiInsights: {},
+        accounts: DEFAULT_ACCOUNTS,
+        accountSavingPlans: DEFAULT_ACCOUNT_SAVING_PLANS,
+        projectEntities: DEFAULT_PROJECT_ENTITIES,
+        projectSavingPlans: DEFAULT_PROJECT_SAVING_PLANS,
+        expenses: DEFAULT_EXPENSES,
       }),
 
       updateProject: (id, updater) =>
@@ -452,9 +613,48 @@ export const useStore = create<State & Actions>()(
           if (!s.projects[id]) return s;
           return { projects: { ...s.projects, [id]: updater(s.projects[id]) } };
         }),
+
+      setAccounts: (accounts) => set({ accounts }),
+
+      setAccountSavingPlans: (plans) =>
+        set(s => ({
+          accountSavingPlans: plans,
+          scenariosData: {
+            ...s.scenariosData,
+            [s.activeScenarioId]: { ...snapshotActiveData(s), accountSavingPlans: plans },
+          },
+        })),
+
+      setProjectEntities: (entities) =>
+        set(s => ({
+          projectEntities: entities,
+          scenariosData: {
+            ...s.scenariosData,
+            [s.activeScenarioId]: { ...snapshotActiveData(s), projectEntities: entities },
+          },
+        })),
+
+      setProjectSavingPlans: (plans) =>
+        set(s => ({
+          projectSavingPlans: plans,
+          scenariosData: {
+            ...s.scenariosData,
+            [s.activeScenarioId]: { ...snapshotActiveData(s), projectSavingPlans: plans },
+          },
+        })),
+
+      setExpenses: (expenses) =>
+        set(s => ({
+          expenses,
+          scenariosData: {
+            ...s.scenariosData,
+            [s.activeScenarioId]: { ...snapshotActiveData(s), expenses },
+          },
+        })),
     }),
     {
       name: 'tsukaidoki-store',
+      version: 2,
       storage: createJSONStorage(() => AsyncStorage),
     },
   ),
